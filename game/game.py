@@ -5,6 +5,9 @@ from .world import World
 from .utils import draw_text
 from .camera import Camera
 from .hud import Hud
+from .workers import Worker
+from .resource_manager import ResourceManager
+from .setting import INITIAL_WORKER
 
 class Game:
     def __init__(self, screen, clock):
@@ -15,8 +18,12 @@ class Game:
         # Shared list for all active game entities
         self.entities = []
 
-        self.hud = Hud(self.width, self.height)
-        self.world = World(self.entities, self.hud, 50, 50, self.width, self.height)
+        # Resource manager
+        self.resource_manager = ResourceManager()
+
+        self.hud = Hud(self.resource_manager,self.width, self.height)
+        self.world = World(self.resource_manager, self.entities, self.hud, 50, 50, self.width, self.height)
+        for _ in range(INITIAL_WORKER): Worker(self.world.world[25][25], self.world)
         self.camera = Camera(self.width, self.height)
 
         self.playing = False

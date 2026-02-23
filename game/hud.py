@@ -3,7 +3,8 @@ from .utils import draw_text
 
 
 class Hud:
-    def __init__(self, width, height):
+    def __init__(self, resource_manager, width, height):
+        self.resource_manager = resource_manager
         self.width = width
         self.height = height
         self.hud_colour = (198, 155, 93, 175)
@@ -64,7 +65,8 @@ class Hud:
                     "name": image_name,
                     "icon": image_scale,
                     "image": image,
-                    "rect": rect
+                    "rect": rect,
+                    "affordable": True
                 }
             )
 
@@ -83,7 +85,11 @@ class Hud:
         # Left click selects
         if mouse_action[0]:
             for tile in self.tiles:
-                if tile["rect"].collidepoint(mouse_pos):
+                if self.resource_manager.is_affordable(tile["name"]):
+                    tile["affordable"] = True
+                else:
+                    tile["affordable"] = False
+                if tile["rect"].collidepoint(mouse_pos) and tile["affordable"]:
                     self.selected_tile = tile
                     break  # Stop checking once we find a collision
 
@@ -101,24 +107,24 @@ class Hud:
 
             draw_text(screen, self.examined_tile.name, 40, (255, 255, 255), self.select_rect.topleft)
 
-            # Using getattr as a safety net in case 'counter' doesn't exist on the object
-            counter_val = str(getattr(self.examined_tile, 'counter', 0))
-            draw_text(screen, counter_val, 30, (255, 255, 255), self.select_rect.center)
-
         for tile in self.tiles:
-            screen.blit(tile["icon"], tile["rect"].topleft)
+            icon = tile["icon"].copy()
+            if not tile["affordable"]: icon.set_alpha(100)
+            screen.blit(icon, tile["rect"].topleft)
 
         # Resource text
         pos_x = self.width - 400
-        for resource_type in ["wood:", "stone:", "gold:"]:
-            draw_text(screen, resource_type, 30, (255, 255, 255), (pos_x, 0))
+
+        for resource, resource_value in self.resource_manager.resources.items():
+            text = resource + ": " + str(resource_value)
+            draw_text(screen, text, 30, (255, 255, 255), (pos_x, 0))
             pos_x += 100
 
     @staticmethod
     def load_images():
         images = {
-            "lumbermill": pg.image.load("assets/graphics/building1.png").convert_alpha(),
-            "stonemasonry": pg.image.load("assets/graphics/building2.png").convert_alpha()
+            "Lumbermill": pg.image.load("assets/graphics/building1.png").convert_alpha(),
+            "Stonemasonry": pg.image.load("assets/graphics/building2.png").convert_alpha()
         }
         return images
 

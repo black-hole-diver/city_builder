@@ -2,11 +2,13 @@ import pygame as pg
 import random
 import noise
 from .setting import TILE_SIZE
+from .workers import Worker
 from .buildings import Lumbermill, Stonemasonry, Building
 from typing import List, Optional
 
 class World:
-    def __init__(self, entities, hud, grid_length_x, grid_length_y, width, height):
+    def __init__(self, resource_manager, entities, hud, grid_length_x, grid_length_y, width, height):
+        self.resource_manager = resource_manager
         self.entities = entities
         self.hud = hud
         self.grid_length_x = grid_length_x
@@ -23,8 +25,11 @@ class World:
 
         self.tiles = self.load_images()
         self.world = self.create_world()
+        self.collision_matrix = self.create_collision_matrix()
 
         self.buildings: List[List[Optional['Building']]] = [[None for _ in range(self.grid_length_x)] for _ in range(self.grid_length_y)]
+        self.workers: List[List[Optional['Worker']]] = [[None for _ in range(self.grid_length_x)] for _ in
+                                                            range(self.grid_length_y)]
 
         self.temp_tile = None
         self.examine_tile = None
@@ -34,8 +39,8 @@ class World:
 
         # Map string names to classes for cleaner building instantiation
         self.building_types = {
-            "lumbermill": Lumbermill,
-            "stonemasonry": Stonemasonry
+            "Lumbermill": Lumbermill,
+            "Stonemasonry": Stonemasonry
         }
 
     def update(self, camera):
@@ -76,11 +81,11 @@ class World:
 
                     if building_class:
                         building_image = self.hud.selected_tile["image"]
-                        ent = building_class(render_pos, building_image)
+                        ent = building_class(render_pos, building_image, self.resource_manager)
                         self.entities.append(ent)
                         self.buildings[grid_pos[0]][grid_pos[1]] = ent
                         self.world[grid_pos[0]][grid_pos[1]]["collision"] = True
-
+                        self.collision_matrix[grid_pos[1]][grid_pos[0]] = 0
                     self.hud.selected_tile = None
 
         else:
@@ -124,6 +129,13 @@ class World:
                     if self.examine_tile == (x, y) and self.examine_mask_points:
                         mask_poly = [(mx + screen_x, my + b_screen_y) for mx, my in self.examine_mask_points]
                         pg.draw.polygon(screen, (255, 255, 255), mask_poly, 3)
+
+                # Draw workers
+                worker = self.workers[x][y]
+                if worker is not None:
+                    screen.blit(worker.image,(
+                        render_pos[0] + offset_x, render_pos[1] - (worker.image.get_height() - TILE_SIZE) + offset_y,
+                    ))
 
         # Draw "Ghost" Temp Tile
         if self.temp_tile is not None:
@@ -193,6 +205,14 @@ class World:
             "tile": tile,
             "collision": tile != ""  # Simplified boolean logic
         }
+
+    def create_collision_matrix(self):
+        collision_matrix = [[1 for _ in range(self.grid_length_x)] for _ in range(self.grid_length_y)]
+        for grid_x in range(self.grid_length_x):
+            for grid_y in range(self.grid_length_y):
+                if self.world[grid_x][grid_y]["collision"]:
+                    collision_matrix[grid_y][grid_x] = 0
+        return collision_matrix
 
     @staticmethod
     def cart_to_iso( x, y):
