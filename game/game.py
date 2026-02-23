@@ -12,6 +12,7 @@ from .setting import INITIAL_WORKER, BACKGROUND_COLOR
 
 class Game:
     def __init__(self, screen, clock):
+        self.stars = []
         self.screen = screen
         self.clock = clock
         self.width, self.height = screen.get_size()
@@ -45,7 +46,6 @@ class Game:
 
         # --- Random stars ---
 
-        self.stars = []
         for _ in range(120):
             x = random.randint(0, self.width)
             y = random.randint(0, self.height)
