@@ -20,8 +20,10 @@ class World:
 
         # Create the base surface for the terrain
         self.grass_tiles = pg.Surface(
-            (grid_length_x * TILE_SIZE * 2, grid_length_y * TILE_SIZE + 2 * TILE_SIZE)
+            (grid_length_x * TILE_SIZE * 2, grid_length_y * TILE_SIZE + 2 * TILE_SIZE),
+            flags=pg.SRCALPHA
         ).convert_alpha()
+        self.grass_tiles.fill((0,0,0,0))
 
         self.tiles = self.load_images()
         self.world = self.create_world()

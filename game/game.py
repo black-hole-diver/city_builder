@@ -1,5 +1,6 @@
 import pygame as pg
 import sys
+import random
 
 from .world import World
 from .utils import draw_text
@@ -7,7 +8,7 @@ from .camera import Camera
 from .hud import Hud
 from .workers import Worker
 from .resource_manager import ResourceManager
-from .setting import INITIAL_WORKER
+from .setting import INITIAL_WORKER, BACKGROUND_COLOR
 
 class Game:
     def __init__(self, screen, clock):
@@ -28,6 +29,32 @@ class Game:
 
         self.playing = False
 
+        # Stars
+        self.background = self.create_starry_background()
+        self.star_offset = 0  # for slow swirl animation
+
+    def create_starry_background(self):
+        surface = pg.Surface((self.width, self.height))
+
+        # --- Gradient sky ---
+        for y in range(self.height):
+            r = 10
+            g = 10 + int(y * 0.05)
+            b = 35 + int(y * 0.15)
+            pg.draw.line(surface, (r, g, b), (0, y), (self.width, y))
+
+        # --- Random stars ---
+
+        self.stars = []
+        for _ in range(120):
+            x = random.randint(0, self.width)
+            y = random.randint(0, self.height)
+            radius = random.randint(1, 3)
+            brightness = random.randint(150, 255)
+            self.stars.append([x, y, radius, brightness])
+
+        return surface
+
     def run(self):
         self.playing = True
         while self.playing:
@@ -47,6 +74,9 @@ class Game:
     def update(self):
         self.camera.update()
 
+        # stars
+        self.star_offset += .2
+
         # Update all active entities
         for e in self.entities:
             e.update()
@@ -55,7 +85,18 @@ class Game:
         self.world.update(self.camera)
 
     def draw(self):
-        self.screen.fill((0, 0, 0))
+        self.screen.fill(BACKGROUND_COLOR)
+
+        # Draw glowing stars
+        for star in self.stars:
+            x, y, radius, brightness = star
+
+            # # slight floating motion
+            # from math import sin
+            # offset_y = y + int(sin(self.star_offset + x * 0.01) * 3)
+
+            glow_color = (brightness, brightness, 180)
+            pg.draw.circle(self.screen, glow_color, (x, y), radius)
 
         self.world.draw(self.screen, self.camera)
         self.hud.draw(self.screen)
