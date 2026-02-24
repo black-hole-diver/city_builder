@@ -4,7 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="47aba308-f49c-4a93-9a5d-4695dc059ce0" name="Changes" comment="axe">
+    <list default="true" id="47aba308-f49c-4a93-9a5d-4695dc059ce0" name="Changes" comment="datetime and speed">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/game/game.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/game.py" afterDir="false" />
     </list>
@@ -46,7 +46,7 @@
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "axe",
+    "git-widget-placeholder": "datetime",
     "junie.onboarding.icon.badge.shown": "true",
     "to.speed.mode.migration.done": "true"
   }
@@ -132,7 +132,15 @@
       <option name="project" value="LOCAL" />
       <updated>1771928657838</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="datetime and speed">
+      <option name="closed" value="true" />
+      <created>1771931052891</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1771931052891</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
@@ -142,7 +150,8 @@
     <MESSAGE value="fixed: camera bound" />
     <MESSAGE value="fixed: camera panning when paused" />
     <MESSAGE value="axe" />
-    <option name="LAST_COMMIT_MESSAGE" value="axe" />
+    <MESSAGE value="datetime and speed" />
+    <option name="LAST_COMMIT_MESSAGE" value="datetime and speed" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

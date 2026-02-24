@@ -49,11 +49,12 @@ class Worker:
         self.world.workers[new_tile[0]][new_tile[1]] = self
         self.tile = self.world.world[new_tile[0]][new_tile[1]]
 
-    def update(self):
+    def update(self, game_speed = 1):
         if not self.path:
             return
         now = pg.time.get_ticks()
-        if now - self.move_timer > WORKER_SPEED:
+        adjusted_delay = WORKER_SPEED / game_speed
+        if now - self.move_timer > adjusted_delay:
             if self.path_index >= len(self.path):
                 self.create_path()
                 return
