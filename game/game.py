@@ -67,8 +67,7 @@ class Game:
         while self.playing:
             self.clock.tick(60)
             self.events()
-            if not self.paused:
-                self.update()
+            self.update()
             self.draw()
 
     def events(self):
@@ -84,6 +83,7 @@ class Game:
     def update(self):
         self.camera.update()
         self.world.update(self.camera, self.paused)
+        self.hud.update()
 
         if not self.paused:
             # stars
@@ -93,7 +93,7 @@ class Game:
             for e in self.entities:
                 e.update()
 
-            self.hud.update()
+
 
 
     def draw(self):

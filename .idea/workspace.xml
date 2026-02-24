@@ -4,12 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="47aba308-f49c-4a93-9a5d-4695dc059ce0" name="Changes" comment="bound of the world">
+    <list default="true" id="47aba308-f49c-4a93-9a5d-4695dc059ce0" name="Changes" comment="fixed: camera bound">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/game/camera.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/camera.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/game/game.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/game.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/game/setting.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/setting.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/game/world.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/world.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -106,14 +103,23 @@
       <option name="project" value="LOCAL" />
       <updated>1771912828733</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="fixed: camera bound">
+      <option name="closed" value="true" />
+      <created>1771914374685</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1771914374685</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="self.star to __init__" />
     <MESSAGE value="new file .env" />
     <MESSAGE value="bound of the world" />
-    <option name="LAST_COMMIT_MESSAGE" value="bound of the world" />
+    <MESSAGE value="fixed: camera bound" />
+    <option name="LAST_COMMIT_MESSAGE" value="fixed: camera bound" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
