@@ -5,16 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="47aba308-f49c-4a93-9a5d-4695dc059ce0" name="Changes" comment="fixed the hovering of axe and hammer">
-      <change afterPath="$PROJECT_DIR$/game/sceneries.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/game/buildings.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/buildings.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/game/game.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/game.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/game/hud.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/hud.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/game/resource_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/resource_manager.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/game/setting.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/setting.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/game/tools.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/tools.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/game/world.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/world.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/save_slot_1.json" beforeDir="false" afterPath="$PROJECT_DIR$/save_slot_1.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -64,7 +56,7 @@
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "multidimension",
+    "git-widget-placeholder": "master",
     "junie.onboarding.icon.badge.shown": "true",
     "to.speed.mode.migration.done": "true"
   }
@@ -166,7 +158,23 @@
       <option name="project" value="LOCAL" />
       <updated>1771938463733</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="multidimension">
+      <option name="closed" value="true" />
+      <created>1771953037450</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1771953037450</updated>
+    </task>
+    <task id="LOCAL-00009" summary="multidimension">
+      <option name="closed" value="true" />
+      <created>1771953041759</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1771953041759</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -189,7 +197,8 @@
     <MESSAGE value="axe" />
     <MESSAGE value="datetime and speed" />
     <MESSAGE value="fixed the hovering of axe and hammer" />
-    <option name="LAST_COMMIT_MESSAGE" value="fixed the hovering of axe and hammer" />
+    <MESSAGE value="multidimension" />
+    <option name="LAST_COMMIT_MESSAGE" value="multidimension" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
