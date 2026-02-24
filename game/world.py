@@ -8,6 +8,7 @@ from typing import List, Optional
 
 class World:
     def __init__(self, resource_manager, entities, hud, grid_length_x, grid_length_y, width, height):
+        self.game_paused = False
         self.resource_manager = resource_manager
         self.entities = entities
         self.hud = hud
@@ -45,7 +46,8 @@ class World:
             "Stonemasonry": Stonemasonry
         }
 
-    def update(self, camera):
+    def update(self, camera, game_paused):
+        self.game_paused = game_paused
         mouse_pos = pg.mouse.get_pos()
         mouse_action = pg.mouse.get_pressed()
 
@@ -77,7 +79,7 @@ class World:
                 }
 
                 # Place building
-                if mouse_action[0] and not collision:
+                if mouse_action[0] and not collision and not self.game_paused:
                     building_name = self.hud.selected_tile["name"]
                     building_class = self.building_types.get(building_name)
 

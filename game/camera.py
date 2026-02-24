@@ -29,6 +29,8 @@ class Camera:
         self.scroll.x += self.dx
         self.scroll.y += self.dy
 
+        center_offset = MAP_WIDTH / 2
+
         # bound to the world
         # left bound
         # X Boundaries (Left and Right)
@@ -36,11 +38,11 @@ class Camera:
 
         if self.scroll.x > MARGIN:
             self.scroll.x = MARGIN
-        elif self.scroll.x < -(MAP_WIDTH- self.width):
-            self.scroll.x = -(MAP_WIDTH- self.width)
+        elif self.scroll.x < -(center_offset + MARGIN + self.width):
+            self.scroll.x = -(center_offset + MARGIN + self.width)
 
         # Y Boundaries (Top and Bottom)
         if self.scroll.y > MARGIN:
             self.scroll.y = MARGIN
-        elif self.scroll.y < -(MAP_HEIGHT - self.height):
-            self.scroll.y = -(MAP_HEIGHT - self.height)
+        elif self.scroll.y < -(MAP_HEIGHT + MARGIN - self.height):
+            self.scroll.y = -(MAP_HEIGHT + MARGIN - self.height)

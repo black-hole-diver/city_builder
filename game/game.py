@@ -8,14 +8,18 @@ from .camera import Camera
 from .hud import Hud
 from .workers import Worker
 from .resource_manager import ResourceManager
-from .setting import INITIAL_WORKER, BACKGROUND_COLOR
+from .setting import INITIAL_WORKER, BACKGROUND_COLOR, WHITE, MAP_WIDTH
+
 
 class Game:
     def __init__(self, screen, clock):
+        self.paused = False
         self.stars = []
         self.screen = screen
         self.clock = clock
         self.width, self.height = screen.get_size()
+
+
 
         # Shared list for all active game entities
         self.entities = []
@@ -26,7 +30,10 @@ class Game:
         self.hud = Hud(self.resource_manager,self.width, self.height)
         self.world = World(self.resource_manager, self.entities, self.hud, 50, 50, self.width, self.height)
         for _ in range(INITIAL_WORKER): Worker(self.world.world[25][25], self.world)
+
         self.camera = Camera(self.width, self.height)
+        self.camera.scroll.x = -(MAP_WIDTH / 2 - self.width / 2)
+        self.camera.scroll.y = -(MAP_WIDTH / 2 - self.width / 2)
 
         self.playing = False
 
@@ -60,7 +67,8 @@ class Game:
         while self.playing:
             self.clock.tick(60)
             self.events()
-            self.update()
+            if not self.paused:
+                self.update()
             self.draw()
 
     def events(self):
@@ -70,36 +78,44 @@ class Game:
             if event.type == pg.KEYDOWN:
                 if event.key == pg.K_ESCAPE:
                     self.quit_game()
+                if event.key == pg.K_SPACE:
+                    self.paused = not self.paused
 
     def update(self):
         self.camera.update()
+        self.world.update(self.camera, self.paused)
 
-        # stars
-        self.star_offset += .2
+        if not self.paused:
+            # stars
+            self.star_offset += .2
 
-        # Update all active entities
-        for e in self.entities:
-            e.update()
+            # Update all active entities
+            for e in self.entities:
+                e.update()
 
-        self.hud.update()
-        self.world.update(self.camera)
+            self.hud.update()
+
 
     def draw(self):
         self.screen.fill(BACKGROUND_COLOR)
 
-        # Draw glowing stars
         for star in self.stars:
             x, y, radius, brightness = star
-
-            # # slight floating motion
-            # from math import sin
-            # offset_y = y + int(sin(self.star_offset + x * 0.01) * 3)
 
             glow_color = (brightness, brightness, 180)
             pg.draw.circle(self.screen, glow_color, (x, y), radius)
 
         self.world.draw(self.screen, self.camera)
         self.hud.draw(self.screen)
+
+        if self.paused:
+            draw_text(
+                self.screen,
+                "SYSTEM PAUSED",
+                80,
+                WHITE,
+                (self.width // 2 - 200, self.height // 2 - 40)
+            )
 
         # Updated to use a modern Python f-string
         draw_text(

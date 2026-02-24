@@ -11,5 +11,8 @@ BACKGROUND_COLOR = (19, 38, 92)
 
 # camera panning
 MAP_WIDTH = 6400
-MAP_HEIGHT = 5000
+MAP_HEIGHT = 3328
 MARGIN = 500
+
+# color
+WHITE = (255, 255, 255)
