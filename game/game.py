@@ -16,6 +16,7 @@ import datetime
 
 class Game:
     def __init__(self, screen, clock):
+        self.menu_mouse_pressed = None
         self.paused = False
         self.stars = []
         self.screen = screen
@@ -49,6 +50,9 @@ class Game:
         self.playing = False
         self.notification_text = ""
         self.notification_timer = 0
+
+        self.menu_state = None
+        self.save_slots = ["save_slot_1.json", "save_slot_2.json", "save_slot_3.json"]
 
     def create_starry_background(self):
         surface = pg.Surface((self.width, self.height))
@@ -85,7 +89,10 @@ class Game:
                 self.quit_game()
             if event.type == pg.KEYDOWN:
                 if event.key == pg.K_ESCAPE:
-                    self.quit_game()
+                    if self.menu_state is not None:
+                        self.quit_game()
+                    else:
+                        self.quit_game()
                 if event.key == pg.K_SPACE:
                     self.paused = not self.paused
                 if event.key == pg.K_F5:
@@ -101,6 +108,11 @@ class Game:
                     self.current_speed = 3
 
     def update(self):
+        if self.hud.menu_action:
+            self.menu_state = self.hud.menu_action
+            self.hud.menu_action = None
+        if self.menu_state is not None:
+            return
         self.camera.update()
         self.world.update(self.camera, self.paused)
         self.hud.update()
@@ -129,6 +141,9 @@ class Game:
 
         self.world.draw(self.screen, self.camera)
         self.hud.draw(self.screen, self.current_date, self.current_speed)
+
+        if self.menu_state is not None:
+            self.process_menu_overlay()
 
         if self.paused:
             draw_text(
@@ -279,3 +294,100 @@ class Game:
         self.notification_timer = pg.time.get_ticks()
 
         print("Game loaded successfully!")
+
+    def delete_save(self, filename):
+       if os.path.exists(filename):
+           os.remove(filename)
+           self.notification_text = "Save Deleted!"
+           self.notification_timer = pg.time.get_ticks()
+
+    def process_menu_overlay(self):
+       # Darken the background
+       overlay = pg.Surface((self.width, self.height), pg.SRCALPHA)
+       overlay.fill((0, 0, 0, 150))
+       self.screen.blit(overlay, (0, 0))
+
+       # Menu Box
+       menu_w, menu_h = 500, 400
+       menu_x, menu_y = (self.width - menu_w) // 2, (self.height - menu_h) // 2
+       menu_rect = pg.Rect(menu_x, menu_y, menu_w, menu_h)
+       pg.draw.rect(self.screen, (40, 40, 60), menu_rect)
+       pg.draw.rect(self.screen, (255, 255, 255), menu_rect, 3)
+
+       title = f"{self.menu_state} GAME"
+       draw_text(self.screen, title, 50, (255, 255, 255), (menu_x + 130, menu_y + 20))
+
+       mouse_pos = pg.mouse.get_pos()
+       mouse_state = pg.mouse.get_pressed()
+
+       # Independent debouncing for the menu
+       if not hasattr(self, 'menu_mouse_pressed'):
+           self.menu_mouse_pressed = False
+
+       mouse_clicked = mouse_state[0] and not self.menu_mouse_pressed
+       self.menu_mouse_pressed = mouse_state[0]
+
+       # --- NEW: Draw Close [X] Button ---
+       close_rect = pg.Rect(menu_x + menu_w - 40, menu_y + 10, 30, 30)
+       c_color = (255, 80, 80) if close_rect.collidepoint(mouse_pos) else (200, 50, 50)
+       pg.draw.rect(self.screen, c_color, close_rect)
+       pg.draw.rect(self.screen, (255, 255, 255), close_rect, 2)
+       draw_text(self.screen, "X", 30, (255, 255, 255), (close_rect.x + 8, close_rect.y + 6))
+
+       # Draw the 3 slots
+       for i, filename in enumerate(self.save_slots):
+           slot_y = menu_y + 100 + (i * 80)
+           slot_rect = pg.Rect(menu_x + 50, slot_y, 300, 60)
+           reset_rect = pg.Rect(menu_x + 370, slot_y, 80, 60)
+
+           # Peek into the file to get info
+           info_text = "Empty Slot"
+           if os.path.exists(filename):
+               try:
+                   with open(filename, "r") as f:
+                       data = json.load(f)
+                   if isinstance(data, dict):
+                       info_text = f"Day: {data.get('date', 'Unknown')}"
+                   else: info_text = "Corrupt Save"
+               except json.JSONDecodeError:
+                   info_text = "Corrupt JSON Save"
+               except OSError:
+                   info_text = "Unreadable Save"
+
+           # Draw Slot Button
+           color = (80, 80, 100) if slot_rect.collidepoint(mouse_pos) else (60, 60, 80)
+           pg.draw.rect(self.screen, color, slot_rect)
+           pg.draw.rect(self.screen, (255, 255, 255), slot_rect, 2)
+           draw_text(self.screen, f"Slot {i + 1}: {info_text}", 25, (255, 255, 255),
+                     (slot_rect.x + 10, slot_rect.y + 20))
+
+           # Draw Reset Button
+           r_color = (200, 50, 50) if reset_rect.collidepoint(mouse_pos) else (150, 40, 40)
+           pg.draw.rect(self.screen, r_color, reset_rect)
+           pg.draw.rect(self.screen, (255, 255, 255), reset_rect, 2)
+           draw_text(self.screen, "RESET", 25, (255, 255, 255), (reset_rect.x + 10, reset_rect.y + 20))
+
+           # Handle Clicks
+           if mouse_clicked:
+               # --- NEW: Handle Close Button Click ---
+               if close_rect.collidepoint(mouse_pos):
+                   self.menu_state = None
+                   self.hud.mouse_pressed = True  # Prevent clicking things behind menu
+                   return  # Exit out early
+
+               elif reset_rect.collidepoint(mouse_pos):
+                   self.delete_save(filename)
+               elif slot_rect.collidepoint(mouse_pos):
+                   if self.menu_state == "SAVE":
+                       self.save_game(filename)
+                   elif self.menu_state == "LOAD":
+                       if info_text != "Empty Slot":
+                           self.load_game(filename)
+
+                   self.menu_state = None  # Close menu after action
+                   self.hud.mouse_pressed = True  # Prevent clicking things behind menu when returning
+
+       # Right-click to close
+       if mouse_state[2]:
+           self.menu_state = None
+           self.hud.mouse_pressed = True

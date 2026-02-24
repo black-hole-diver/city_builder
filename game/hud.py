@@ -34,12 +34,18 @@ class Hud:
         self.examined_tile_scaled_img = None
 
         self.hovered_tile = None
+        self.mouse_pressed = False
+
         self.item_descriptions = {
             "Axe": "Chops down trees.\nGrants 5 wood.",
             "Hammer": "Demolishes buildings & rocks.\nGrants 5 stone.",
             "Lumbermill": "Produces 1 wood\nevery 2 seconds.",
             "Stonemasonry": "Produces 1 stone\nevery 2 seconds."
         }
+
+        self.save_btn_rect = pg.Rect(10,40,100,30)
+        self.load_btn_rect = pg.Rect(120,40,100,30)
+        self.menu_action = None
 
     @property
     def examined_tile(self):
@@ -68,13 +74,16 @@ class Hud:
             image_scale = self.scale_image(image, w=object_width)
             rect = image_scale.get_rect(topleft=(render_x, render_y))
 
+            item_type = "Tool" if image_name in ["Axe", "Hammer"] else "Building"
+
             tiles.append(
                 {
                     "name": image_name,
                     "icon": image_scale,
                     "image": image,
                     "rect": rect,
-                    "affordable": True
+                    "affordable": True,
+                    "type": item_type
                 }
             )
 
@@ -85,8 +94,19 @@ class Hud:
     def update(self):
         mouse_pos = pg.mouse.get_pos()
         mouse_action = pg.mouse.get_pressed()
+        mouse_clicked = mouse_action[0] and not self.mouse_pressed
+        self.mouse_pressed = mouse_action[0]
 
         self.hovered_tile = None
+        self.menu_action = None
+
+        if mouse_clicked:
+            if self.save_btn_rect.collidepoint(mouse_pos):
+                self.menu_action = "SAVE"
+                return
+            elif self.load_btn_rect.collidepoint(mouse_pos):
+                self.menu_action = "LOAD"
+                return
 
         # Right click deselects
         if mouse_action[2]:
@@ -97,7 +117,9 @@ class Hud:
             if tile["rect"].collidepoint(mouse_pos):
                 self.hovered_tile = tile
                 if mouse_action[0] and tile["affordable"]:
-                    self.selected_tile = tile
+                    if self.selected_tile == tile:
+                        self.selected_tile = None
+                    else: self.selected_tile = tile
                     break
 
     def draw(self, screen, current_date=None, current_speed=1):
@@ -135,6 +157,14 @@ class Hud:
 
         if self.hovered_tile is not None:
             self.draw_tooltip(screen, pg.mouse.get_pos(), self.hovered_tile)
+
+        pg.draw.rect(screen, (70, 70, 70), self.save_btn_rect)
+        pg.draw.rect(screen, (255, 255, 255), self.save_btn_rect, 2)
+        draw_text(screen, "SAVE", 24, (255, 255, 255), (self.save_btn_rect.x + 25, self.save_btn_rect.y + 8))
+
+        pg.draw.rect(screen, (70, 70, 70), self.load_btn_rect)
+        pg.draw.rect(screen, (255, 255, 255), self.load_btn_rect, 2)
+        draw_text(screen, "LOAD", 24, (255, 255, 255), (self.load_btn_rect.x + 25, self.load_btn_rect.y + 8))
 
     def draw_tooltip(self, screen, mouse_pos, tile):
         name = tile["name"]
@@ -196,7 +226,7 @@ class Hud:
         images = {
             "Lumbermill": pg.image.load("assets/graphics/building1.png").convert_alpha(),
             "Stonemasonry": pg.image.load("assets/graphics/building2.png").convert_alpha(),
-            "Axe": pg.image.load("assets/graphics/axe.webp").convert_alpha(),
+            "Axe": pg.image.load("assets/graphics/axe.png").convert_alpha(),
             "Hammer": pg.image.load("assets/graphics/hammer.png").convert_alpha(),
         }
         return images
