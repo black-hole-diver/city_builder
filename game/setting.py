@@ -1,7 +1,9 @@
 TILE_SIZE = 64
 PRODUCE = {
     "Stonemasonry":"stone",
-    "Lumbermill": "wood"
+    "Lumbermill": "wood",
+    "ResZone": "",
+    "Stadium":""
 }
 WORKER_SPEED = 180
 INITIAL_WOOD = 10

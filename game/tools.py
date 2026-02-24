@@ -38,11 +38,23 @@ class Hammer(Tool):
 
             if has_building:
                 building_to_remove = world.buildings[grid_pos[0]][grid_pos[1]]
+
                 if building_to_remove in world.entities:
                     world.entities.remove(building_to_remove)
-                world.buildings[grid_pos[0]][grid_pos[1]] = None
 
-                if world.examine_tile == (grid_pos[0], grid_pos[1]):
+                # --- NEW: Clear ALL tiles the building occupied ---
+                b_w = building_to_remove.grid_width
+                b_h = building_to_remove.grid_height
+                ox, oy = building_to_remove.origin
+
+                for x in range(ox, ox + b_w):
+                    for y in range(oy, oy + b_h):
+                        world.buildings[x][y] = None
+                        world.world[x][y]["collision"] = False
+                        world.collision_matrix[y][x] = 1
+
+                # Deselect if we destroy the currently examined building
+                if world.examine_tile == building_to_remove.origin:
                     world.examine_tile = None
                     world.hud.examined_tile = None
                     world.examine_mask_points = None
@@ -51,5 +63,6 @@ class Hammer(Tool):
                 world.world[grid_pos[0]][grid_pos[1]]["tile"] = ""
                 world.resource_manager.resources["stone"] += 5
 
-            world.world[grid_pos[0]][grid_pos[1]]["collision"] = False
-            world.collision_matrix[grid_pos[1]][grid_pos[0]] = 1
+                # Free up the tile for rocks
+                world.world[grid_pos[0]][grid_pos[1]]["collision"] = False
+                world.collision_matrix[grid_pos[1]][grid_pos[0]] = 1

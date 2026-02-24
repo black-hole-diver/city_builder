@@ -3,9 +3,10 @@ import random
 import noise
 from .setting import TILE_SIZE
 from .workers import Worker
-from .buildings import Lumbermill, Stonemasonry, Building
+from .buildings import Lumbermill, Stonemasonry, Building, ResZone, Stadium
 from .tools import Axe, Hammer
 from typing import List, Optional
+from .sceneries import Scenery
 
 class World:
     def __init__(self, resource_manager, entities, hud, grid_length_x, grid_length_y, width, height):
@@ -44,7 +45,9 @@ class World:
         # Map string names to classes for cleaner building instantiation
         self.building_types = {
             "Lumbermill": Lumbermill,
-            "Stonemasonry": Stonemasonry
+            "Stonemasonry": Stonemasonry,
+            "ResZone": ResZone,
+            "Stadium": Stadium
         }
 
         self.tools = {
@@ -75,48 +78,9 @@ class World:
                 cell = self.world[grid_pos[0]][grid_pos[1]]
                 render_pos = cell["render_pos"]
                 iso_poly = cell["iso_poly"]
-                collision = cell["collision"]
+                # collision = cell["collision"]
                 selected_name = self.hud.selected_tile["name"]
 
-                # if selected_name == "Axe":
-                #     can_chop = (cell["tile"] == "tree")
-                #     self.temp_tile = {
-                #         "image": img,
-                #         "render_pos": render_pos,
-                #         "iso_poly": iso_poly,
-                #         "collision": not can_chop,
-                #     }
-                #
-                #     if mouse_action[0] and can_chop and not self.game_paused:
-                #         self.world[grid_pos[0]][grid_pos[1]]["tile"] = ""
-                #         self.world[grid_pos[0]][grid_pos[1]]["collision"] = False
-                #         self.collision_matrix[grid_pos[1]][grid_pos[0]] = 1
-                #         self.resource_manager.resources["wood"] += 5
-                # elif selected_name == "Hammer":
-                #     has_building = self.buildings[grid_pos[0]][grid_pos[1]] is not None
-                #     is_rock = cell["tile"] == "rock"
-                #     can_demolish = has_building or is_rock
-                #     self.temp_tile = {
-                #         "image": img,
-                #         "render_pos": render_pos,
-                #         "iso_poly": iso_poly,
-                #         "collision": not can_demolish
-                #     }
-                #     if mouse_action[0] and can_demolish and not self.game_paused:
-                #         if has_building:
-                #             building_to_remove = self.buildings[grid_pos[0]][grid_pos[1]]
-                #             if building_to_remove in self.entities:
-                #                 self.entities.remove(building_to_remove)
-                #             self.buildings[grid_pos[0]][grid_pos[1]] = None
-                #             if self.examine_tile == (grid_pos[0], grid_pos[1]):
-                #                 self.examine_tile = None
-                #                 self.hud.examined_tile = None
-                #                 self.examine_mask_points = None
-                #         elif is_rock:
-                #             self.world[grid_pos[0]][grid_pos[1]]["tile"] = ""
-                #             self.resource_manager.resources["stone"] += 5
-                #         self.world[grid_pos[0]][grid_pos[1]]["collision"] = False
-                #         self.collision_matrix[grid_pos[1]][grid_pos[0]] = 1
                 if selected_name in self.tools:
                     tool = self.tools[selected_name]
                     can_use = tool.can_use(grid_pos, self)
@@ -129,36 +93,66 @@ class World:
                     if mouse_action[0] and can_use and not self.game_paused:
                         tool.use(grid_pos, self)
                 else:
+                    b_width = self.hud.selected_tile.get("grid_width", 1)
+                    b_height = self.hud.selected_tile.get("grid_height", 1)
+                    can_build = self.is_area_free(grid_pos[0], grid_pos[1], b_width, b_height)
+
+                    cart_x = grid_pos[0] * TILE_SIZE
+                    cart_y = grid_pos[1] * TILE_SIZE
+
+                    multi_rect = [
+                        (cart_x, cart_y),
+                        (cart_x + b_width * TILE_SIZE, cart_y),
+                        (cart_x + b_width * TILE_SIZE, cart_y + b_height * TILE_SIZE),
+                        (cart_x, cart_y + b_height * TILE_SIZE)
+                    ]
+
+                    multi_iso_poly = [self.cart_to_iso(x,y) for x, y in multi_rect]
+
                     self.temp_tile = {
                         "image": img,
                         "render_pos": render_pos,
-                        "iso_poly": iso_poly,
-                        "collision": collision
+                        "iso_poly": multi_iso_poly,
+                        "collision": not can_build
                     }
 
                     # Place building
-                    if mouse_action[0] and not collision and not self.game_paused:
+                    if mouse_action[0] and can_build and not self.game_paused:
                         building_name = self.hud.selected_tile["name"]
                         building_class = self.building_types.get(building_name)
 
                         if building_class:
                             building_image = self.hud.selected_tile["image"]
-                            ent = building_class(render_pos, building_image, self.resource_manager)
+                            ent = building_class(render_pos, building_image, self.resource_manager, grid_pos)
                             self.entities.append(ent)
-                            self.buildings[grid_pos[0]][grid_pos[1]] = ent
-                            self.world[grid_pos[0]][grid_pos[1]]["collision"] = True
-                            self.collision_matrix[grid_pos[1]][grid_pos[0]] = 0
+                            for x in range(grid_pos[0], grid_pos[0] + b_width):
+                                for y in range(grid_pos[1], grid_pos[1] + b_height):
+                                    self.buildings[x][y] = ent
+                                    self.world[x][y]["collision"] = True
+                                    self.collision_matrix[y][x] = 0
                         self.hud.selected_tile = None
-
         else:
             if self.can_place_tile(grid_pos):
                 building = self.buildings[grid_pos[0]][grid_pos[1]]
+                world_tile = self.world[grid_pos[0]][grid_pos[1]]["tile"]
+
                 # Select building to examine
-                if mouse_action[0] and (building is not None):
-                    self.examine_tile = (grid_pos[0], grid_pos[1])
-                    self.hud.examined_tile = building
-                    # Calculate the mask outline exactly ONCE upon clicking
-                    self.examine_mask_points = pg.mask.from_surface(building.image).outline()
+                if mouse_action[0]:
+                    if building is not None:
+                        # --- THE FIX: Use the building's origin, not the clicked tile! ---
+                        self.examine_tile = building.origin
+
+                        self.hud.examined_tile = building
+                        # Calculate the mask outline exactly ONCE upon clicking
+                        self.examine_mask_points = pg.mask.from_surface(building.image).outline()
+                    elif world_tile in ["tree", "rock"]:
+                        # Examine Nature
+                        self.examine_tile = (grid_pos[0], grid_pos[1])
+
+                        # Use our new Scenery class!
+                        feature = Scenery(world_tile, self.tiles[world_tile])
+                        self.hud.examined_tile = feature
+                        self.examine_mask_points = pg.mask.from_surface(feature.image).outline()
 
     def draw(self, screen, camera):
         screen.blit(self.grass_tiles, (camera.scroll.x, camera.scroll.y))
@@ -181,16 +175,47 @@ class World:
                     screen_y = render_pos[1] - (tile_img.get_height() - TILE_SIZE) + offset_y
                     screen.blit(tile_img, (screen_x, screen_y))
 
+                    if self.examine_tile == (x,y) and self.buildings[x][y] is None and self.examine_mask_points:
+                        mask_poly = [(mx + screen_x, my + screen_y) for mx, my in self.examine_mask_points]
+                        pg.draw.polygon(screen, (255, 255, 255), mask_poly, 3)
+
                 # Draw buildings
                 building = self.buildings[x][y]
                 if building is not None:
-                    b_screen_y = render_pos[1] - (building.image.get_height() - TILE_SIZE) + offset_y
-                    screen.blit(building.image, (screen_x, b_screen_y))
+                    # 1. ONLY draw if the loop is on the building's origin tile
+                    if building.origin == (x, y):
 
-                    # Draw highlight mask using the cached points
-                    if self.examine_tile == (x, y) and self.examine_mask_points:
-                        mask_poly = [(mx + screen_x, my + b_screen_y) for mx, my in self.examine_mask_points]
-                        pg.draw.polygon(screen, (255, 255, 255), mask_poly, 3)
+                        # 2. Calculate the massive footprint of the building
+                        cart_x = x * TILE_SIZE
+                        cart_y = y * TILE_SIZE
+                        b_w = building.grid_width
+                        b_h = building.grid_height
+
+                        multi_rect = [
+                            (cart_x, cart_y),
+                            (cart_x + b_w * TILE_SIZE, cart_y),
+                            (cart_x + b_w * TILE_SIZE, cart_y + b_h * TILE_SIZE),
+                            (cart_x, cart_y + b_h * TILE_SIZE)
+                        ]
+
+                        # 3. Find the true boundaries in isometric space
+                        multi_iso = [self.cart_to_iso(px, py) for px, py in multi_rect]
+                        minx = min(px for px, py in multi_iso)
+                        miny = min(py for px, py in multi_iso)
+
+                        # 4. Apply the massive image alignment math
+                        screen_x = minx + offset_x
+
+                        # The base floor height of an isometric diamond is (W + H) * (TILE_SIZE / 2)
+                        floor_height = (b_w + b_h) * (TILE_SIZE / 2)
+                        b_screen_y = miny - (building.image.get_height() - floor_height) + offset_y
+
+                        screen.blit(building.image, (screen_x, b_screen_y))
+
+                        # Draw highlight mask if examining
+                        if self.examine_tile == (x, y) and self.examine_mask_points:
+                            mask_poly = [(mx + screen_x, my + b_screen_y) for mx, my in self.examine_mask_points]
+                            pg.draw.polygon(screen, (255, 255, 255), mask_poly, 3)
 
                 # Draw workers
                 worker = self.workers[x][y]
@@ -312,3 +337,12 @@ class World:
         # BUG FIX: changed `self.grid_length_x` to `self.grid_length_y` for the Y axis check
         world_bounds = (0 <= grid_pos[0] < self.grid_length_x) and (0 <= grid_pos[1] < self.grid_length_y)
         return world_bounds
+
+    def is_area_free(self, origin_x, origin_y, width, height):
+        for x in range(origin_x, origin_x + width):
+            for y in range(origin_y, origin_y + height):
+                if not (0 <= x < self.grid_length_x and 0 <= y < self.grid_length_y):
+                    return False
+                if self.world[x][y]["collision"]:
+                    return False
+        return True

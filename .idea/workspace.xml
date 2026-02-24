@@ -5,10 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="47aba308-f49c-4a93-9a5d-4695dc059ce0" name="Changes" comment="fixed the hovering of axe and hammer">
+      <change afterPath="$PROJECT_DIR$/game/sceneries.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/game/buildings.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/buildings.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/game/game.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/game.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/game/hud.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/hud.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/savegame.json" beforeDir="false" afterPath="$PROJECT_DIR$/savegame.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/game/resource_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/resource_manager.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/game/setting.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/setting.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/game/tools.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/tools.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/game/world.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/world.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/save_slot_1.json" beforeDir="false" afterPath="$PROJECT_DIR$/save_slot_1.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -58,7 +64,7 @@
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "axe-hover",
+    "git-widget-placeholder": "multidimension",
     "junie.onboarding.icon.badge.shown": "true",
     "to.speed.mode.migration.done": "true"
   }
@@ -163,6 +169,17 @@
     <option name="localTasksCounter" value="8" />
     <servers />
   </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="self.star to __init__" />
     <MESSAGE value="new file .env" />
@@ -181,10 +198,6 @@
           <url>file://$PROJECT_DIR$/main.py</url>
           <line>16</line>
           <option name="timeStamp" value="1" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/game/hud.py</url>
-          <option name="timeStamp" value="2" />
         </line-breakpoint>
       </breakpoints>
     </breakpoint-manager>
