@@ -33,6 +33,14 @@ class Hud:
         self._examined_tile = None
         self.examined_tile_scaled_img = None
 
+        self.hovered_tile = None
+        self.item_descriptions = {
+            "Axe": "Chops down trees.\nGrants 5 wood.",
+            "Hammer": "Demolishes buildings & rocks.\nGrants 5 stone.",
+            "Lumbermill": "Produces 1 wood\nevery 2 seconds.",
+            "Stonemasonry": "Produces 1 stone\nevery 2 seconds."
+        }
+
     @property
     def examined_tile(self):
         return self._examined_tile
@@ -78,20 +86,19 @@ class Hud:
         mouse_pos = pg.mouse.get_pos()
         mouse_action = pg.mouse.get_pressed()
 
+        self.hovered_tile = None
+
         # Right click deselects
         if mouse_action[2]:
             self.selected_tile = None
 
-        # Left click selects
-        if mouse_action[0]:
-            for tile in self.tiles:
-                if self.resource_manager.is_affordable(tile["name"]):
-                    tile["affordable"] = True
-                else:
-                    tile["affordable"] = False
-                if tile["rect"].collidepoint(mouse_pos) and tile["affordable"]:
+        for tile in self.tiles:
+            tile["affordable"] = self.resource_manager.is_affordable(tile["name"])
+            if tile["rect"].collidepoint(mouse_pos):
+                self.hovered_tile = tile
+                if mouse_action[0] and tile["affordable"]:
                     self.selected_tile = tile
-                    break  # Stop checking once we find a collision
+                    break
 
     def draw(self, screen):
         # Draw HUD elements using their pre-calculated Rects
@@ -120,11 +127,71 @@ class Hud:
             draw_text(screen, text, 30, (255, 255, 255), (pos_x, 0))
             pos_x += 100
 
+        if self.hovered_tile is not None:
+            self.draw_tooltip(screen, pg.mouse.get_pos(), self.hovered_tile)
+
+    def draw_tooltip(self, screen, mouse_pos, tile):
+        name = tile["name"]
+        desc = self.item_descriptions.get(name, "No description available.")
+
+        # 1. Format the cost text
+        costs = self.resource_manager.costs.get(name, {})
+        if costs:
+            cost_text = "Cost: " + ", ".join(f"{v} {k}" for k, v in costs.items())
+        else:
+            cost_text = "Cost: Free"
+
+        # 2. Setup fonts
+        font_title = pg.font.SysFont(None, 30)
+        font_desc = pg.font.SysFont(None, 24)
+
+        # 3. Render text surfaces
+        title_surf = font_title.render(name, True, (255, 255, 255))
+        cost_surf = font_desc.render(cost_text, True, (255, 200, 0))  # Gold color for cost
+
+        # Handle multi-line descriptions (split by \n)
+        desc_lines = desc.split('\n')
+        desc_surfs = [font_desc.render(line, True, (200, 200, 200)) for line in desc_lines]
+
+        # 4. Calculate dynamic box dimensions based on the widest/tallest text
+        max_text_width = max(title_surf.get_width(), cost_surf.get_width(), *(s.get_width() for s in desc_surfs))
+        box_width = max_text_width + 20  # Add padding
+
+        total_text_height = title_surf.get_height() + cost_surf.get_height() + sum(s.get_height() for s in desc_surfs)
+        box_height = total_text_height + 30  # Add padding and line spacing
+
+        # 5. Position the box (Offset to the top-left of the mouse so it doesn't cover the cursor)
+        box_x = mouse_pos[0] - box_width - 15
+        box_y = mouse_pos[1] - box_height - 15
+
+        # Prevent the tooltip from going off the left/top edges of the screen
+        if box_x < 0: box_x = mouse_pos[0] + 20
+        if box_y < 0: box_y = mouse_pos[1] + 20
+
+        # 6. Draw the background box and border
+        tooltip_rect = pg.Rect(box_x, box_y, box_width, box_height)
+        pg.draw.rect(screen, (30, 30, 30, 230), tooltip_rect)  # Dark gray background
+        pg.draw.rect(screen, (255, 255, 255), tooltip_rect, 2)  # White border
+
+        # 7. Blit the text surfaces onto the screen
+        current_y = box_y + 10
+        screen.blit(title_surf, (box_x + 10, current_y))
+        current_y += title_surf.get_height() + 5
+
+        for d_surf in desc_surfs:
+            screen.blit(d_surf, (box_x + 10, current_y))
+            current_y += d_surf.get_height() + 2
+
+        current_y += 5
+        screen.blit(cost_surf, (box_x + 10, current_y))
+
     @staticmethod
     def load_images():
         images = {
             "Lumbermill": pg.image.load("assets/graphics/building1.png").convert_alpha(),
-            "Stonemasonry": pg.image.load("assets/graphics/building2.png").convert_alpha()
+            "Stonemasonry": pg.image.load("assets/graphics/building2.png").convert_alpha(),
+            "Axe": pg.image.load("assets/graphics/axe.webp").convert_alpha(),
+            "Hammer": pg.image.load("assets/graphics/hammer.png").convert_alpha(),
         }
         return images
 
