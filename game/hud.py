@@ -34,6 +34,8 @@ class Hud:
         self.examined_tile_scaled_img = None
 
         self.hovered_tile = None
+        self.mouse_pressed = False
+
         self.item_descriptions = {
             "Axe": "Chops down trees.\nGrants 5 wood.",
             "Hammer": "Demolishes buildings & rocks.\nGrants 5 stone.",
@@ -68,13 +70,16 @@ class Hud:
             image_scale = self.scale_image(image, w=object_width)
             rect = image_scale.get_rect(topleft=(render_x, render_y))
 
+            item_type = "Tool" if image_name in ["Axe", "Hammer"] else "Building"
+
             tiles.append(
                 {
                     "name": image_name,
                     "icon": image_scale,
                     "image": image,
                     "rect": rect,
-                    "affordable": True
+                    "affordable": True,
+                    "type": item_type
                 }
             )
 
@@ -85,6 +90,7 @@ class Hud:
     def update(self):
         mouse_pos = pg.mouse.get_pos()
         mouse_action = pg.mouse.get_pressed()
+        self.mouse_pressed = mouse_action[0]
 
         self.hovered_tile = None
 
@@ -97,7 +103,9 @@ class Hud:
             if tile["rect"].collidepoint(mouse_pos):
                 self.hovered_tile = tile
                 if mouse_action[0] and tile["affordable"]:
-                    self.selected_tile = tile
+                    if self.selected_tile == tile:
+                        self.selected_tile = None
+                    else: self.selected_tile = tile
                     break
 
     def draw(self, screen, current_date=None, current_speed=1):
@@ -196,7 +204,7 @@ class Hud:
         images = {
             "Lumbermill": pg.image.load("assets/graphics/building1.png").convert_alpha(),
             "Stonemasonry": pg.image.load("assets/graphics/building2.png").convert_alpha(),
-            "Axe": pg.image.load("assets/graphics/axe.webp").convert_alpha(),
+            "Axe": pg.image.load("assets/graphics/axe.png").convert_alpha(),
             "Hammer": pg.image.load("assets/graphics/hammer.png").convert_alpha(),
         }
         return images

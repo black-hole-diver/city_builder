@@ -4,6 +4,7 @@ import noise
 from .setting import TILE_SIZE
 from .workers import Worker
 from .buildings import Lumbermill, Stonemasonry, Building
+from .tools import Axe, Hammer
 from typing import List, Optional
 
 class World:
@@ -46,6 +47,11 @@ class World:
             "Stonemasonry": Stonemasonry
         }
 
+        self.tools = {
+            "Axe": Axe(),
+            "Hammer": Hammer()
+        }
+
     def update(self, camera, game_paused):
         self.game_paused = game_paused
         mouse_pos = pg.mouse.get_pos()
@@ -72,45 +78,56 @@ class World:
                 collision = cell["collision"]
                 selected_name = self.hud.selected_tile["name"]
 
-                if selected_name == "Axe":
-                    can_chop = (cell["tile"] == "tree")
+                # if selected_name == "Axe":
+                #     can_chop = (cell["tile"] == "tree")
+                #     self.temp_tile = {
+                #         "image": img,
+                #         "render_pos": render_pos,
+                #         "iso_poly": iso_poly,
+                #         "collision": not can_chop,
+                #     }
+                #
+                #     if mouse_action[0] and can_chop and not self.game_paused:
+                #         self.world[grid_pos[0]][grid_pos[1]]["tile"] = ""
+                #         self.world[grid_pos[0]][grid_pos[1]]["collision"] = False
+                #         self.collision_matrix[grid_pos[1]][grid_pos[0]] = 1
+                #         self.resource_manager.resources["wood"] += 5
+                # elif selected_name == "Hammer":
+                #     has_building = self.buildings[grid_pos[0]][grid_pos[1]] is not None
+                #     is_rock = cell["tile"] == "rock"
+                #     can_demolish = has_building or is_rock
+                #     self.temp_tile = {
+                #         "image": img,
+                #         "render_pos": render_pos,
+                #         "iso_poly": iso_poly,
+                #         "collision": not can_demolish
+                #     }
+                #     if mouse_action[0] and can_demolish and not self.game_paused:
+                #         if has_building:
+                #             building_to_remove = self.buildings[grid_pos[0]][grid_pos[1]]
+                #             if building_to_remove in self.entities:
+                #                 self.entities.remove(building_to_remove)
+                #             self.buildings[grid_pos[0]][grid_pos[1]] = None
+                #             if self.examine_tile == (grid_pos[0], grid_pos[1]):
+                #                 self.examine_tile = None
+                #                 self.hud.examined_tile = None
+                #                 self.examine_mask_points = None
+                #         elif is_rock:
+                #             self.world[grid_pos[0]][grid_pos[1]]["tile"] = ""
+                #             self.resource_manager.resources["stone"] += 5
+                #         self.world[grid_pos[0]][grid_pos[1]]["collision"] = False
+                #         self.collision_matrix[grid_pos[1]][grid_pos[0]] = 1
+                if selected_name in self.tools:
+                    tool = self.tools[selected_name]
+                    can_use = tool.can_use(grid_pos, self)
                     self.temp_tile = {
                         "image": img,
                         "render_pos": render_pos,
                         "iso_poly": iso_poly,
-                        "collision": not can_chop,
+                        "collision": not can_use
                     }
-
-                    if mouse_action[0] and can_chop and not self.game_paused:
-                        self.world[grid_pos[0]][grid_pos[1]]["tile"] = ""
-                        self.world[grid_pos[0]][grid_pos[1]]["collision"] = False
-                        self.collision_matrix[grid_pos[1]][grid_pos[0]] = 1
-                        self.resource_manager.resources["wood"] += 5
-                elif selected_name == "Hammer":
-                    has_building = self.buildings[grid_pos[0]][grid_pos[1]] is not None
-                    is_rock = cell["tile"] == "rock"
-                    can_demolish = has_building or is_rock
-                    self.temp_tile = {
-                        "image": img,
-                        "render_pos": render_pos,
-                        "iso_poly": iso_poly,
-                        "collision": not can_demolish
-                    }
-                    if mouse_action[0] and can_demolish and not self.game_paused:
-                        if has_building:
-                            building_to_remove = self.buildings[grid_pos[0]][grid_pos[1]]
-                            if building_to_remove in self.entities:
-                                self.entities.remove(building_to_remove)
-                            self.buildings[grid_pos[0]][grid_pos[1]] = None
-                            if self.examine_tile == (grid_pos[0], grid_pos[1]):
-                                self.examine_tile = None
-                                self.hud.examined_tile = None
-                                self.examine_mask_points = None
-                        elif is_rock:
-                            self.world[grid_pos[0]][grid_pos[1]]["tile"] = ""
-                            self.resource_manager.resources["stone"] += 5
-                        self.world[grid_pos[0]][grid_pos[1]]["collision"] = False
-                        self.collision_matrix[grid_pos[1]][grid_pos[0]] = 1
+                    if mouse_action[0] and can_use and not self.game_paused:
+                        tool.use(grid_pos, self)
                 else:
                     self.temp_tile = {
                         "image": img,
