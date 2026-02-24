@@ -138,15 +138,15 @@ class Game:
                 WHITE,
                 (self.width // 2 - 200, self.height // 2 - 40)
             )
-
-        # Updated to use a modern Python f-string
-        draw_text(
-            self.screen,
-            f"FPS: {int(self.clock.get_fps())}",
-            25,
-            (255, 255, 255),
-            (10, 10)
-        )
+        #
+        # # Updated to use a modern Python f-string
+        # draw_text(
+        #     self.screen,
+        #     f"FPS: {int(self.clock.get_fps())}",
+        #     25,
+        #     (255, 255, 255),
+        #     (10, 10)
+        # )
 
         if self.notification_text != "":
             if pg.time.get_ticks() - self.notification_timer < 3_000:
