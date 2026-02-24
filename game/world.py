@@ -70,27 +70,68 @@ class World:
                 render_pos = cell["render_pos"]
                 iso_poly = cell["iso_poly"]
                 collision = cell["collision"]
+                selected_name = self.hud.selected_tile["name"]
 
-                self.temp_tile = {
-                    "image": img,
-                    "render_pos": render_pos,
-                    "iso_poly": iso_poly,
-                    "collision": collision
-                }
+                if selected_name == "Axe":
+                    can_chop = (cell["tile"] == "tree")
+                    self.temp_tile = {
+                        "image": img,
+                        "render_pos": render_pos,
+                        "iso_poly": iso_poly,
+                        "collision": not can_chop,
+                    }
 
-                # Place building
-                if mouse_action[0] and not collision and not self.game_paused:
-                    building_name = self.hud.selected_tile["name"]
-                    building_class = self.building_types.get(building_name)
+                    if mouse_action[0] and can_chop and not self.game_paused:
+                        self.world[grid_pos[0]][grid_pos[1]]["tile"] = ""
+                        self.world[grid_pos[0]][grid_pos[1]]["collision"] = False
+                        self.collision_matrix[grid_pos[1]][grid_pos[0]] = 1
+                        self.resource_manager.resources["wood"] += 5
+                elif selected_name == "Hammer":
+                    has_building = self.buildings[grid_pos[0]][grid_pos[1]] is not None
+                    is_rock = cell["tile"] == "rock"
+                    can_demolish = has_building or is_rock
+                    self.temp_tile = {
+                        "image": img,
+                        "render_pos": render_pos,
+                        "iso_poly": iso_poly,
+                        "collision": not can_demolish
+                    }
+                    if mouse_action[0] and can_demolish and not self.game_paused:
+                        if has_building:
+                            building_to_remove = self.buildings[grid_pos[0]][grid_pos[1]]
+                            if building_to_remove in self.entities:
+                                self.entities.remove(building_to_remove)
+                            self.buildings[grid_pos[0]][grid_pos[1]] = None
+                            if self.examine_tile == (grid_pos[0], grid_pos[1]):
+                                self.examine_tile = None
+                                self.hud.examined_tile = None
+                                self.examine_mask_points = None
+                        elif is_rock:
+                            self.world[grid_pos[0]][grid_pos[1]]["tile"] = ""
+                            self.resource_manager.resources["stone"] += 5
+                        self.world[grid_pos[0]][grid_pos[1]]["collision"] = False
+                        self.collision_matrix[grid_pos[1]][grid_pos[0]] = 1
+                else:
+                    self.temp_tile = {
+                        "image": img,
+                        "render_pos": render_pos,
+                        "iso_poly": iso_poly,
+                        "collision": collision
+                    }
 
-                    if building_class:
-                        building_image = self.hud.selected_tile["image"]
-                        ent = building_class(render_pos, building_image, self.resource_manager)
-                        self.entities.append(ent)
-                        self.buildings[grid_pos[0]][grid_pos[1]] = ent
-                        self.world[grid_pos[0]][grid_pos[1]]["collision"] = True
-                        self.collision_matrix[grid_pos[1]][grid_pos[0]] = 0
-                    self.hud.selected_tile = None
+                    # Place building
+                    if mouse_action[0] and not collision and not self.game_paused:
+                        building_name = self.hud.selected_tile["name"]
+                        building_class = self.building_types.get(building_name)
+
+                        if building_class:
+                            building_image = self.hud.selected_tile["image"]
+                            ent = building_class(render_pos, building_image, self.resource_manager)
+                            self.entities.append(ent)
+                            self.buildings[grid_pos[0]][grid_pos[1]] = ent
+                            self.world[grid_pos[0]][grid_pos[1]]["collision"] = True
+                            self.collision_matrix[grid_pos[1]][grid_pos[0]] = 0
+                        self.hud.selected_tile = None
 
         else:
             if self.can_place_tile(grid_pos):
