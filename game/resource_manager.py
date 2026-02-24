@@ -13,7 +13,9 @@ class ResourceManager:
             "Lumbermill": {"wood": 7, "stone": 3},
             "Stonemasonry": {"wood": 3, "stone": 5},
             "Axe":{},
-            "Hammer":{}
+            "Hammer":{},
+            "ResZone": {"wood":10, "stone":10},
+            "Stadium": {"wood":10, "stone":10}
         }
 
     def apply_cost_to_resource(self, building):

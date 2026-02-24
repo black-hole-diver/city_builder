@@ -40,7 +40,11 @@ class Hud:
             "Axe": "Chops down trees.\nGrants 5 wood.",
             "Hammer": "Demolishes buildings & rocks.\nGrants 5 stone.",
             "Lumbermill": "Produces 1 wood\nevery 2 seconds.",
-            "Stonemasonry": "Produces 1 stone\nevery 2 seconds."
+            "Stonemasonry": "Produces 1 stone\nevery 2 seconds.",
+            "ResZone": "Apartment complex for the residents",
+            "Tree": "A natural forest tree.\nUse an Axe to harvest 5 Wood.",
+            "Rock": "A solid rock formation.\nUse a Hammer to harvest 5 Stone.",
+            "Stadium": "Hosts massive events.\nIncreases happiness and clout."
         }
 
         self.save_btn_rect = pg.Rect(10,40,100,30)
@@ -63,6 +67,7 @@ class Hud:
 
     def create_build_hud(self):
         # Use existing rect properties instead of recalculating
+        start_x = self.build_rect.x + 10
         render_x = self.build_rect.x + 10
         render_y = self.build_rect.y + 10
         object_width = self.build_rect.width // 5
@@ -72,9 +77,19 @@ class Hud:
         for image_name, image in self.images.items():
             # pg.transform.scale creates a new surface, so .copy() is unnecessary
             image_scale = self.scale_image(image, w=object_width)
+
+            if render_x + image_scale.get_width() > self.build_rect.right - 10:
+                render_x = start_x
+                render_y += image_scale.get_height() + 10
+
             rect = image_scale.get_rect(topleft=(render_x, render_y))
 
             item_type = "Tool" if image_name in ["Axe", "Hammer"] else "Building"
+            w,h = 1,1
+            if image_name == "ResZone":
+                w,h = 4,4
+            if image_name == "Stadium":
+                w,h = 6,6
 
             tiles.append(
                 {
@@ -83,7 +98,9 @@ class Hud:
                     "image": image,
                     "rect": rect,
                     "affordable": True,
-                    "type": item_type
+                    "type": item_type,
+                    "grid_width": w,
+                    "grid_height": h
                 }
             )
 
@@ -116,7 +133,7 @@ class Hud:
             tile["affordable"] = self.resource_manager.is_affordable(tile["name"])
             if tile["rect"].collidepoint(mouse_pos):
                 self.hovered_tile = tile
-                if mouse_action[0] and tile["affordable"]:
+                if mouse_clicked and tile["affordable"]:
                     if self.selected_tile == tile:
                         self.selected_tile = None
                     else: self.selected_tile = tile
@@ -131,10 +148,36 @@ class Hud:
         if self.examined_tile is not None:
             screen.blit(self.select_surface, self.select_rect.topleft)
 
-            # Blit the pre-scaled image instead of scaling it every frame
-            screen.blit(self.examined_tile_scaled_img, (self.select_rect.x + 10, self.select_rect.y + 40))
+            # 1. Draw Title (Gold color)
+            title_text = self.examined_tile.name
+            draw_text(screen, title_text, 35, (255, 215, 0), (self.select_rect.x + 15, self.select_rect.y + 10))
 
-            draw_text(screen, self.examined_tile.name, 40, (255, 255, 255), self.select_rect.topleft)
+            # 2. Draw a clean dividing line
+            pg.draw.line(screen, (255, 255, 255), (self.select_rect.x + 15, self.select_rect.y + 40),
+                         (self.select_rect.right - 15, self.select_rect.y + 40))
+
+            # 3. Blit the building/nature image
+            img_x = self.select_rect.x + 15
+            img_y = self.select_rect.y + 50
+            screen.blit(self.examined_tile_scaled_img, (img_x, img_y))
+
+            # 4. Draw the Description Text
+            desc = self.item_descriptions.get(title_text, "A structure in your city.")
+            desc_x = img_x + self.examined_tile_scaled_img.get_width() + 15
+            desc_y = img_y
+
+            # Print multi-line text cleanly
+            for i, line in enumerate(desc.split('\n')):
+                draw_text(screen, line, 22, (220, 220, 220), (desc_x, desc_y + (i * 25)))
+
+            # 5. Show Status (Only applies to active buildings with a cooldown)
+            if hasattr(self.examined_tile, 'resource_cooldown'):
+                draw_text(screen, "Status: Operational", 22, (100, 255, 100), (desc_x, desc_y + 60))
+
+            # # Blit the pre-scaled image instead of scaling it every frame
+            # screen.blit(self.examined_tile_scaled_img, (self.select_rect.x + 10, self.select_rect.y + 40))
+            #
+            # draw_text(screen, self.examined_tile.name, 40, (255, 255, 255), self.select_rect.topleft)
 
         for tile in self.tiles:
             icon = tile["icon"].copy()
@@ -228,6 +271,8 @@ class Hud:
             "Stonemasonry": pg.image.load("assets/graphics/building2.png").convert_alpha(),
             "Axe": pg.image.load("assets/graphics/axe.png").convert_alpha(),
             "Hammer": pg.image.load("assets/graphics/hammer.png").convert_alpha(),
+            "ResZone": pg.image.load("assets/graphics/ResZone.png").convert_alpha(),
+            "Stadium": pg.image.load("assets/graphics/stadium.png").convert_alpha()
         }
         return images
 

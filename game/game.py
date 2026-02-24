@@ -222,7 +222,7 @@ class Game:
         self.notification_text = "Game Saved!"
         self.notification_timer = pg.time.get_ticks()
 
-    def load_game(self, filename="savegame.json"):
+    def load_game(self, filename="savegame.json", grid_pos=None):
         if not os.path.exists(filename):
             print("No save file found!")
             self.notification_text = "No save file found!"
@@ -270,7 +270,7 @@ class Game:
             if building_class:
                 # Grab the correct image from the HUD dictionary
                 image = self.hud.images.get(name)
-                ent = building_class(render_pos, image, self.resource_manager)
+                ent = building_class(render_pos, image, self.resource_manager, grid_pos)
 
                 # BUG PREVENTION: The Building class automatically charges resources upon creation.
                 # Since we are loading an existing game, we must refund this cost.
