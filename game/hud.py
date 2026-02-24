@@ -43,6 +43,10 @@ class Hud:
             "Stonemasonry": "Produces 1 stone\nevery 2 seconds."
         }
 
+        self.save_btn_rect = pg.Rect(10,40,100,30)
+        self.load_btn_rect = pg.Rect(120,40,100,30)
+        self.menu_action = None
+
     @property
     def examined_tile(self):
         return self._examined_tile
@@ -90,9 +94,19 @@ class Hud:
     def update(self):
         mouse_pos = pg.mouse.get_pos()
         mouse_action = pg.mouse.get_pressed()
+        mouse_clicked = mouse_action[0] and not self.mouse_pressed
         self.mouse_pressed = mouse_action[0]
 
         self.hovered_tile = None
+        self.menu_action = None
+
+        if mouse_clicked:
+            if self.save_btn_rect.collidepoint(mouse_pos):
+                self.menu_action = "SAVE"
+                return
+            elif self.load_btn_rect.collidepoint(mouse_pos):
+                self.menu_action = "LOAD"
+                return
 
         # Right click deselects
         if mouse_action[2]:
@@ -143,6 +157,14 @@ class Hud:
 
         if self.hovered_tile is not None:
             self.draw_tooltip(screen, pg.mouse.get_pos(), self.hovered_tile)
+
+        pg.draw.rect(screen, (70, 70, 70), self.save_btn_rect)
+        pg.draw.rect(screen, (255, 255, 255), self.save_btn_rect, 2)
+        draw_text(screen, "SAVE", 24, (255, 255, 255), (self.save_btn_rect.x + 25, self.save_btn_rect.y + 8))
+
+        pg.draw.rect(screen, (70, 70, 70), self.load_btn_rect)
+        pg.draw.rect(screen, (255, 255, 255), self.load_btn_rect, 2)
+        draw_text(screen, "LOAD", 24, (255, 255, 255), (self.load_btn_rect.x + 25, self.load_btn_rect.y + 8))
 
     def draw_tooltip(self, screen, mouse_pos, tile):
         name = tile["name"]
