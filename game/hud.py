@@ -100,7 +100,7 @@ class Hud:
                     self.selected_tile = tile
                     break
 
-    def draw(self, screen):
+    def draw(self, screen, current_date=None, current_speed=1):
         # Draw HUD elements using their pre-calculated Rects
         screen.blit(self.resource_surface, self.resource_rect.topleft)
         screen.blit(self.build_surface, self.build_rect.topleft)
@@ -126,6 +126,12 @@ class Hud:
             text = resource + ": " + str(resource_value)
             draw_text(screen, text, 30, (255, 255, 255), (pos_x, 0))
             pos_x += 100
+
+        if current_date:
+            date_str = current_date.strftime("%d %b %Y")
+            time_text = f"{date_str}  |  Speed: {current_speed}x"
+            draw_text(screen, time_text, 30, (255, 255, 255), (self.width // 2 - 350, 0))
+
 
         if self.hovered_tile is not None:
             self.draw_tooltip(screen, pg.mouse.get_pos(), self.hovered_tile)

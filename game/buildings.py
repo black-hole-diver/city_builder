@@ -11,9 +11,10 @@ class Building:
         self.resource_manager.apply_cost_to_resource(self.name)
         self.resource_cooldown = pg.time.get_ticks()
 
-    def update(self):
+    def update(self, game_speed=1):
         now = pg.time.get_ticks()
-        if now - self.resource_cooldown > 2000:
+        adjusted_cooldown = 2000 / game_speed
+        if now - self.resource_cooldown > adjusted_cooldown:
             self.resource_manager.resources[PRODUCE[self.name]] += 1
             self.resource_cooldown = now
 

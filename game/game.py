@@ -8,11 +8,11 @@ from .camera import Camera
 from .hud import Hud
 from .workers import Worker
 from .resource_manager import ResourceManager
-from .setting import INITIAL_WORKER, BACKGROUND_COLOR, WHITE, MAP_WIDTH
+from .setting import INITIAL_WORKER, BACKGROUND_COLOR, WHITE, MAP_WIDTH, SPEEDS
 
 import json
 import os
-
+import datetime
 
 class Game:
     def __init__(self, screen, clock):
@@ -22,7 +22,9 @@ class Game:
         self.clock = clock
         self.width, self.height = screen.get_size()
 
-
+        self.current_date = datetime.datetime(2000,1,1)
+        self.current_speed = 1
+        self.day_timer = 0
 
         # Shared list for all active game entities
         self.entities = []
@@ -91,6 +93,13 @@ class Game:
                 if event.key == pg.K_F9:
                     self.load_game()
 
+                if event.key == pg.K_1:
+                    self.current_speed = 1
+                if event.key == pg.K_2:
+                    self.current_speed = 2
+                if event.key == pg.K_3:
+                    self.current_speed = 3
+
     def update(self):
         self.camera.update()
         self.world.update(self.camera, self.paused)
@@ -100,12 +109,14 @@ class Game:
             # stars
             self.star_offset += .2
 
+            self.day_timer += self.clock.get_time()
+            if self.day_timer >= SPEEDS[self.current_speed]:
+                self.current_date += datetime.timedelta(days=1)
+                self.day_timer -= SPEEDS[self.current_speed]
+
             # Update all active entities
             for e in self.entities:
-                e.update()
-
-
-
+                e.update(self.current_speed)
 
     def draw(self):
         self.screen.fill(BACKGROUND_COLOR)
@@ -117,7 +128,7 @@ class Game:
             pg.draw.circle(self.screen, glow_color, (x, y), radius)
 
         self.world.draw(self.screen, self.camera)
-        self.hud.draw(self.screen)
+        self.hud.draw(self.screen, self.current_date, self.current_speed)
 
         if self.paused:
             draw_text(
@@ -163,6 +174,8 @@ class Game:
         data = {
             "resources": self.resource_manager.resources,
             "camera": {"x": self.camera.scroll.x, "y": self.camera.scroll.y},
+            "date": self.current_date.strftime("%Y-%m-%d"),
+            "speed": self.current_speed,
             "map":[],
             "buildings":[],
             "workers":[]
@@ -209,6 +222,11 @@ class Game:
         self.resource_manager.resources = data["resources"]
         self.camera.scroll.x = data["camera"]["x"]
         self.camera.scroll.y = data["camera"]["y"]
+
+        saved_date = data.get("date", "2000-01-01")
+        self.current_date = datetime.datetime.strptime(saved_date, "%Y-%m-%d")
+        self.current_speed = data.get("speed", 1)
+        self.day_timer = 0
 
         # 2. Clear current entities and map data
         self.entities.clear()
