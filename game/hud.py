@@ -40,9 +40,9 @@ class Hud:
         self.item_descriptions = {
             "Axe": "Chops down trees.\nGrants 5 wood.",
             "Hammer": "Demolishes buildings & rocks.\nGrants 5 stone.",
+            "ResZone": "Apartment complex for the residents",
             "Lumbermill": "Produces 1 wood\nevery 2 seconds.",
             "Stonemasonry": "Produces 1 stone\nevery 2 seconds.",
-            "ResZone": "Apartment complex for the residents",
             "Tree": "A natural forest tree.\nUse an Axe to harvest 5 Wood.",
             "Rock": "A solid rock formation.\nUse a Hammer to harvest 5 Stone.",
             "Stadium": "Hosts massive events.\nIncreases happiness and clout."
@@ -180,26 +180,63 @@ class Hud:
                 draw_text(screen, line, 22, (220, 220, 220), (desc_x, desc_y + (i * 25)))
 
             # 5. Show Status (Only applies to active buildings with a cooldown)
-            if hasattr(self.examined_tile, 'resource_cooldown'):
-                draw_text(screen, "Status: Operational", 22, (100, 255, 100), (desc_x, desc_y + 60))
+            # 5. Show Status (Check if the examined tile is a Zone)
+            if hasattr(self.examined_tile, 'capacity'):
+                cap = self.examined_tile.capacity
+                occ = self.examined_tile.occupants
+                percent = int((occ / cap) * 100) if cap > 0 else 0
 
-            # # Blit the pre-scaled image instead of scaling it every frame
-            # screen.blit(self.examined_tile_scaled_img, (self.select_rect.x + 10, self.select_rect.y + 40))
-            #
-            # draw_text(screen, self.examined_tile.name, 40, (255, 255, 255), self.select_rect.topleft)
+                # Draw Saturation
+                status_text = f"Saturation: {occ}/{cap} ({percent}%)"
+                draw_text(screen, status_text, 22, (200, 200, 255), (desc_x, desc_y + 60))
+
+                # NEW: Draw Local Satisfaction
+                if hasattr(self.examined_tile, 'local_satisfaction'):
+                    sat = self.examined_tile.local_satisfaction
+                    sat_text = f"Local Satisfaction: {sat}%"
+
+                    # Color code it just like the top bar
+                    if sat > 75:
+                        sat_color = (100, 255, 100)  # Green
+                    elif sat > 50:
+                        sat_color = (255, 255, 100)  # Yellow
+                    else:
+                        sat_color = (255, 100, 100)  # Red
+
+                    draw_text(screen, sat_text, 22, sat_color, (desc_x, desc_y + 85))
 
         for tile in self.tiles:
             icon = tile["icon"].copy()
             if not tile["affordable"]: icon.set_alpha(100)
             screen.blit(icon, tile["rect"].topleft)
 
-        # Resource text
-        pos_x = self.width - 400
+        # --- TOP BAR: CITY STATS ---
+        # Positioned to the top right
+        pos_x = self.width - 600
 
-        for resource, resource_value in self.resource_manager.resources.items():
-            text = resource + ": " + str(resource_value)
-            draw_text(screen, text, 30, (255, 255, 255), (pos_x, 0))
-            pos_x += 100
+        # 1. Funds
+        funds_text = f"Funds: ${self.resource_manager.funds:,}"
+        # Make it red if funds are negative (operating on credit)
+        funds_color = (255, 100, 100) if self.resource_manager.funds < 0 else (255, 255, 255)
+        draw_text(screen, funds_text, 30, funds_color, (pos_x, 0))
+        pos_x += 200
+
+        # 2. Population
+        pop_text = f"Pop: {self.resource_manager.population:,}"
+        draw_text(screen, pop_text, 30, (255, 255, 255), (pos_x, 0))
+        pos_x += 150
+
+        # 3. Satisfaction
+        sat_text = f"Sat: {self.resource_manager.satisfaction}%"
+        # Color code satisfaction: Green (>75%), Yellow (50-75%), Red (<50%)
+        if self.resource_manager.satisfaction > 75:
+            sat_color = (100, 255, 100)
+        elif self.resource_manager.satisfaction > 50:
+            sat_color = (255, 255, 100)
+        else:
+            sat_color = (255, 100, 100)
+
+        draw_text(screen, sat_text, 30, sat_color, (pos_x, 0))
 
         if current_date:
             date_str = current_date.strftime("%d %b %Y")
@@ -223,9 +260,9 @@ class Hud:
         desc = self.item_descriptions.get(name, "No description available.")
 
         # 1. Format the cost text
-        costs = self.resource_manager.costs.get(name, {})
-        if costs:
-            cost_text = "Cost: " + ", ".join(f"{v} {k}" for k, v in costs.items())
+        cost = self.resource_manager.costs.get(name, 0)
+        if cost > 0:
+            cost_text = f"Cost: ${cost:,}"
         else:
             cost_text = "Cost: Free"
 
@@ -276,8 +313,6 @@ class Hud:
     @staticmethod
     def load_images():
         images = {
-            "Lumbermill": pg.image.load(BUILDING1_URL).convert_alpha(),
-            "Stonemasonry": pg.image.load(BUILDING2_URL).convert_alpha(),
             "Axe": pg.image.load(AXE_URL).convert_alpha(),
             "Hammer": pg.image.load(HAMMER_URL).convert_alpha(),
             "ResZone": pg.image.load(RESZONE_URL).convert_alpha(),
