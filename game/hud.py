@@ -1,13 +1,14 @@
 import pygame as pg
-from .utils import draw_text
 
+from .setting import *
+from .utils import draw_text
 
 class Hud:
     def __init__(self, resource_manager, width, height):
         self.resource_manager = resource_manager
         self.width = width
         self.height = height
-        self.hud_colour = (198, 155, 93, 175)
+        self.hud_colour = HUD_COLOR
 
         # Resource HUD
         self.resource_surface = pg.Surface((width, height * 0.02), pg.SRCALPHA)
@@ -60,8 +61,16 @@ class Hud:
         """Cache the scaled image when a new tile is examined to save FPS."""
         self._examined_tile = tile
         if tile is not None:
-            h = self.select_rect.height
-            self.examined_tile_scaled_img = self.scale_image(tile.image, h=h * 0.7)
+            max_w = self.select_rect.width * .25
+            max_h = self.select_rect.height * .6
+            orig_w = tile.image.get_width()
+            orig_h = tile.image.get_height()
+            scale_w = max_w / orig_w
+            scale_h = max_h / orig_h
+            scale = min(scale_w, scale_h)
+            final_w = int(orig_w * scale)
+            final_h = int(orig_h * scale)
+            self.examined_tile_scaled_img = pg.transform.smoothscale(tile.image, (final_w, final_h))
         else:
             self.examined_tile_scaled_img = None
 
@@ -267,12 +276,12 @@ class Hud:
     @staticmethod
     def load_images():
         images = {
-            "Lumbermill": pg.image.load("assets/graphics/building1.png").convert_alpha(),
-            "Stonemasonry": pg.image.load("assets/graphics/building2.png").convert_alpha(),
-            "Axe": pg.image.load("assets/graphics/axe.png").convert_alpha(),
-            "Hammer": pg.image.load("assets/graphics/hammer.png").convert_alpha(),
-            "ResZone": pg.image.load("assets/graphics/ResZone.png").convert_alpha(),
-            "Stadium": pg.image.load("assets/graphics/stadium.png").convert_alpha()
+            "Lumbermill": pg.image.load(BUILDING1_URL).convert_alpha(),
+            "Stonemasonry": pg.image.load(BUILDING2_URL).convert_alpha(),
+            "Axe": pg.image.load(AXE_URL).convert_alpha(),
+            "Hammer": pg.image.load(HAMMER_URL).convert_alpha(),
+            "ResZone": pg.image.load(RESZONE_URL).convert_alpha(),
+            "Stadium": pg.image.load(STADIUM_URL).convert_alpha()
         }
         return images
 
