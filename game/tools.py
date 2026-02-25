@@ -20,7 +20,6 @@ class Axe(Tool):
             world.world[grid_pos[0]][grid_pos[1]]["tile"] = ""
             world.world[grid_pos[0]][grid_pos[1]]["collision"] = False
             world.collision_matrix[grid_pos[1]][grid_pos[0]] = 1
-            world.resource_manager.resources["wood"] += 5
 
 class Hammer(Tool):
     def __init__(self):
@@ -61,7 +60,6 @@ class Hammer(Tool):
 
             elif is_rock:
                 world.world[grid_pos[0]][grid_pos[1]]["tile"] = ""
-                world.resource_manager.resources["stone"] += 5
 
                 # Free up the tile for rocks
                 world.world[grid_pos[0]][grid_pos[1]]["collision"] = False

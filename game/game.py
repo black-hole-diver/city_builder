@@ -8,7 +8,7 @@ from .camera import Camera
 from .hud import Hud
 from .workers import Worker
 from .resource_manager import ResourceManager
-from .setting import INITIAL_WORKER, BACKGROUND_COLOR, WHITE, MAP_WIDTH, SPEEDS
+from .setting import *
 
 import json
 import os
@@ -121,10 +121,16 @@ class Game:
             # stars
             self.star_offset += .2
 
+            old_year = self.current_date.year
             self.day_timer += self.clock.get_time()
             if self.day_timer >= SPEEDS[self.current_speed]:
                 self.current_date += datetime.timedelta(days=1)
                 self.day_timer -= SPEEDS[self.current_speed]
+
+            if self.current_date.year > old_year:
+                income, expense = self.resource_manager.apply_annual_budget(self.world)
+                self.notification_text += f"Yearly Budget: +${income} | -${expense}"
+                self.notification_timer = pg.time.get_ticks()
 
             # Update all active entities
             for e in self.entities:
@@ -155,13 +161,13 @@ class Game:
             )
         #
         # # Updated to use a modern Python f-string
-        # draw_text(
-        #     self.screen,
-        #     f"FPS: {int(self.clock.get_fps())}",
-        #     25,
-        #     (255, 255, 255),
-        #     (10, 10)
-        # )
+        draw_text(
+            self.screen,
+            f"FPS: {int(self.clock.get_fps())}",
+            25,
+            (255, 255, 255),
+            (10, 10)
+        )
 
         if self.notification_text != "":
             if pg.time.get_ticks() - self.notification_timer < 3_000:
@@ -187,7 +193,10 @@ class Game:
     def save_game(self, filename="savegame.json"):
         print("Saving game...")
         data = {
-            "resources": self.resource_manager.resources,
+            "funds": self.resource_manager.funds,
+            "population": self.resource_manager.population,
+            "satisfaction": self.resource_manager.satisfaction,
+
             "camera": {"x": self.camera.scroll.x, "y": self.camera.scroll.y},
             "date": self.current_date.strftime("%Y-%m-%d"),
             "speed": self.current_speed,
@@ -205,7 +214,7 @@ class Game:
         for x in range(self.world.grid_length_x):
             for y in range(self.world.grid_length_y):
                 b = self.world.buildings[x][y]
-                if b is not None:
+                if b is not None and b.origin == (x,y):
                     data["buildings"].append({"name": b.name, "x": x, "y": y})
 
         # 3. Save Workers
@@ -234,7 +243,10 @@ class Game:
             data = json.load(f)
 
         # 1. Restore Resources & Camera
-        self.resource_manager.resources = data["resources"]
+        self.resource_manager.funds = data.get("funds", 20_800)
+        self.resource_manager.population = data.get("population", 0)
+        self.resource_manager.satisfaction = data.get("satisfaction", 100)
+
         self.camera.scroll.x = data["camera"]["x"]
         self.camera.scroll.y = data["camera"]["y"]
 
@@ -268,18 +280,21 @@ class Game:
             building_class = self.world.building_types.get(name)
 
             if building_class:
-                # Grab the correct image from the HUD dictionary
                 image = self.hud.images.get(name)
-                ent = building_class(render_pos, image, self.resource_manager, grid_pos)
+                ent = building_class(render_pos, image, self.resource_manager, (x,y))
 
                 # BUG PREVENTION: The Building class automatically charges resources upon creation.
                 # Since we are loading an existing game, we must refund this cost.
-                for res, cost in self.resource_manager.costs.get(name, {}).items():
-                    self.resource_manager.resources[res] += cost
+                refund_amount = self.resource_manager.costs.get(name, 0)
+                self.resource_manager.funds += refund_amount
 
                 self.entities.append(ent)
-                self.world.buildings[x][y] = ent
-                self.world.world[x][y]["collision"] = True
+                b_w = ent.grid_width
+                b_h = ent.grid_height
+                for i in range(x,x+b_w):
+                    for j in range(y,y+b_h):
+                        self.world.buildings[i][j] = ent
+                        self.world.world[i][j]["collision"] = True
 
         # 5. Restore Workers
         for w_data in data["workers"]:

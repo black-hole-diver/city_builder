@@ -3,7 +3,7 @@ import random
 import noise
 from .setting import *
 from .workers import Worker
-from .buildings import Lumbermill, Stonemasonry, Building, ResZone, Stadium
+from .buildings import *
 from .tools import Axe, Hammer
 from typing import List, Optional
 from .sceneries import Scenery
@@ -44,10 +44,9 @@ class World:
 
         # Map string names to classes for cleaner building instantiation
         self.building_types = {
-            "Lumbermill": Lumbermill,
-            "Stonemasonry": Stonemasonry,
-            "ResZone": ResZone,
-            "Stadium": Stadium
+            "ResZone" : ResZone,
+            "Stadium" : Stadium,
+            "Police" : Police
         }
 
         self.tools = {
