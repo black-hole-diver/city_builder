@@ -1,7 +1,7 @@
 import pygame as pg
 import random
 import noise
-from .setting import TILE_SIZE
+from .setting import *
 from .workers import Worker
 from .buildings import Lumbermill, Stonemasonry, Building, ResZone, Stadium
 from .tools import Axe, Hammer
@@ -109,11 +109,16 @@ class World:
 
                     multi_iso_poly = [self.cart_to_iso(x,y) for x, y in multi_rect]
 
+                    minx = min(px for px, py in multi_iso_poly)
+                    miny = min(py for px, py in multi_iso_poly)
+
                     self.temp_tile = {
                         "image": img,
-                        "render_pos": render_pos,
+                        "render_pos": (minx, miny),
                         "iso_poly": multi_iso_poly,
-                        "collision": not can_build
+                        "collision": not can_build,
+                        "b_w": b_width,
+                        "b_h": b_height
                     }
 
                     # Place building
@@ -161,70 +166,91 @@ class World:
         offset_x = self.grass_tiles.get_width() / 2 + camera.scroll.x
         offset_y = camera.scroll.y
 
+        render_queue = []
+
         for x in range(self.grid_length_x):
             for y in range(self.grid_length_y):
                 render_pos = self.world[x][y]["render_pos"]
-
-                # Calculate final screen coordinates for this specific tile
                 screen_x = render_pos[0] + offset_x
 
-                # Draw world tiles
+                # --- World Tiles (Trees, Rocks) ---
                 tile_key = self.world[x][y]["tile"]
                 if tile_key != "":
                     tile_img = self.tiles[tile_key]
                     screen_y = render_pos[1] - (tile_img.get_height() - TILE_SIZE) + offset_y
-                    screen.blit(tile_img, (screen_x, screen_y))
 
-                    if self.examine_tile == (x,y) and self.buildings[x][y] is None and self.examine_mask_points:
-                        mask_poly = [(mx + screen_x, my + screen_y) for mx, my in self.examine_mask_points]
-                        pg.draw.polygon(screen, (255, 255, 255), mask_poly, 3)
+                    # Calculate isometric depth (x + width + y + height)
+                    depth = x + 1 + y + 1
 
-                # Draw buildings
+                    mask = None
+                    if self.examine_tile == (x, y) and self.buildings[x][y] is None and self.examine_mask_points:
+                        mask = [(mx + screen_x, my + screen_y) for mx, my in self.examine_mask_points]
+
+                    render_queue.append({
+                        "image": tile_img,
+                        "pos": (screen_x, screen_y),
+                        "depth": depth,
+                        "mask": mask
+                    })
+
+                # --- Buildings ---
                 building = self.buildings[x][y]
-                if building is not None:
-                    # 1. ONLY draw if the loop is on the building's origin tile
-                    if building.origin == (x, y):
+                if building is not None and building.origin == (x, y):
+                    b_w = building.grid_width
+                    b_h = building.grid_height
 
-                        # 2. Calculate the massive footprint of the building
-                        cart_x = x * TILE_SIZE
-                        cart_y = y * TILE_SIZE
-                        b_w = building.grid_width
-                        b_h = building.grid_height
+                    cart_x = x * TILE_SIZE
+                    cart_y = y * TILE_SIZE
+                    multi_rect = [
+                        (cart_x, cart_y),
+                        (cart_x + b_w * TILE_SIZE, cart_y),
+                        (cart_x + b_w * TILE_SIZE, cart_y + b_h * TILE_SIZE),
+                        (cart_x, cart_y + b_h * TILE_SIZE)
+                    ]
+                    multi_iso = [self.cart_to_iso(px, py) for px, py in multi_rect]
+                    minx = min(px for px, py in multi_iso)
+                    miny = min(py for px, py in multi_iso)
 
-                        multi_rect = [
-                            (cart_x, cart_y),
-                            (cart_x + b_w * TILE_SIZE, cart_y),
-                            (cart_x + b_w * TILE_SIZE, cart_y + b_h * TILE_SIZE),
-                            (cart_x, cart_y + b_h * TILE_SIZE)
-                        ]
+                    b_screen_x = minx + offset_x
+                    floor_height = (b_w + b_h) * (TILE_SIZE / 2)
+                    b_screen_y = miny - (building.image.get_height() - floor_height) + offset_y
 
-                        # 3. Find the true boundaries in isometric space
-                        multi_iso = [self.cart_to_iso(px, py) for px, py in multi_rect]
-                        minx = min(px for px, py in multi_iso)
-                        miny = min(py for px, py in multi_iso)
+                    # Calculate depth specifically for multi-tile buildings
+                    depth = x + b_w + y + b_h
 
-                        # 4. Apply the massive image alignment math
-                        screen_x = minx + offset_x
+                    mask = None
+                    if self.examine_tile == (x, y) and self.examine_mask_points:
+                        mask = [(mx + b_screen_x, my + b_screen_y) for mx, my in self.examine_mask_points]
 
-                        # The base floor height of an isometric diamond is (W + H) * (TILE_SIZE / 2)
-                        floor_height = (b_w + b_h) * (TILE_SIZE / 2)
-                        b_screen_y = miny - (building.image.get_height() - floor_height) + offset_y
+                    render_queue.append({
+                        "image": building.image,
+                        "pos": (b_screen_x, b_screen_y),
+                        "depth": depth,
+                        "mask": mask
+                    })
 
-                        screen.blit(building.image, (screen_x, b_screen_y))
-
-                        # Draw highlight mask if examining
-                        if self.examine_tile == (x, y) and self.examine_mask_points:
-                            mask_poly = [(mx + screen_x, my + b_screen_y) for mx, my in self.examine_mask_points]
-                            pg.draw.polygon(screen, (255, 255, 255), mask_poly, 3)
-
-                # Draw workers
+                # --- Workers ---
                 worker = self.workers[x][y]
                 if worker is not None:
-                    screen.blit(worker.image,(
-                        render_pos[0] + offset_x, render_pos[1] - (worker.image.get_height() - TILE_SIZE) + offset_y,
-                    ))
+                    w_screen_y = render_pos[1] - (worker.image.get_height() - TILE_SIZE) + offset_y
+                    depth = x + 1 + y + 1
+                    render_queue.append({
+                        "image": worker.image,
+                        "pos": (render_pos[0] + offset_x, w_screen_y),
+                        "depth": depth,
+                        "mask": None
+                    })
 
-        # Draw "Ghost" Temp Tile
+        # 2. Sort the queue by our calculated depth!
+        render_queue.sort(key=lambda q_item: q_item["depth"])
+
+        # 3. Render everything from back-to-front
+        for item in render_queue:
+            screen.blit(item["image"], item["pos"])
+            if item["mask"]:
+                pg.draw.polygon(screen, (255, 255, 255), item["mask"], 3)
+
+        # 4. Draw Ghost Tile last so it stays completely visible as a UI overlay
         if self.temp_tile is not None:
             iso_poly = self.temp_tile["iso_poly"]
             shifted_poly = [(px + offset_x, py + offset_y) for px, py in iso_poly]
@@ -234,7 +260,11 @@ class World:
 
             render_pos = self.temp_tile["render_pos"]
             img = self.temp_tile["image"]
-            screen_y = render_pos[1] - (img.get_height() - TILE_SIZE) + offset_y
+            b_w = self.temp_tile.get("b_w", 1)
+            b_h = self.temp_tile.get("b_h", 1)
+
+            floor_height = (b_w + b_h) * (TILE_SIZE / 2)
+            screen_y = render_pos[1] - (img.get_height() - floor_height) + offset_y
 
             screen.blit(img, (render_pos[0] + offset_x, screen_y))
 
@@ -319,11 +349,11 @@ class World:
     @staticmethod
     def load_images():
         return {
-            "building1": pg.image.load("assets/graphics/building1.png").convert_alpha(),
-            "building2": pg.image.load("assets/graphics/building2.png").convert_alpha(),
-            "tree": pg.image.load("assets/graphics/tree.png").convert_alpha(),
-            "rock": pg.image.load("assets/graphics/rock.png").convert_alpha(),
-            "block": pg.image.load("assets/graphics/block.png").convert_alpha()
+            "building1": pg.image.load(BUILDING1_URL).convert_alpha(),
+            "building2": pg.image.load(BUILDING2_URL).convert_alpha(),
+            "tree": pg.image.load(TREE_URL).convert_alpha(),
+            "rock": pg.image.load(ROCK_URL).convert_alpha(),
+            "block": pg.image.load(BLOCK_URL).convert_alpha()
         }
 
     def can_place_tile(self, grid_pos):
