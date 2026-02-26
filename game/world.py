@@ -154,6 +154,8 @@ class World:
                                 for e in self.entities:
                                     if hasattr(e, "has_road_access"):
                                         e.has_road_access = self.has_road_access(e.origin[0], e.origin[1], e.grid_width, e.grid_height)
+                                # Recalculate satisfaction immediately for better responsiveness
+                                self.game.calculate_satisfaction_and_growth()
                             
                             # Initial image update for zones
                             if hasattr(ent, "update_image"):
@@ -167,6 +169,8 @@ class World:
                                 self.game.add_notification("ROAD CONNECTED", (200, 200, 200))
                             elif building_name in ["Police", "Stadium", "FireStation", "School", "University", "PowerPlant"]:
                                 self.game.add_notification(f"NEW {building_name.upper()} BUILT!", (255, 255, 100))
+                                # Recalculate satisfaction immediately to apply new bonuses
+                                self.game.calculate_satisfaction_and_growth()
 
                         self.hud.selected_tile = None
                         self.examine_tile = None

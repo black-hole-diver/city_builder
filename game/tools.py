@@ -56,10 +56,10 @@ class Hammer(Tool):
                 # Refund logic
                 refund_percent = BUILDING_REFUND_PERCENT
                 if hasattr(building_to_remove, "occupants"):
-                    # Zone refund logic: only if no construction (occupants == 0)
+                    # Zone refund logic: 50% refund (as per requirement)
+                    refund_percent = ZONE_REFUND_PERCENT
+                    
                     if building_to_remove.occupants > 0:
-                        refund_percent = 0 # No refund if construction has taken place
-                        
                         # Population logic: handle disappeared or displaced citizens
                         if building_to_remove.name == "ResZone":
                             # People in residential zones disappear from the city
@@ -88,8 +88,6 @@ class Hammer(Tool):
 
                         # For IndZone/SerZone, they are workers and will be redistributed in next game update
                         # since population doesn't change, but they lose their current workplace.
-                    else:
-                        refund_percent = ZONE_REFUND_PERCENT
                 
                 cost = world.resource_manager.costs.get(building_to_remove.name, 0)
                 world.resource_manager.funds += int(cost * refund_percent)

@@ -34,6 +34,7 @@ class Game:
         self.resource_manager = ResourceManager()
 
         self.hud = Hud(self.resource_manager,self.width, self.height)
+        self.hud.game = self # Give HUD a reference to game
         self.world = World(self, self.resource_manager, self.entities, self.hud, 50, 50, self.width, self.height)
         
         # Robust worker spawning: search for free tile
@@ -100,6 +101,17 @@ class Game:
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 self.quit_game()
+            if event.type == pg.VIDEORESIZE:
+                self.width, self.height = event.w, event.h
+                self.screen = pg.display.set_mode((self.width, self.height), pg.RESIZABLE)
+                self.hud.width = self.width
+                self.hud.height = self.height
+                # Re-initialize HUD components that depend on screen size
+                self.hud.__init__(self.resource_manager, self.width, self.height)
+                self.camera.width = self.width
+                self.camera.height = self.height
+                # Update background to match new size
+                self.background = self.create_starry_background()
             if event.type == pg.KEYDOWN:
                 if event.key == pg.K_ESCAPE:
                     if self.menu_state is not None:
@@ -276,29 +288,38 @@ class Game:
                 if ratio > 2 or ratio < 0.5:
                     total_sat -= 10
         
-        # Calculate individual zone satisfaction
-        for rz in res_zones:
+        # Calculate individual zone satisfaction for ALL zones (Res, Ind, Ser)
+        all_zones = res_zones + ind_zones + ser_zones
+        for rz in all_zones:
             rz.local_satisfaction = total_sat
             if not rz.has_road_access:
                 rz.local_satisfaction = 0 # No satisfaction if no road
+                rz.bonuses = [] # Clear bonuses if no road access
                 continue
 
             # Police/Stadium bonus
+            rz.bonuses = []
             for s in services:
                 # Service building itself needs road access to provide benefit
                 if not s.has_road_access: continue
                 
-                dist = ((rz.origin[0]-s.origin[0])**2 + (rz.origin[1]-s.origin[1])**2)**0.5
+                dist = ((rz.origin[0]+rz.grid_width/2 - (s.origin[0]+s.grid_width/2))**2 + 
+                        (rz.origin[1]+rz.grid_height/2 - (s.origin[1]+s.grid_height/2))**2)**0.5
                 if s.name == "Police" and dist < POLICE_RADIUS:
                     rz.local_satisfaction += 10
+                    rz.bonuses.append("Safety Bonus (+10)")
                 if s.name == "Stadium" and dist < STADIUM_RADIUS:
                     rz.local_satisfaction += 15
+                    rz.bonuses.append("Stadium Bonus (+15)")
             
-            # Proximity to Industry (Negative)
-            for iz in ind_zones:
-                dist = ((rz.origin[0]-iz.origin[0])**2 + (rz.origin[1]-iz.origin[1])**2)**0.5
-                if dist < INDUSTRIAL_NEGATIVE_RADIUS:
-                    rz.local_satisfaction -= 10
+            # Proximity to Industry (Negative for Residential)
+            if isinstance(rz, ResZone):
+                for iz in ind_zones:
+                    dist = ((rz.origin[0]+rz.grid_width/2 - (iz.origin[0]+iz.grid_width/2))**2 + 
+                            (rz.origin[1]+rz.grid_height/2 - (iz.origin[1]+iz.grid_height/2))**2)**0.5
+                    if dist < INDUSTRIAL_NEGATIVE_RADIUS:
+                        rz.local_satisfaction -= 10
+                        rz.bonuses.append("Industrial Pollution (-10)")
             
             rz.local_satisfaction = max(0, min(100, rz.local_satisfaction))
 
@@ -456,6 +477,8 @@ class Game:
             "satisfaction": self.resource_manager.satisfaction,
             "years_negative_budget": self.resource_manager.years_negative_budget,
             "is_mayor_replaced": self.resource_manager.is_mayor_replaced,
+            "tax_per_citizen": self.resource_manager.tax_per_citizen,
+            "total_loan_amount": self.resource_manager.total_loan_amount,
 
             "camera": {"x": self.camera.scroll.x, "y": self.camera.scroll.y},
             "date": self.current_date.strftime("%Y-%m-%d"),
@@ -511,6 +534,8 @@ class Game:
         self.resource_manager.satisfaction = data.get("satisfaction", 100)
         self.resource_manager.years_negative_budget = data.get("years_negative_budget", 0)
         self.resource_manager.is_mayor_replaced = data.get("is_mayor_replaced", False)
+        self.resource_manager.tax_per_citizen = data.get("tax_per_citizen", 10)
+        self.resource_manager.total_loan_amount = data.get("total_loan_amount", 0)
 
         self.camera.scroll.x = data["camera"]["x"]
         self.camera.scroll.y = data["camera"]["y"]

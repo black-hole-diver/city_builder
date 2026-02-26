@@ -73,9 +73,23 @@ class Hud:
             "PowerPlant": "Power Plant.\nGenerates electricity. Must be adjacent to zones or connected via power lines."
         }
 
-        self.save_btn_rect = pg.Rect(10,40,100,30)
-        self.load_btn_rect = pg.Rect(120,40,100,30)
+        # --- NEW: Improved Button Layout ---
+        # 1. System Controls (Top Left)
+        self.save_btn_rect = pg.Rect(20, 45, 100, 35)
+        self.load_btn_rect = pg.Rect(130, 45, 100, 35)
+        
+        # 2. Financial Controls (Top Center-Left, further from System Controls)
+        finance_start_x = 280
+        self.tax_plus_rect = pg.Rect(finance_start_x, 45, 35, 35)
+        self.tax_minus_rect = pg.Rect(finance_start_x + 45, 45, 35, 35)
+        self.loan_btn_rect = pg.Rect(finance_start_x + 100, 45, 120, 35)
+        self.repay_btn_rect = pg.Rect(finance_start_x + 230, 45, 120, 35)
+
+        self.help_btn_rect = pg.Rect(20, self.height - 60, 100, 35)
+        self.show_help = False
+
         self.menu_action = None
+        self.game = None # Set by Game class
 
     @property
     def examined_tile(self):
@@ -193,6 +207,25 @@ class Hud:
             elif self.load_btn_rect.collidepoint(mouse_pos):
                 self.menu_action = "LOAD"
                 return
+            
+            # Budget interactions
+            elif self.tax_plus_rect.collidepoint(mouse_pos):
+                self.resource_manager.tax_per_citizen += 1
+                if self.game: self.game.add_notification(f"TAX INCREASED: ${self.resource_manager.tax_per_citizen}", (255, 255, 100))
+            elif self.tax_minus_rect.collidepoint(mouse_pos):
+                if self.resource_manager.tax_per_citizen > 0:
+                    self.resource_manager.tax_per_citizen -= 1
+                    if self.game: self.game.add_notification(f"TAX DECREASED: ${self.resource_manager.tax_per_citizen}", (100, 255, 255))
+            elif self.loan_btn_rect.collidepoint(mouse_pos):
+                self.resource_manager.take_loan(1000)
+                if self.game: self.game.add_notification("LOAN TAKEN: +$1,000", (100, 255, 100))
+            elif self.repay_btn_rect.collidepoint(mouse_pos):
+                if self.resource_manager.repay_loan(1000):
+                    if self.game: self.game.add_notification("LOAN REPAID: -$1,000", (255, 215, 0))
+                else:
+                    if self.game: self.game.add_notification("NOT ENOUGH FUNDS OR NO LOAN", (255, 100, 100))
+            elif self.help_btn_rect.collidepoint(mouse_pos):
+                self.show_help = not self.show_help
 
         # Right click deselects
         if mouse_action[2]:
@@ -239,20 +272,14 @@ class Hud:
             
             # Show occupancy/local satisfaction in description area for zones
             if hasattr(self.examined_tile, 'capacity'):
-                cap = self.examined_tile.capacity
-                occ = self.examined_tile.occupants
-                percent = int((occ / cap) * 100) if cap > 0 else 0
-                desc += f"\n\nLocal Population: {occ}/{cap} ({percent}%)"
-                
-                if hasattr(self.examined_tile, 'local_satisfaction'):
-                    sat = self.examined_tile.local_satisfaction
-                    desc += f"\nLocal Satisfaction: {sat}%"
+                # Moved to dedicated status section below to prevent description overflow
+                pass
 
             desc_x = img_x + self.examined_tile_scaled_img.get_width() + 15
             desc_y = img_y
 
             # --- NEW: Dynamic Word Wrapping ---
-            font = pg.font.SysFont(None, 22)
+            font = pg.font.SysFont(None, 20)
             max_text_width = self.select_rect.right - desc_x - 15  # 15px padding from the right edge
 
             wrapped_lines = []
@@ -272,8 +299,8 @@ class Hud:
             # Print multi-line text and track our Y-coordinate
             current_y = desc_y
             for line in wrapped_lines:
-                draw_text(screen, line, 22, (220, 220, 220), (desc_x, current_y))
-                current_y += 25  # Move down a line
+                draw_text(screen, line, 20, (220, 220, 220), (desc_x, current_y))
+                current_y += 22  # Move down a line
 
             # --- 5. Show Status ---
             current_y += 10  # Add a little extra visual padding before the stats
@@ -283,15 +310,19 @@ class Hud:
                 occ = self.examined_tile.occupants
                 percent = int((occ / cap) * 100) if cap > 0 else 0
 
-                # Draw Saturation
-                status_text = f"Saturation: {occ}/{cap} ({percent}%)"
-                draw_text(screen, status_text, 22, (200, 200, 255), (desc_x, current_y))
-                current_y += 25
+                # Determine labels based on zone type
+                is_working_zone = self.examined_tile.name in ["IndZone", "SerZone"]
+                pop_label = "Employees" if is_working_zone else "Local Pop"
 
-                # Draw Local Satisfaction
-                if hasattr(self.examined_tile, 'local_satisfaction'):
+                # Draw Saturation
+                status_text = f"{pop_label}: {occ}/{cap} ({percent}%)"
+                draw_text(screen, status_text, 22, (200, 200, 255), (desc_x, current_y))
+                current_y += 20
+
+                # Draw Local Satisfaction (Only for Residential Zones or non-working buildings with capacity)
+                if not is_working_zone and hasattr(self.examined_tile, 'local_satisfaction'):
                     sat = self.examined_tile.local_satisfaction
-                    sat_text = f"Local Satisfaction: {sat}%"
+                    sat_text = f"Satisfaction: {sat}%"
 
                     # Color code it just like the top bar
                     if sat > 75:
@@ -302,6 +333,13 @@ class Hud:
                         sat_color = (255, 100, 100)  # Red
 
                     draw_text(screen, sat_text, 22, sat_color, (desc_x, current_y))
+                    current_y += 20
+
+                # Show active bonuses (limit to 2 most recent or important to save space)
+                if hasattr(self.examined_tile, 'bonuses') and self.examined_tile.bonuses:
+                    for bonus in self.examined_tile.bonuses[:2]: # Show max 2 bonuses to prevent overflow
+                        draw_text(screen, f"• {bonus}", 18, (255, 255, 150), (desc_x, current_y))
+                        current_y += 18
 
         for tile in self.tiles:
             # 1. Draw the slot background (Dark grey with rounded corners)
@@ -362,29 +400,98 @@ class Hud:
         if self.hovered_tile is not None:
             self.draw_tooltip(screen, pg.mouse.get_pos(), self.hovered_tile)
 
-        pg.draw.rect(screen, (70, 70, 70), self.save_btn_rect)
-        pg.draw.rect(screen, (255, 255, 255), self.save_btn_rect, 2)
-        draw_text(screen, "SAVE", 24, (255, 255, 255), (self.save_btn_rect.x + 25, self.save_btn_rect.y + 8))
+        # --- TOP LEFT: SYSTEM & FINANCE BUTTONS ---
+        mouse_pos = pg.mouse.get_pos()
+        
+        def draw_styled_button(rect, text, base_color=(60, 60, 70), hover_color=(90, 90, 110), border_color=(200, 200, 200), font_size=20):
+            # Modern button with rounded corners and hover effect
+            is_hovered = rect.collidepoint(mouse_pos)
+            color = hover_color if is_hovered else base_color
+            
+            # Draw shadow for "3D" effect
+            shadow_rect = rect.copy()
+            shadow_rect.y += 2
+            pg.draw.rect(screen, (20, 20, 20), shadow_rect, border_radius=6)
+            
+            # Draw main button
+            pg.draw.rect(screen, color, rect, border_radius=6)
+            pg.draw.rect(screen, border_color, rect, 2, border_radius=6)
+            
+            # Draw text - Centered
+            font = pg.font.SysFont("Trebuchet MS", font_size, bold=True)
+            text_surf = font.render(text, True, (255, 255, 255))
+            text_rect = text_surf.get_rect(center=rect.center)
+            screen.blit(text_surf, text_rect)
 
-        pg.draw.rect(screen, (70, 70, 70), self.load_btn_rect)
-        pg.draw.rect(screen, (255, 255, 255), self.load_btn_rect, 2)
-        draw_text(screen, "LOAD", 24, (255, 255, 255), (self.load_btn_rect.x + 25, self.load_btn_rect.y + 8))
-        # --- BOTTOM LEFT: CONTROLS LEGEND ---
-        controls_text = [
-            "ESC : Close Menu / Quit",
-            "SPACE : Pause / Resume",
-            "F5 : Quick Save",
-            "F9 : Quick Load",
-            "1, 2, 3 : Game Speed (1x, 2x, 3x)"
+        # 1. System Controls (Blueish Grey)
+        sys_color = (50, 70, 90)
+        sys_hover = (70, 90, 110)
+        draw_styled_button(self.save_btn_rect, "SAVE", sys_color, sys_hover)
+        draw_styled_button(self.load_btn_rect, "LOAD", sys_color, sys_hover)
+
+        # 2. Tax Controls (Greenish Grey for Income)
+        tax_color = (60, 90, 60)
+        tax_hover = (80, 110, 80)
+        draw_text(screen, f"Tax: ${self.resource_manager.tax_per_citizen}", 22, (255, 255, 255), (self.tax_plus_rect.x, 18))
+        draw_styled_button(self.tax_plus_rect, "+", tax_color, tax_hover)
+        draw_styled_button(self.tax_minus_rect, "-", tax_color, tax_hover)
+
+        # 3. Loan Controls (Gold/Orange for Money management)
+        loan_color_base = (110, 90, 50)
+        loan_hover = (130, 110, 70)
+        debt_label_color = (255, 200, 100) if self.resource_manager.total_loan_amount > 0 else (200, 200, 200)
+        draw_text(screen, f"Debt: ${self.resource_manager.total_loan_amount:,}", 22, debt_label_color, (self.loan_btn_rect.x, 18))
+        draw_styled_button(self.loan_btn_rect, "TAKE LOAN", loan_color_base, loan_hover)
+        
+        # Repay should be different color or highlighted if possible
+        repay_color = (130, 60, 60) if self.resource_manager.total_loan_amount > 0 else (70, 70, 70)
+        repay_hover = (150, 80, 80) if self.resource_manager.total_loan_amount > 0 else (90, 90, 90)
+        draw_styled_button(self.repay_btn_rect, "REPAY LOAN", repay_color, repay_hover)
+
+        # Help Button
+        help_color = (90, 50, 90) if self.show_help else (70, 70, 80)
+        help_hover = (110, 70, 110) if self.show_help else (90, 90, 100)
+        draw_styled_button(self.help_btn_rect, "HELP", help_color, help_hover)
+
+        if self.show_help:
+            self.draw_help_overlay(screen)
+
+    def draw_help_overlay(self, screen):
+        # Semi-transparent overlay for instructions
+        help_w, help_h = 500, 450
+        help_rect = pg.Rect((self.width - help_w) // 2, (self.height - help_h) // 2, help_w, help_h)
+        
+        # Create a semi-transparent surface
+        s = pg.Surface((help_w, help_h), pg.SRCALPHA)
+        s.fill((30, 30, 40, 240))
+        screen.blit(s, help_rect.topleft)
+        
+        pg.draw.rect(screen, (255, 255, 255), help_rect, 2, border_radius=12)
+
+        draw_text(screen, "CITY BUILDER - HOW TO PLAY", 35, (255, 215, 0), (help_rect.x + 60, help_rect.y + 20))
+        pg.draw.line(screen, (255, 255, 255), (help_rect.x + 20, help_rect.y + 60), (help_rect.right - 20, help_rect.y + 60))
+
+        instructions = [
+            "• BUILD ROADS: Essential for zones and services.",
+            "• ZONES: Citizens build on Residential, Industrial,",
+            "  and Service zones ONLY if connected to roads.",
+            "• SERVICES: Police/Stadiums provide bonuses if on roads.",
+            "• SATISFACTION: Keep it high (>10%) to avoid being fired!",
+            "• BUDGET: Taxes are collected annually. Don't stay in",
+            "  debt for more than 5 years!",
+            "• CONTROLS:",
+            "  - L-Click: Select / Place / Examine building",
+            "  - R-Click: Deselect tool / Close examine HUD",
+            "  - SPACE: Pause game  |  1, 2, 3: Change Speed",
+            "  - F5: Quick Save  |  F9: Quick Load"
         ]
 
-        # Calculate starting Y position so it perfectly anchors to the bottom left
-        # 20px padding from bottom, and 22px height per line of text
-        start_y = self.height - 20 - (len(controls_text) * 22)
+        curr_y = help_rect.y + 80
+        for line in instructions:
+            draw_text(screen, line, 24, (220, 220, 220), (help_rect.x + 30, curr_y))
+            curr_y += 28
 
-        for i, text in enumerate(controls_text):
-            # Draw with a slight grey color so it isn't too distracting
-            draw_text(screen, text, 22, (180, 180, 180), (15, start_y + (i * 22)))
+        draw_text(screen, "Press HELP again to close", 20, (150, 150, 150), (help_rect.x + 150, help_rect.bottom - 30))
 
     def draw_tooltip(self, screen, mouse_pos, tile):
         raw_name = tile["name"]
@@ -441,6 +548,11 @@ class Hud:
 
         current_y += 5
         screen.blit(cost_surf, (box_x + 10, current_y))
+
+        # --- BOTTOM LEFT: HELP BUTTON & CONTROLS ---
+        # Draw with a slight grey color so it isn't too distracting
+        # Note: help_btn_rect is already handled in draw_styled_button
+        pass
 
     """
     Crops invisible padding and forces flat tiles into a perfect 2:1 ration

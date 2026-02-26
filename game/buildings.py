@@ -25,6 +25,7 @@ class Zone(Building):
         self.capacity = ZONE_CAPACITY
         self.occupants = 0
         self.local_satisfaction = 100
+        self.bonuses = []
         
         # Images for different levels of saturation
         self.base_image = image

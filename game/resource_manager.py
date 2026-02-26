@@ -42,6 +42,26 @@ class ResourceManager:
         self.tax_per_citizen = 10
         self.tax_rate_satisfaction_impact = 0 # 0 means normal taxes
 
+        # Loans
+        self.loans = [] # List of {amount, interest_rate}
+        self.total_loan_amount = 0
+
+    def take_loan(self, amount):
+        interest_rate = 0.05 # 5% annual interest
+        self.loans.append({"amount": amount, "interest": interest_rate})
+        self.funds += amount
+        self.total_loan_amount += amount
+
+    def repay_loan(self, amount):
+        if self.funds >= amount and self.total_loan_amount >= amount:
+            self.funds -= amount
+            self.total_loan_amount -= amount
+            # Simplify repayment: reduce from total, and eventually clear list if 0
+            if self.total_loan_amount == 0:
+                self.loans = []
+            return True
+        return False
+
     def apply_cost_to_resource(self, building):
         cost = self.costs.get(building, 0)
         self.funds -= cost
@@ -66,6 +86,9 @@ class ResourceManager:
         # Taxation: annual fixed tax amount levied on each zone space based on how many people live or work there.
         tax_income = total_occupants * self.tax_per_citizen
         
+        # Loan interest: 5% of total loan amount
+        loan_interest = int(self.total_loan_amount * 0.05)
+        
         maintenance_cost = 0
         processed_buildings = set()
         for x in range(world.grid_length_x):
@@ -75,6 +98,7 @@ class ResourceManager:
                     maintenance_cost += self.maintenance_fees.get(b.name, 0)
                     processed_buildings.add(b)
 
+        maintenance_cost += loan_interest
         self.funds += tax_income
         self.funds -= maintenance_cost
         
