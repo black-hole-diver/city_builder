@@ -4,14 +4,13 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="47aba308-f49c-4a93-9a5d-4695dc059ce0" name="Changes" comment="debug hud UI &amp; display name">
+    <list default="true" id="47aba308-f49c-4a93-9a5d-4695dc059ce0" name="Changes" comment="debug stadium UI">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assets/graphics/Police.png" beforeDir="false" afterPath="$PROJECT_DIR$/assets/graphics/Police.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assets/graphics/Police_full_size.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/assets/graphics/stadium.png" beforeDir="false" afterPath="$PROJECT_DIR$/assets/graphics/stadium.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/graphics/PowerPlant.png" beforeDir="false" afterPath="$PROJECT_DIR$/assets/graphics/PowerPlant.png" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/game/buildings.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/buildings.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/game/hud.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/hud.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/game/setting.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/setting.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/savegame.json" beforeDir="false" afterPath="$PROJECT_DIR$/savegame.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -232,7 +231,23 @@
       <option name="project" value="LOCAL" />
       <updated>1772080338140</updated>
     </task>
-    <option name="localTasksCounter" value="14" />
+    <task id="LOCAL-00014" summary="debug stadium UI">
+      <option name="closed" value="true" />
+      <created>1772086084085</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1772086084085</updated>
+    </task>
+    <task id="LOCAL-00015" summary="debug stadium UI">
+      <option name="closed" value="true" />
+      <created>1772086090156</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1772086090156</updated>
+    </task>
+    <option name="localTasksCounter" value="16" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -259,6 +274,7 @@
     <MESSAGE value="depth change, url of pics changed" />
     <MESSAGE value="fix the examine hud" />
     <MESSAGE value="debug hud UI &amp; display name" />
-    <option name="LAST_COMMIT_MESSAGE" value="debug hud UI &amp; display name" />
+    <MESSAGE value="debug stadium UI" />
+    <option name="LAST_COMMIT_MESSAGE" value="debug stadium UI" />
   </component>
 </project>

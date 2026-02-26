@@ -355,6 +355,22 @@ class Hud:
         pg.draw.rect(screen, (70, 70, 70), self.load_btn_rect)
         pg.draw.rect(screen, (255, 255, 255), self.load_btn_rect, 2)
         draw_text(screen, "LOAD", 24, (255, 255, 255), (self.load_btn_rect.x + 25, self.load_btn_rect.y + 8))
+        # --- BOTTOM LEFT: CONTROLS LEGEND ---
+        controls_text = [
+            "ESC : Close Menu / Quit",
+            "SPACE : Pause / Resume",
+            "F5 : Quick Save",
+            "F9 : Quick Load",
+            "1, 2, 3 : Game Speed (1x, 2x, 3x)"
+        ]
+
+        # Calculate starting Y position so it perfectly anchors to the bottom left
+        # 20px padding from bottom, and 22px height per line of text
+        start_y = self.height - 20 - (len(controls_text) * 22)
+
+        for i, text in enumerate(controls_text):
+            # Draw with a slight grey color so it isn't too distracting
+            draw_text(screen, text, 22, (180, 180, 180), (15, start_y + (i * 22)))
 
     def draw_tooltip(self, screen, mouse_pos, tile):
         raw_name = tile["name"]
@@ -446,7 +462,8 @@ class Hud:
             "University": pg.image.load(UNIVERSITY_URL).convert_alpha(),
             "School": pg.image.load(SCHOOL_URL).convert_alpha(),
             "FireStation": pg.image.load(FIRE_STATION_URL).convert_alpha(),
-            "Police": pg.image.load(POLICE_URL).convert_alpha()
+            "Police": pg.image.load(POLICE_URL).convert_alpha(),
+            "PowerPlant": pg.image.load(POWERPLANT_URL).convert_alpha(),
         }
         formatted_images = {}
         for name, img in raw_images.items():

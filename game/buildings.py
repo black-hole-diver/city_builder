@@ -75,4 +75,4 @@ class University(Building):
 class PowerPlant(Building):
     def __init__(self, pos, image, resource_manager, grid_pos):
         # Power Plants occupy a 2x2 area
-        super().__init__(pos, image, "PowerPlant", resource_manager, grid_pos, grid_width=2, grid_height=2)
+        super().__init__(pos, image, "PowerPlant", resource_manager, grid_pos, grid_width=4, grid_height=4)
