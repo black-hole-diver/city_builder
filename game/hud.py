@@ -100,21 +100,6 @@ class Hud:
             self.examined_tile_scaled_img = None
 
     def create_build_hud(self):
-        # 1. Local Building Specs Dictionary (Single Source of Truth for the HUD)
-        building_specs = {
-            "Road": (1, 1),
-            "PowerLine": (1, 1),
-            "ResZone": (4, 4),
-            "IndZone": (4, 4),
-            "SerZone": (4, 4),
-            "Police": (2, 2),
-            "Stadium": (6, 6),
-            "FireStation": (2, 2),
-            "School": (2, 2),
-            "University": (4, 4),
-            "PowerPlant": (2, 2)
-        }
-
         # 1. Grid Configuration
         cols = 3
         gap = 8
@@ -171,7 +156,7 @@ class Hud:
             cell_rect = pg.Rect(cell_x, cell_y, cell_w, cell_h)
 
             item_type = "Tool" if image_name in ["Axe", "Hammer"] else "Building"
-            w, h = building_specs.get(image_name, (1, 1))
+            w, h = BUILDING_SPECS.get(image_name, (1, 1))
 
             tiles.append({
                 "name": image_name,
@@ -370,6 +355,22 @@ class Hud:
         pg.draw.rect(screen, (70, 70, 70), self.load_btn_rect)
         pg.draw.rect(screen, (255, 255, 255), self.load_btn_rect, 2)
         draw_text(screen, "LOAD", 24, (255, 255, 255), (self.load_btn_rect.x + 25, self.load_btn_rect.y + 8))
+        # --- BOTTOM LEFT: CONTROLS LEGEND ---
+        controls_text = [
+            "ESC : Close Menu / Quit",
+            "SPACE : Pause / Resume",
+            "F5 : Quick Save",
+            "F9 : Quick Load",
+            "1, 2, 3 : Game Speed (1x, 2x, 3x)"
+        ]
+
+        # Calculate starting Y position so it perfectly anchors to the bottom left
+        # 20px padding from bottom, and 22px height per line of text
+        start_y = self.height - 20 - (len(controls_text) * 22)
+
+        for i, text in enumerate(controls_text):
+            # Draw with a slight grey color so it isn't too distracting
+            draw_text(screen, text, 22, (180, 180, 180), (15, start_y + (i * 22)))
 
     def draw_tooltip(self, screen, mouse_pos, tile):
         raw_name = tile["name"]
@@ -427,9 +428,31 @@ class Hud:
         current_y += 5
         screen.blit(cost_surf, (box_x + 10, current_y))
 
+    """
+    Crops invisible padding and forces flat tiles into a perfect 2:1 ration
+    """
+    @staticmethod
+    def format_isometric_asset(image, is_flat=False, grid_w=1, grid_h=1):
+        bounding_rect = image.get_bounding_rect()
+        if bounding_rect.width == 0 or bounding_rect.height == 0:
+            return image  # Failsafe for empty images
+
+        cropped = image.subsurface(bounding_rect).copy()
+
+        if is_flat:
+            # In your engine, a 1x1 tile footprint is exactly 128x64.
+            # A 2x2 tile footprint is exactly 256x128.
+            target_w = (grid_w + grid_h) * 64
+            target_h = (grid_w + grid_h) * 32
+            return pg.transform.smoothscale(cropped, (target_w, target_h))
+
+        # For tall 3D buildings, we ONLY crop the padding to fix depth sorting.
+        # We do not squash them, or they would look like flat pancakes!
+        return cropped
+
     @staticmethod
     def load_images():
-        images = {
+        raw_images = {
             "Axe": pg.image.load(AXE_URL).convert_alpha(),
             "Hammer": pg.image.load(HAMMER_URL).convert_alpha(),
             "ResZone": pg.image.load(RESZONE_URL1).convert_alpha(),
@@ -439,9 +462,18 @@ class Hud:
             "University": pg.image.load(UNIVERSITY_URL).convert_alpha(),
             "School": pg.image.load(SCHOOL_URL).convert_alpha(),
             "FireStation": pg.image.load(FIRE_STATION_URL).convert_alpha(),
-            "Police": pg.image.load(POLICE_URL).convert_alpha()
+            "Police": pg.image.load(POLICE_URL).convert_alpha(),
+            "PowerPlant": pg.image.load(POWERPLANT_URL).convert_alpha(),
         }
-        return images
+        formatted_images = {}
+        for name, img in raw_images.items():
+            if name in ["Axe", "Hammer"]:
+                formatted_images[name] = img
+                continue
+            is_flat_zone = name in ["ResZone", "IndZone", "SerZone"]
+            w,h = BUILDING_SPECS.get(name, (1,1))
+            formatted_images[name] = Hud.format_isometric_asset(img, is_flat=is_flat_zone, grid_w=w, grid_h=h)
+        return formatted_images
 
     @staticmethod
     def scale_image(image, w=None, h=None):

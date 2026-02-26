@@ -10,7 +10,10 @@ def main():
     playing = True
     pg.init()
     pg.mixer.init()
+    # window_width = 1_280
+    # window_height = 720
     screen = pg.display.set_mode((0,0), FULLSCREEN)
+    pg.display.set_caption("City Builder")
     clock = pg.time.Clock()
 
     # implement menus
