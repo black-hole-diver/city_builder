@@ -446,3 +446,16 @@ class World:
                     if b and b.name == "Road":
                         return True
         return False
+
+    def get_adjacent_roads(self, x, y, b_width, b_height):
+        """Returns a list of (x, y) coordinates of roads adjacent to the building."""
+        roads = []
+        for i in range(x - 1, x + b_width + 1):
+            for j in range(y - 1, y + b_height + 1):
+                if x <= i < x + b_width and y <= j < y + b_height:
+                    continue
+                if 0 <= i < self.grid_length_x and 0 <= j < self.grid_length_y:
+                    b = self.buildings[i][j]
+                    if b and b.name == "Road":
+                        roads.append((i, j))
+        return roads

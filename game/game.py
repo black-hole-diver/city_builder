@@ -304,12 +304,14 @@ class Game:
              self.add_notification("GAME OVER: DEBT LIMIT EXCEEDED", (255, 0, 0))
 
     def calculate_satisfaction_and_growth(self):
-        from .buildings import ResZone, IndZone, SerZone
+        from .buildings import ResZone, IndZone, SerZone, Road
+        from collections import deque
         # Gather all zones
         res_zones = []
         ind_zones = []
         ser_zones = []
         services = [] # Police, Stadium
+        roads = []
         processed = set()
         
         for x in range(self.world.grid_length_x):
@@ -320,14 +322,47 @@ class Game:
                     if isinstance(b, ResZone): res_zones.append(b)
                     elif isinstance(b, IndZone): ind_zones.append(b)
                     elif isinstance(b, SerZone): ser_zones.append(b)
+                    elif isinstance(b, Road): roads.append(b)
                     elif b.name in ["Police", "Stadium"]: services.append(b)
 
         # Update road access for all buildings annually
-        for x in range(self.world.grid_length_x):
-            for y in range(self.world.grid_length_y):
-                b = self.world.buildings[x][y]
-                if b and hasattr(b, "has_road_access") and b.origin == (x,y):
-                    b.has_road_access = self.world.has_road_access(b.origin[0], b.origin[1], b.grid_width, b.grid_height)
+        for e in self.entities:
+            if hasattr(e, "has_road_access"):
+                e.has_road_access = self.world.has_road_access(e.origin[0], e.origin[1], e.grid_width, e.grid_height)
+
+        # --- ROAD NETWORK CONNECTIVITY ---
+        # Map each road to its "network ID" using BFS
+        road_networks = {} # (x, y) -> network_id
+        next_network_id = 0
+        visited_roads = set()
+
+        for r in roads:
+            rx, ry = r.origin
+            if (rx, ry) not in visited_roads:
+                # Start a new network BFS
+                queue = deque([(rx, ry)])
+                visited_roads.add((rx, ry))
+                while queue:
+                    cx, cy = queue.popleft()
+                    road_networks[(cx, cy)] = next_network_id
+                    # Check neighbors
+                    for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
+                        nx, ny = cx + dx, cy + dy
+                        if 0 <= nx < self.world.grid_length_x and 0 <= ny < self.world.grid_length_y:
+                            nb = self.world.buildings[nx][ny]
+                            if isinstance(nb, Road) and (nx, ny) not in visited_roads:
+                                visited_roads.add((nx, ny))
+                                queue.append((nx, ny))
+                next_network_id += 1
+
+        # Map zones to the set of road networks they touch
+        def get_touched_networks(zone):
+            adj_roads = self.world.get_adjacent_roads(zone.origin[0], zone.origin[1], zone.grid_width, zone.grid_height)
+            return {road_networks[r_pos] for r_pos in adj_roads if r_pos in road_networks}
+
+        res_zone_networks = {rz: get_touched_networks(rz) for rz in res_zones}
+        ind_zone_networks = {iz: get_touched_networks(iz) for iz in ind_zones}
+        ser_zone_networks = {sz: get_touched_networks(sz) for sz in ser_zones}
 
         # Satisfaction logic
         total_sat = 100
@@ -337,8 +372,6 @@ class Game:
             # Penalty based on loan size (relative to a base of 1000) and years negative
             loan_penalty = (self.resource_manager.total_loan_amount / 1000) * (1 + self.resource_manager.years_negative_budget)
             total_sat -= int(loan_penalty)
-            # Add to bonuses for visibility if it's a zone
-            debt_penalty_text = f"Debt Penalty (-{int(loan_penalty)})"
             
         # - Tax impact (High taxes reduce satisfaction)
         # Assuming base tax is 10. Every $1 above 10 reduces satisfaction by 2.
@@ -377,6 +410,12 @@ class Game:
                 rz.bonuses = [] # Clear bonuses if no road access
                 continue
 
+            rz_networks = get_touched_networks(rz)
+            if not rz_networks:
+                rz.local_satisfaction = 0
+                rz.bonuses = ["Disconnected road!"]
+                continue
+
             # Add global bonuses/penalties to individual zones for HUD display
             rz.bonuses = []
             if self.resource_manager.total_loan_amount > 0:
@@ -395,6 +434,11 @@ class Game:
                 # Service building itself needs road access to provide benefit
                 if not s.has_road_access: continue
                 
+                # Check if service building is reachable from the zone by road
+                s_networks = get_touched_networks(s)
+                if not rz_networks.intersection(s_networks):
+                    continue
+
                 dist = ((rz.origin[0]+rz.grid_width/2 - (s.origin[0]+s.grid_width/2))**2 + 
                         (rz.origin[1]+rz.grid_height/2 - (s.origin[1]+s.grid_height/2))**2)**0.5
                 if s.name == "Police" and dist < POLICE_RADIUS:
@@ -416,7 +460,8 @@ class Game:
             rz.local_satisfaction = max(0, min(100, rz.local_satisfaction))
 
         # Overall average satisfaction (only road-accessible zones contribute to city happiness)
-        road_res = [z for z in res_zones if z.has_road_access]
+        # Also require at least one road connection for it to contribute positively
+        road_res = [z for z in res_zones if z.has_road_access and get_touched_networks(z)]
         if road_res:
             self.resource_manager.satisfaction = sum(z.local_satisfaction for z in road_res) / len(road_res)
         elif not res_zones:
@@ -462,34 +507,49 @@ class Game:
         for sz in ser_zones: sz.occupants = 0
         
         # 2. Total workers available (limited by those living in ResZones)
-        total_workers_available = sum(rz.occupants for rz in res_zones)
-        # Ensure resource_manager.population is in sync with total occupants of ResZones
-        self.resource_manager.population = total_workers_available
-        
-        # 3. Distribute workers
-        for _ in range(total_workers_available):
-            eligible_ind = [z for z in ind_zones if z.occupants < z.capacity and z.has_road_access]
-            eligible_ser = [z for z in ser_zones if z.occupants < z.capacity and z.has_road_access]
+        # Distribute workers from each ResZone to reachable Ind/Ser zones
+        for rz in res_zones:
+            if rz.occupants == 0 or not rz.has_road_access:
+                continue
             
-            target = None
-            if eligible_ind and eligible_ser:
-                # To maintain equal proportion, pick from the one with fewer total occupants across all zones of that type.
-                current_ind_occ = sum(z.occupants for z in ind_zones)
-                current_ser_occ = sum(z.occupants for z in ser_zones)
+            rz_networks = get_touched_networks(rz)
+            if not rz_networks:
+                rz.local_satisfaction = 0 # No satisfaction if no road connection
+                rz.bonuses = ["No road connection!"]
+                continue
                 
-                if current_ind_occ <= current_ser_occ:
-                    target = random.choice(eligible_ind)
-                else:
-                    target = random.choice(eligible_ser)
-            elif eligible_ind:
-                target = random.choice(eligible_ind)
-            elif eligible_ser:
-                target = random.choice(eligible_ser)
+            # Find all reachable workplaces for THIS specific residential zone
+            reachable_ind = [iz for iz in ind_zones if iz.has_road_access and ind_zone_networks[iz].intersection(rz_networks)]
+            reachable_ser = [sz for sz in ser_zones if sz.has_road_access and ser_zone_networks[sz].intersection(rz_networks)]
             
-            if target:
-                target.occupants += 1
+            if not reachable_ind and not reachable_ser:
+                 rz.bonuses.append("No reachable workplaces!")
+                 # Some people might move out if they can't find work? 
+                 # For now, just a visual indicator.
+            
+            # Distribute workers of this zone
+            for _ in range(rz.occupants):
+                eligible_ind = [z for z in reachable_ind if z.occupants < z.capacity]
+                eligible_ser = [z for z in reachable_ser if z.occupants < z.capacity]
+                
+                target = None
+                if eligible_ind and eligible_ser:
+                    current_ind_occ = sum(z.occupants for z in ind_zones)
+                    current_ser_occ = sum(z.occupants for z in ser_zones)
+                    
+                    if current_ind_occ <= current_ser_occ:
+                        target = random.choice(eligible_ind)
+                    else:
+                        target = random.choice(eligible_ser)
+                elif eligible_ind:
+                    target = random.choice(eligible_ind)
+                elif eligible_ser:
+                    target = random.choice(eligible_ser)
+                
+                if target:
+                    target.occupants += 1
         
-        # 4. Update images for all industrial and service zones once at the end
+        # 3. Update images for all industrial and service zones once at the end
         for iz in ind_zones: iz.update_image()
         for sz in ser_zones: sz.update_image()
         for rz in res_zones: rz.update_image()
