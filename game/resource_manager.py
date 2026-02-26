@@ -3,6 +3,10 @@ class ResourceManager:
         self.funds = 20_800
         self.population = 0
         self.satisfaction = 100
+        
+        # Win/Loss tracking
+        self.years_negative_budget = 0
+        self.is_mayor_replaced = False
 
         # costs
         self.costs = {
@@ -36,6 +40,7 @@ class ResourceManager:
         }
 
         self.tax_per_citizen = 10
+        self.tax_rate_satisfaction_impact = 0 # 0 means normal taxes
 
     def apply_cost_to_resource(self, building):
         cost = self.costs.get(building, 0)
@@ -46,7 +51,21 @@ class ResourceManager:
         return self.funds >= cost
 
     def apply_annual_budget(self, world):
-        tax_income = self.population * self.tax_per_citizen
+        # The amount of tax collected depends on how many people live or work in the given zone field.
+        
+        # Calculate total occupants across all zones (Residential, Industrial, Service)
+        total_occupants = 0
+        processed_zones = set()
+        for x in range(world.grid_length_x):
+            for y in range(world.grid_length_y):
+                b = world.buildings[x][y]
+                if b and hasattr(b, "occupants") and b not in processed_zones:
+                    total_occupants += b.occupants
+                    processed_zones.add(b)
+        
+        # Taxation: annual fixed tax amount levied on each zone space based on how many people live or work there.
+        tax_income = total_occupants * self.tax_per_citizen
+        
         maintenance_cost = 0
         processed_buildings = set()
         for x in range(world.grid_length_x):
@@ -58,4 +77,10 @@ class ResourceManager:
 
         self.funds += tax_income
         self.funds -= maintenance_cost
+        
+        if self.funds < 0:
+            self.years_negative_budget += 1
+        else:
+            self.years_negative_budget = 0
+            
         return tax_income, maintenance_cost

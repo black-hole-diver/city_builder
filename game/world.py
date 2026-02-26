@@ -9,7 +9,8 @@ from typing import List, Optional
 from .sceneries import Scenery
 
 class World:
-    def __init__(self, resource_manager, entities, hud, grid_length_x, grid_length_y, width, height):
+    def __init__(self, game, resource_manager, entities, hud, grid_length_x, grid_length_y, width, height):
+        self.game = game
         self.game_paused = False
         self.resource_manager = resource_manager
         self.entities = entities
@@ -129,19 +130,44 @@ class World:
                     }
 
                     # Place building
-                    if mouse_action[0] and can_build and not self.game_paused:
+                    if mouse_action[0] and not self.temp_tile["collision"] and not self.game_paused:
                         building_name = self.hud.selected_tile["name"]
                         building_class = self.building_types.get(building_name)
 
                         if building_class:
                             building_image = self.hud.selected_tile["image"]
                             ent = building_class((minx, miny), building_image, self.resource_manager, grid_pos)
+                            ent.game = self.game # Set game reference
+                            
+                            # Update initial road access
+                            ent.has_road_access = self.has_road_access(grid_pos[0], grid_pos[1], b_width, b_height)
+                            
                             self.entities.append(ent)
                             for x in range(grid_pos[0], grid_pos[0] + b_width):
                                 for y in range(grid_pos[1], grid_pos[1] + b_height):
                                     self.buildings[x][y] = ent
                                     self.world[x][y]["collision"] = True
                                     self.collision_matrix[y][x] = 0
+                            
+                            # NEW: Update road access for ALL buildings if we just placed a road
+                            if building_name == "Road":
+                                for e in self.entities:
+                                    if hasattr(e, "has_road_access"):
+                                        e.has_road_access = self.has_road_access(e.origin[0], e.origin[1], e.grid_width, e.grid_height)
+                            
+                            # Initial image update for zones
+                            if hasattr(ent, "update_image"):
+                                ent.update_image()
+                                if building_name == "ResZone":
+                                    self.game.add_notification("RESIDENT AREA BUILT", (100, 200, 255))
+                                elif building_name in ["IndZone", "SerZone"]:
+                                    self.game.add_notification("NEW WORKPLACE BUILT", (255, 165, 0))
+                            
+                            if building_name == "Road":
+                                self.game.add_notification("ROAD CONNECTED", (200, 200, 200))
+                            elif building_name in ["Police", "Stadium", "FireStation", "School", "University", "PowerPlant"]:
+                                self.game.add_notification(f"NEW {building_name.upper()} BUILT!", (255, 255, 100))
+
                         self.hud.selected_tile = None
                         self.examine_tile = None
                         self.hud.examined_tile = None
@@ -168,6 +194,15 @@ class World:
                         feature = Scenery(world_tile, self.tiles[world_tile])
                         self.hud.examined_tile = feature
                         self.examine_mask_points = pg.mask.from_surface(feature.image).outline()
+                    else:
+                        # Clicked on empty grass - clear examine
+                        self.examine_tile = None
+                        self.hud.examined_tile = None
+                        self.examine_mask_points = None
+                
+                # Dynamic update of examined tile for real-time stats (saturation etc)
+                if self.examine_tile and self.buildings[self.examine_tile[0]][self.examine_tile[1]]:
+                     self.hud.examined_tile = self.buildings[self.examine_tile[0]][self.examine_tile[1]]
 
     def draw(self, screen, camera):
         screen.blit(self.grass_tiles, (camera.scroll.x, camera.scroll.y))
@@ -384,3 +419,17 @@ class World:
                 if self.world[x][y]["collision"]:
                     return False
         return True
+
+    def has_road_access(self, x, y, b_width, b_height):
+        """Checks if a building at (x,y) with dimensions (w,h) is adjacent to a road."""
+        # Check all tiles around the perimeter
+        for i in range(x - 1, x + b_width + 1):
+            for j in range(y - 1, y + b_height + 1):
+                # Skip the tiles the building itself occupies
+                if x <= i < x + b_width and y <= j < y + b_height:
+                    continue
+                if 0 <= i < self.grid_length_x and 0 <= j < self.grid_length_y:
+                    b = self.buildings[i][j]
+                    if b and b.name == "Road":
+                        return True
+        return False

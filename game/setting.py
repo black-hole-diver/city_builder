@@ -6,6 +6,18 @@ WORKER_SPEED = 180
 INITIAL_WORKER = 10
 
 # ==========================================
+# ZONE SETTINGS
+# ==========================================
+ZONE_CAPACITY = 100  # Max people per zone tile
+ZONE_REFUND_PERCENT = 0.5  # 50% refund if empty
+BUILDING_REFUND_PERCENT = 0.5
+
+# Satisfaction influence radiuses
+POLICE_RADIUS = 10
+STADIUM_RADIUS = 15
+INDUSTRIAL_NEGATIVE_RADIUS = 8
+
+# ==========================================
 # CAMERA & DISPLAY
 # ==========================================
 MAP_WIDTH = 6400
@@ -20,9 +32,9 @@ HUD_COLOR = (27, 27, 27, 175)
 # TIME & SPEED
 # ==========================================
 SPEEDS = {
-    1: 15_000,
-    2: 10_000,
-    3: 3_000
+    1: 5_000,
+    2: 2_500,
+    3: 300
 }
 
 # ==========================================

@@ -236,6 +236,18 @@ class Hud:
 
             # 4. Draw the Description Text (Use raw_name to look up the description!)
             desc = self.item_descriptions.get(raw_name, "A structure in your city.")
+            
+            # Show occupancy/local satisfaction in description area for zones
+            if hasattr(self.examined_tile, 'capacity'):
+                cap = self.examined_tile.capacity
+                occ = self.examined_tile.occupants
+                percent = int((occ / cap) * 100) if cap > 0 else 0
+                desc += f"\n\nLocal Population: {occ}/{cap} ({percent}%)"
+                
+                if hasattr(self.examined_tile, 'local_satisfaction'):
+                    sat = self.examined_tile.local_satisfaction
+                    desc += f"\nLocal Satisfaction: {sat}%"
+
             desc_x = img_x + self.examined_tile_scaled_img.get_width() + 15
             desc_y = img_y
 
@@ -329,11 +341,12 @@ class Hud:
         pos_x += 150
 
         # 3. Satisfaction
-        sat_text = f"Sat: {self.resource_manager.satisfaction}%"
+        sat = int(self.resource_manager.satisfaction)
+        sat_text = f"Sat: {sat}%"
         # Color code satisfaction: Green (>75%), Yellow (50-75%), Red (<50%)
-        if self.resource_manager.satisfaction > 75:
+        if sat > 75:
             sat_color = (100, 255, 100)
-        elif self.resource_manager.satisfaction > 50:
+        elif sat > 50:
             sat_color = (255, 255, 100)
         else:
             sat_color = (255, 100, 100)
