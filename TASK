@@ -1,0 +1,13 @@
+The citizens can have primary, secondary, or tertiary education. All citizens have a basic (primary)
+education. Secondary education can be obtained at school, and higher education can be obtained at
+university. As a new service building, schools can be built (School), which provide a secondary
+education to a given number of citizens every year. The university (University) serves a similar
+purpose: to obtain tertiary education.
+Since the population of the city is continually replaced by internal processes (retirement / death and
+birth), a part of the skilled workforce should lose their qualifications every year, thus representing
+that a more qualified citizen retired and was replaced by a fresh, but still unskilled worker .
+Those with a higher education have a higher income and produce more value, so more taxes can be
+collected from them for their work at their workplace and as citizens in their place of residence. Not
+everyone wants a higher education, so there should be an upper limit on how much of the city's
+population can obtain a secondary or tertiary education. School and University buildings have construction and operating costs, the latter of which must be paid even if they are not used.
+Also implement the UI to show the citizens' education status.

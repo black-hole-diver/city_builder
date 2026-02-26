@@ -117,6 +117,19 @@ class Hammer(Tool):
                         world.world[x][y]["collision"] = False
                         world.collision_matrix[y][x] = 1
 
+                if building_to_remove.name == "ResZone":
+                    lost_pop = building_to_remove.occupants
+                    res = world.resource_manager
+                    # Remove from primary first (simulating youth/low-skilled displacement)
+                    for _ in range(lost_pop):
+                        if res.edu_primary > 0:
+                            res.edu_primary -= 1
+                        elif res.edu_secondary > 0:
+                            res.edu_secondary -= 1
+                        elif res.edu_tertiary > 0:
+                            res.edu_tertiary -= 1
+                    res.population = max(0, res.population - lost_pop)
+
                 # NEW: Update road access for ALL buildings if we just demolished a road
                 if building_to_remove.name == "Road":
                     for e in world.entities:

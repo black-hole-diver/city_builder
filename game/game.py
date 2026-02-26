@@ -304,6 +304,43 @@ class Game:
             self.add_notification("TAXING TIME!", (255, 215, 0))
             self.add_notification(f"Annual Budget: +${tax} -${maintenance}", (100, 255, 100) if tax >= maintenance else (255, 100, 100))
 
+        # Attrition (Death/Retirement)
+
+        attrition_rate = 0.10
+        retired_sec = int(self.resource_manager.edu_secondary * attrition_rate)
+        retired_tert = int(self.resource_manager.edu_tertiary * attrition_rate)
+        self.resource_manager.edu_secondary -= retired_sec
+        self.resource_manager.edu_primary += retired_sec
+        self.resource_manager.edu_tertiary -= retired_tert
+        self.resource_manager.edu_secondary += retired_tert
+
+        # Graduation
+        sec_cap = int(self.resource_manager.population * 0.50)
+        tert_cap = int(self.resource_manager.population * 0.25)
+
+        schools = [e for e in self.entities if e.name == "School" and e.has_road_access]
+        unis = [e for e in self.entities if e.name == "University" and e.has_road_access]
+
+        # Schools graduate Primary -> Secondary
+        for s in schools:
+            # Each school can handle a specific number of students per year
+            potential = 20
+            graduates = min(potential, self.resource_manager.edu_primary, max(0, sec_cap - self.resource_manager.edu_secondary))
+            self.resource_manager.edu_primary -= graduates
+            self.resource_manager.edu_secondary += graduates
+            s.occupants = graduates
+
+        # Universities graduate Secondary -> Tertiary
+        for u in unis:
+            potential = 10
+            graduates = min(potential, self.resource_manager.edu_secondary, max(0, tert_cap - self.resource_manager.edu_tertiary))
+            self.resource_manager.edu_secondary -= graduates
+            self.resource_manager.edu_tertiary += graduates
+            u.occupants = graduates
+
+        if len(schools) > 0 or len(unis) > 0:
+            self.add_notification("ACADEMIC YEAR COMPLETE", (100, 200, 255))
+
         # ============ Population Dynamics & Satisfaction ============
         self.calculate_satisfaction_and_growth()
 
@@ -520,6 +557,7 @@ class Game:
                 if eligible:
                     target = random.choice(eligible)
                     target.occupants += 1
+                    self.resource_manager.edu_primary += 1
             # Sync population after growth
             self.resource_manager.population = sum(rz.occupants for rz in res_zones)
 
@@ -671,6 +709,9 @@ class Game:
         data = {
             "funds": self.resource_manager.funds,
             "population": self.resource_manager.population,
+            "edu_primary": self.resource_manager.edu_primary,
+            "edu_secondary": self.resource_manager.edu_secondary,
+            "edu_tertiary": self.resource_manager.edu_tertiary,
             "satisfaction": self.resource_manager.satisfaction,
             "years_negative_budget": self.resource_manager.years_negative_budget,
             "is_mayor_replaced": self.resource_manager.is_mayor_replaced,
@@ -735,6 +776,9 @@ class Game:
         # ============ Restore Resources & Camera ============
         self.resource_manager.funds = data.get("funds", 20_800)
         self.resource_manager.population = data.get("population", 0)
+        self.resource_manager.edu_primary = data.get("edu_primary", self.resource_manager.population)
+        self.resource_manager.edu_secondary = data.get("edu_secondary", 0)
+        self.resource_manager.edu_tertiary = data.get("edu_tertiary", 0)
         self.resource_manager.satisfaction = data.get("satisfaction", 100)
         self.resource_manager.years_negative_budget = data.get("years_negative_budget", 0)
         self.resource_manager.is_mayor_replaced = data.get("is_mayor_replaced", False)

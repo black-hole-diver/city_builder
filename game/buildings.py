@@ -106,11 +106,15 @@ class School(Building):
     def __init__(self, pos, image, resource_manager, grid_pos):
         # Schools occupy a 2x2 area
         super().__init__(pos, image, "School", resource_manager, grid_pos, grid_width=2, grid_height=2)
+        self.capacity = 50
+        self.occupants = 0
 
 class University(Building):
     def __init__(self, pos, image, resource_manager, grid_pos):
         # Universities occupy a 4x4 area
         super().__init__(pos, image, "University", resource_manager, grid_pos, grid_width=4, grid_height=4)
+        self.capacity = 200
+        self.occupants = 0
 
 class PowerPlant(Building):
     def __init__(self, pos, image, resource_manager, grid_pos):
