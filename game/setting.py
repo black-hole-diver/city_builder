@@ -32,19 +32,19 @@ BUILDING_SPECS = {
     # Infrastructure & Zones (1x1)
     "Road": (1, 1),
     "PowerLine": (1, 1),
-    "ResZone": (1, 1),
-    "IndZone": (1, 1),
-    "SrvZone": (1, 1),
+    "ResZone": (4, 4),
+    "IndZone": (4, 4),
+    "SerZone": (4, 4),
 
     # Basic Services
-    "Police": (1, 1),
-    "Stadium": (2, 2),
+    "Police": (2, 2),
+    "Stadium": (4, 4),
 
     # Advanced Services
-    "FireStation": (1, 1),
-    "School": (1, 2),
-    "University": (2, 2),
-    "PowerPlant": (2, 2)
+    "FireStation": (2, 2),
+    "School": (2, 2),
+    "University": (4, 4),
+    "PowerPlant": (4, 4)
 }
 
 # ==========================================
@@ -69,7 +69,7 @@ FIRETRUCK_URL = "assets/graphics/Firetruck.png"
 
 # Service Buildings
 POLICE_URL = "assets/graphics/Police.png"
-STADIUM_URL = "assets/graphics/stadium.png"
+STADIUM_URL = "assets/graphics/Olympic.png"
 FIRE_STATION_URL = "assets/graphics/FireStation.png"
 SCHOOL_URL = "assets/graphics/School.png"
 UNIVERSITY_URL = "assets/graphics/University.png"

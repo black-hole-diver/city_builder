@@ -45,7 +45,7 @@ class Police(Building):
 
 class Stadium(Building):
     def __init__(self, pos, image, resource_manager, grid_pos):
-        super().__init__(pos, image, "Stadium", resource_manager, grid_pos, grid_width=6, grid_height=6)
+        super().__init__(pos, image, "Stadium", resource_manager, grid_pos, grid_width=4, grid_height=4)
 
 class FireStation(Building):
     def __init__(self, pos, image, resource_manager, grid_pos):
