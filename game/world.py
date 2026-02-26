@@ -45,8 +45,14 @@ class World:
         # Map string names to classes for cleaner building instantiation
         self.building_types = {
             "ResZone" : ResZone,
+            "IndZone": IndZone,
+            "SerZone": SerZone,
             "Stadium" : Stadium,
-            "Police" : Police
+            "Police" : Police,
+            "FireStation": FireStation,
+            "School": School,
+            "University": University,
+            "PowerPlant": PowerPlant
         }
 
         self.tools = {
@@ -348,8 +354,6 @@ class World:
     @staticmethod
     def load_images():
         return {
-            "building1": pg.image.load(BUILDING1_URL).convert_alpha(),
-            "building2": pg.image.load(BUILDING2_URL).convert_alpha(),
             "tree": pg.image.load(TREE_URL).convert_alpha(),
             "rock": pg.image.load(ROCK_URL).convert_alpha(),
             "block": pg.image.load(BLOCK_URL).convert_alpha()

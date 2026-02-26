@@ -38,14 +38,30 @@ class Hud:
         self.mouse_pressed = False
 
         self.item_descriptions = {
-            "Axe": "Chops down trees.\nGrants 5 wood.",
-            "Hammer": "Demolishes buildings & rocks.\nGrants 5 stone.",
-            "ResZone": "Apartment complex for the residents",
-            "Lumbermill": "Produces 1 wood\nevery 2 seconds.",
-            "Stonemasonry": "Produces 1 stone\nevery 2 seconds.",
-            "Tree": "A natural forest tree.\nUse an Axe to harvest 5 Wood.",
-            "Rock": "A solid rock formation.\nUse a Hammer to harvest 5 Stone.",
-            "Stadium": "Hosts massive events.\nIncreases happiness and clout."
+            # Tools & Nature
+            "Axe": "Chops down trees to clear land for development.",
+            "Hammer": "Demolishes buildings, roads, and rocks.\nRefunds part of the construction cost.",
+            "Tree": "A natural forest tree.\nImproves the satisfaction of nearby residents.",
+            "Rock": "A solid rock formation.\nMust be cleared with a Hammer to build here.",
+
+            # Infrastructure
+            "Road": "Public Road.\nEssential for citizens to commute to work and for zones to develop.",
+            "PowerLine": "High-Voltage Transmission Line.\nTransmits electricity between non-contiguous areas.",
+
+            # Zones
+            "ResZone": "Residential Zone.\nCitizens will automatically build homes here if connected to a road.",
+            "IndZone": "Industrial Zone.\nProvides jobs, but lowers the satisfaction of nearby residential areas.",
+            "SrvZone": "Service Zone.\nProvides jobs and helps balance out industrial production.",
+
+            # Basic Service Buildings
+            "Police": "Police Station.\nGuarantees public safety for fields within its radius.",
+            "Stadium": "Stadium.\nProvides a massive satisfaction bonus to citizens living or working nearby.",
+
+            # Advanced Service Buildings (Optional Features)
+            "FireStation": "Fire Station.\nReduces fire risk in its radius and dispatches fire trucks to emergencies.",
+            "School": "School.\nProvides secondary education, increasing citizen income and tax revenue.",
+            "University": "University.\nProvides tertiary education for maximum citizen income and tax revenue.",
+            "PowerPlant": "Power Plant.\nGenerates electricity. Must be adjacent to zones or connected via power lines."
         }
 
         self.save_btn_rect = pg.Rect(10,40,100,30)
@@ -75,30 +91,45 @@ class Hud:
             self.examined_tile_scaled_img = None
 
     def create_build_hud(self):
-        # Use existing rect properties instead of recalculating
+        # 1. Setup layout variables
         start_x = self.build_rect.x + 10
         render_x = self.build_rect.x + 10
         render_y = self.build_rect.y + 10
         object_width = self.build_rect.width // 5
 
+        # 2. Define your Building Specs here (Single Source of Truth)
+        # Format: "Name": (width, height)
+        # Any building NOT in this list will default to (1, 1)
+        building_specs = {
+            "FireStation": (2, 2),
+            "Police": (2, 2),
+            "School": (2, 2),
+            "PowerPlant": (2, 2),
+            "ResZone": (4, 4),
+            "SerZone": (4, 4),
+            "IndZone": (4, 4),
+            "University": (4, 4),
+            "Stadium": (6, 6)
+        }
+
         tiles = []
 
         for image_name, image in self.images.items():
-            # pg.transform.scale creates a new surface, so .copy() is unnecessary
+            # Scale image
             image_scale = self.scale_image(image, w=object_width)
 
+            # Check for line break (wrap to next row)
             if render_x + image_scale.get_width() > self.build_rect.right - 10:
                 render_x = start_x
                 render_y += image_scale.get_height() + 10
 
             rect = image_scale.get_rect(topleft=(render_x, render_y))
 
+            # Determine type
             item_type = "Tool" if image_name in ["Axe", "Hammer"] else "Building"
-            w,h = 1,1
-            if image_name == "ResZone":
-                w,h = 4,4
-            if image_name == "Stadium":
-                w,h = 6,6
+
+            # 3. Smart Lookup: Get dimensions from dict, default to (1,1) if not found
+            w, h = building_specs.get(image_name, (1, 1))
 
             tiles.append(
                 {
@@ -175,12 +206,33 @@ class Hud:
             desc_x = img_x + self.examined_tile_scaled_img.get_width() + 15
             desc_y = img_y
 
-            # Print multi-line text cleanly
-            for i, line in enumerate(desc.split('\n')):
-                draw_text(screen, line, 22, (220, 220, 220), (desc_x, desc_y + (i * 25)))
+            # --- NEW: Dynamic Word Wrapping ---
+            font = pg.font.SysFont(None, 22)
+            max_text_width = self.select_rect.right - desc_x - 15  # 15px padding from the right edge
 
-            # 5. Show Status (Only applies to active buildings with a cooldown)
-            # 5. Show Status (Check if the examined tile is a Zone)
+            wrapped_lines = []
+            for paragraph in desc.split('\n'):
+                words = paragraph.split(' ')
+                current_line = ""
+                for word in words:
+                    test_line = current_line + word + " "
+                    # Check if adding this word makes the line wider than our box
+                    if font.size(test_line)[0] < max_text_width:
+                        current_line = test_line
+                    else:
+                        wrapped_lines.append(current_line)
+                        current_line = word + " "
+                wrapped_lines.append(current_line)
+
+            # Print multi-line text and track our Y-coordinate
+            current_y = desc_y
+            for line in wrapped_lines:
+                draw_text(screen, line, 22, (220, 220, 220), (desc_x, current_y))
+                current_y += 25  # Move down a line
+
+            # --- 5. Show Status ---
+            current_y += 10  # Add a little extra visual padding before the stats
+
             if hasattr(self.examined_tile, 'capacity'):
                 cap = self.examined_tile.capacity
                 occ = self.examined_tile.occupants
@@ -188,9 +240,10 @@ class Hud:
 
                 # Draw Saturation
                 status_text = f"Saturation: {occ}/{cap} ({percent}%)"
-                draw_text(screen, status_text, 22, (200, 200, 255), (desc_x, desc_y + 60))
+                draw_text(screen, status_text, 22, (200, 200, 255), (desc_x, current_y))
+                current_y += 25
 
-                # NEW: Draw Local Satisfaction
+                # Draw Local Satisfaction
                 if hasattr(self.examined_tile, 'local_satisfaction'):
                     sat = self.examined_tile.local_satisfaction
                     sat_text = f"Local Satisfaction: {sat}%"
@@ -203,7 +256,7 @@ class Hud:
                     else:
                         sat_color = (255, 100, 100)  # Red
 
-                    draw_text(screen, sat_text, 22, sat_color, (desc_x, desc_y + 85))
+                    draw_text(screen, sat_text, 22, sat_color, (desc_x, current_y))
 
         for tile in self.tiles:
             icon = tile["icon"].copy()
@@ -315,8 +368,14 @@ class Hud:
         images = {
             "Axe": pg.image.load(AXE_URL).convert_alpha(),
             "Hammer": pg.image.load(HAMMER_URL).convert_alpha(),
-            "ResZone": pg.image.load(RESZONE_URL).convert_alpha(),
-            "Stadium": pg.image.load(STADIUM_URL).convert_alpha()
+            "ResZone": pg.image.load(RESZONE_URL1).convert_alpha(),
+            "IndZone": pg.image.load(INDZONE_URL1).convert_alpha(),
+            "SerZone": pg.image.load(SERZONE_URL1).convert_alpha(),
+            "Stadium": pg.image.load(STADIUM_URL).convert_alpha(),
+            "University": pg.image.load(UNIVERSITY_URL).convert_alpha(),
+            "School": pg.image.load(SCHOOL_URL).convert_alpha(),
+            "FireStation": pg.image.load(FIRE_STATION_URL).convert_alpha(),
+            "Police": pg.image.load(POLICE_URL).convert_alpha()
         }
         return images
 
