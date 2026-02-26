@@ -1,11 +1,11 @@
 class ResourceManager:
     def __init__(self):
         self.funds = 20_800
-        self.population = 0
+        self._population = 0
         self.satisfaction = 100
 
         # Education tracking
-        self.edu_primary = 0  # All start here
+        #self.edu_primary = 0  # All start here
         self.edu_secondary = 0
         self.edu_tertiary = 0
         
@@ -52,6 +52,26 @@ class ResourceManager:
         self.total_loan_amount = 0
 
         self.budget_history = [] # List of {year, income, expenses, balance}
+
+    @property
+    def population(self):
+        return self._population
+
+    @population.setter
+    def population(self, value):
+        self._population = max(0, int(value))
+        if self.edu_tertiary > self.population:
+            self.edu_tertiary = self.population
+        if self.edu_secondary + self.edu_tertiary > self._population:
+            self.edu_secondary = self._population - self.edu_tertiary
+
+    @property
+    def edu_primary(self):
+        return max(0, self._population - self.edu_secondary - self.edu_tertiary)
+
+    @edu_primary.setter
+    def edu_primary(self, value):
+        pass
 
     def take_loan(self, amount, game=None):
         interest_rate = 0.05 # 5% annual interest
