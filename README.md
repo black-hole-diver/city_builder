@@ -30,21 +30,23 @@ The core requirements and objectives of the task include:
 
 ## Controls
 
-* **Left Click**: Place buildings, use selected tool, or select objects to examine.
-* **Right Click**: Deselect current tool or building.
-* **Mouse Movement**: Pan the camera to scroll across the map.
+* **Left Click**: Select / Place / Examine building.
+* **Right Click**: Deselect tool / Close examine HUD.
+* **Mouse Movement**: Pan the camera at the edges of the screen.
 * **Spacebar**: Pause / Unpause the game simulation.
 * **1, 2, 3**: Change simulation speed (1x, 2x, 3x).
-* **ESC**: Close open menus or quit the game.
+* **F5**: Quick Save.
+* **F9**: Quick Load.
+* **ESC**: Close menus or quit.
 
 ## Installation & Running
 
 1. Ensure you have Python 3.x installed.
 2. Install the required dependencies:
    ```bash
-   pip install pygame
-   pip install noise
-   
+   pip install -r requirements.txt
+   ```
 3. Run the main game file:
    ```bash
    python main.py
+   ```

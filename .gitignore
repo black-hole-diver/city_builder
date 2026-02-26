@@ -1,0 +1,21 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# OS-specific
+.DS_Store
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+
+# Game saves
+savegame.json
+save_slot_*.json
+
+# VS Code / IDE settings
+.vscode/
+.idea/
