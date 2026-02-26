@@ -102,8 +102,9 @@ class Hud:
     def create_build_hud(self):
         # 1. Grid Configuration
         cols = 3
-        gap = 8
-        menu_padding = 12
+        gap = 10
+        menu_padding = 10
+        item_padding = 10
 
         # 2. Count valid images and calculate how many rows we need
         valid_images = {k: v for k, v in self.images.items() if v.get_width() > 0}
@@ -135,9 +136,9 @@ class Hud:
         col, row = 0, 0
 
         for image_name, image in valid_images.items():
-            # Scale icon to 85% of the slot
-            max_img_w = int(cell_w * 0.85)
-            max_img_h = int(cell_h * 0.85)
+            # Apply 10px padding for every item in the grid
+            max_img_w = cell_w - (item_padding * 2)
+            max_img_h = cell_h - (item_padding * 2)
 
             orig_w, orig_h = image.get_size()
             scale = min(max_img_w / orig_w, max_img_h / orig_h)
@@ -464,6 +465,8 @@ class Hud:
             "FireStation": pg.image.load(FIRE_STATION_URL).convert_alpha(),
             "Police": pg.image.load(POLICE_URL).convert_alpha(),
             "PowerPlant": pg.image.load(POWERPLANT_URL).convert_alpha(),
+            "Road": pg.image.load(ROAD_URL).convert_alpha(),
+            "PowerLine": pg.image.load(POWERLINE_URL).convert_alpha(),
         }
         formatted_images = {}
         for name, img in raw_images.items():

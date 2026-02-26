@@ -35,11 +35,25 @@ class Game:
 
         self.hud = Hud(self.resource_manager,self.width, self.height)
         self.world = World(self.resource_manager, self.entities, self.hud, 50, 50, self.width, self.height)
-        for _ in range(INITIAL_WORKER): Worker(self.world.world[25][25], self.world)
+        
+        # Robust worker spawning: search for free tile
+        for _ in range(INITIAL_WORKER):
+            spawned = False
+            attempts = 0
+            while not spawned and attempts < 1000:
+                x = random.randint(0, self.world.grid_length_x - 1)
+                y = random.randint(0, self.world.grid_length_y - 1)
+                if not self.world.world[x][y]["collision"]:
+                    Worker(self.world.world[x][y], self.world)
+                    spawned = True
+                attempts += 1
+            if not spawned:
+                # Failsafe if map is somehow full
+                Worker(self.world.world[0][0], self.world)
 
         self.camera = Camera(self.width, self.height)
         self.camera.scroll.x = -(MAP_WIDTH / 2 - self.width / 2)
-        self.camera.scroll.y = -(MAP_WIDTH / 2 - self.width / 2)
+        self.camera.scroll.y = -(MAP_HEIGHT / 2 - self.height / 2)
 
         self.playing = False
 
@@ -90,7 +104,7 @@ class Game:
             if event.type == pg.KEYDOWN:
                 if event.key == pg.K_ESCAPE:
                     if self.menu_state is not None:
-                        self.quit_game()
+                        self.menu_state = None
                     else:
                         self.quit_game()
                 if event.key == pg.K_SPACE:
@@ -257,10 +271,10 @@ class Game:
 
         # 2. Clear current entities and map data
         self.entities.clear()
-        self.world.buildings = [[None for _ in range(self.world.grid_length_x)] for _ in
-                                range(self.world.grid_length_y)]
-        self.world.workers = [[None for _ in range(self.world.grid_length_x)] for _ in
-                              range(self.world.grid_length_y)]
+        self.world.buildings = [[None for _ in range(self.world.grid_length_y)] for _ in
+                                range(self.world.grid_length_x)]
+        self.world.workers = [[None for _ in range(self.world.grid_length_y)] for _ in
+                              range(self.world.grid_length_x)]
 
         # 3. Restore Map Tiles
         for x in range(self.world.grid_length_x):

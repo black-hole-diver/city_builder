@@ -28,7 +28,9 @@ class Worker:
 
     def create_path(self):
         searching_for_path = True
-        while searching_for_path:
+        attempts = 0
+        while searching_for_path and attempts < 100:
+            attempts += 1
             x = random.randint(0, self.world.grid_length_x-1)
             y = random.randint(0, self.world.grid_length_y-1)
             dest_tile = self.world.world[x][y]
@@ -38,11 +40,14 @@ class Worker:
                 self.end = self.grid.node(x,y)
                 finder = AStarFinder(diagonal_movement=DiagonalMovement.never)
                 self.path_index = 0
-                self.path, runs = finder.find_path(self.start, self.end, self.grid)
-                if not self.path:
-                    return
-                self.path = [(node.x, node.y) for node in self.path]
-                searching_for_path = False
+                path, runs = finder.find_path(self.start, self.end, self.grid)
+                if path:
+                    self.path = [(node.x, node.y) for node in path]
+                    searching_for_path = False
+        
+        if searching_for_path:
+            self.path = None
+            self.move_timer = pg.time.get_ticks() + 2000 # wait 2 seconds before retrying
 
     def change_tile(self, new_tile):
         self.world.workers[self.tile["grid"][0]][self.tile["grid"][1]] = None
@@ -50,9 +55,11 @@ class Worker:
         self.tile = self.world.world[new_tile[0]][new_tile[1]]
 
     def update(self, game_speed = 1):
-        if not self.path:
-            return
         now = pg.time.get_ticks()
+        if not self.path:
+            if now > self.move_timer:
+                self.create_path()
+            return
         adjusted_delay = WORKER_SPEED / game_speed
         if now - self.move_timer > adjusted_delay:
             if self.path_index >= len(self.path):

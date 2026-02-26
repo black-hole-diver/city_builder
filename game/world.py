@@ -32,9 +32,9 @@ class World:
         self.world = self.create_world()
         self.collision_matrix = self.create_collision_matrix()
 
-        self.buildings: List[List[Optional['Building']]] = [[None for _ in range(self.grid_length_x)] for _ in range(self.grid_length_y)]
-        self.workers: List[List[Optional['Worker']]] = [[None for _ in range(self.grid_length_x)] for _ in
-                                                            range(self.grid_length_y)]
+        self.buildings: List[List[Optional['Building']]] = [[None for _ in range(self.grid_length_y)] for _ in range(self.grid_length_x)]
+        self.workers: List[List[Optional['Worker']]] = [[None for _ in range(self.grid_length_y)] for _ in
+                                                            range(self.grid_length_x)]
 
         self.temp_tile = None
         self.examine_tile = None
@@ -52,7 +52,9 @@ class World:
             "FireStation": FireStation,
             "School": School,
             "University": University,
-            "PowerPlant": PowerPlant
+            "PowerPlant": PowerPlant,
+            "Road": Road,
+            "PowerLine": PowerLine
         }
 
         self.tools = {
@@ -133,7 +135,7 @@ class World:
 
                         if building_class:
                             building_image = self.hud.selected_tile["image"]
-                            ent = building_class(render_pos, building_image, self.resource_manager, grid_pos)
+                            ent = building_class((minx, miny), building_image, self.resource_manager, grid_pos)
                             self.entities.append(ent)
                             for x in range(grid_pos[0], grid_pos[0] + b_width):
                                 for y in range(grid_pos[1], grid_pos[1] + b_height):
@@ -141,6 +143,9 @@ class World:
                                     self.world[x][y]["collision"] = True
                                     self.collision_matrix[y][x] = 0
                         self.hud.selected_tile = None
+                        self.examine_tile = None
+                        self.hud.examined_tile = None
+                        self.examine_mask_points = None
         else:
             if self.can_place_tile(grid_pos):
                 building = self.buildings[grid_pos[0]][grid_pos[1]]

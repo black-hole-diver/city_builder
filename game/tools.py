@@ -17,6 +17,12 @@ class Axe(Tool):
 
     def use(self, grid_pos, world):
         if self.can_use(grid_pos, world):
+            # Deselect if we destroy the currently examined tree
+            if world.examine_tile == (grid_pos[0], grid_pos[1]):
+                world.examine_tile = None
+                world.hud.examined_tile = None
+                world.examine_mask_points = None
+
             world.world[grid_pos[0]][grid_pos[1]]["tile"] = ""
             world.world[grid_pos[0]][grid_pos[1]]["collision"] = False
             world.collision_matrix[grid_pos[1]][grid_pos[0]] = 1
@@ -59,6 +65,12 @@ class Hammer(Tool):
                     world.examine_mask_points = None
 
             elif is_rock:
+                # Deselect if we destroy the currently examined rock
+                if world.examine_tile == (grid_pos[0], grid_pos[1]):
+                    world.examine_tile = None
+                    world.hud.examined_tile = None
+                    world.examine_mask_points = None
+
                 world.world[grid_pos[0]][grid_pos[1]]["tile"] = ""
 
                 # Free up the tile for rocks

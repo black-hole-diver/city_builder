@@ -13,13 +13,26 @@ class ResourceManager:
             "ResZone": 50,
             "Stadium": 5000,
             "Police": 500,
-            "Road": 10
+            "Road": 10,
+            "FireStation": 500,
+            "School": 1000,
+            "University": 5000,
+            "PowerPlant": 10000,
+            "PowerLine": 5
         }
 
         self.maintenance_fees = {
             "Road": 1,
             "Police": 50,
             "Stadium": 200,
+            "FireStation": 50,
+            "School": 100,
+            "University": 500,
+            "PowerPlant": 1000,
+            "PowerLine": 1,
+            "ResZone": 5,
+            "IndZone": 5,
+            "SerZone": 5
         }
 
         self.tax_per_citizen = 10
