@@ -5,6 +5,7 @@ from .utils import draw_text
 
 class Hud:
     def __init__(self, resource_manager, width, height):
+        self.music_btn_rect_main = None
         self.resource_manager = resource_manager
         self.width = width
         self.height = height
@@ -351,7 +352,12 @@ class Hud:
 
                 # Determine labels based on zone type
                 is_working_zone = self.examined_tile.name in ["IndZone", "SerZone"]
-                pop_label = "Employees" if is_working_zone else "Local Pop"
+                if is_working_zone:
+                    pop_label = "Employees"
+                elif self.examined_tile.name in ["School", "University"]:
+                    pop_label = "Students"
+                else:
+                    pop_label = "Local Pop"
 
                 # Draw Saturation
                 status_text = f"{pop_label}: {occ}/{cap} ({percent}%)"
@@ -511,6 +517,24 @@ class Hud:
 
         if self.resource_manager.is_mayor_replaced:
             self.draw_game_over_panel(screen)
+
+        # NEW: Education Status HUD (Bottom Left)
+        res = self.resource_manager
+        edu_y = self.height - 180
+        draw_text(screen, "CITIZEN EDUCATION", 24, (255, 215, 0), (20, edu_y))
+
+        draw_text(screen, f"Primary: {res.edu_primary}", 18, (200, 200, 200), (30, edu_y + 30))
+        draw_text(screen, f"Secondary: {res.edu_secondary}", 18, (150, 255, 150), (30, edu_y + 50))
+        draw_text(screen, f"Tertiary: {res.edu_tertiary}", 18, (150, 150, 255), (30, edu_y + 70))
+
+        # Visual Progress Bar
+        if res.population > 0:
+            bar_w = 150
+            pg.draw.rect(screen, (50, 50, 50), (30, edu_y + 95, bar_w, 10))
+            sec_w = (res.edu_secondary / res.population) * bar_w
+            tert_w = (res.edu_tertiary / res.population) * bar_w
+            pg.draw.rect(screen, (100, 255, 100), (30, edu_y + 95, sec_w, 10))
+            pg.draw.rect(screen, (100, 100, 255), (30 + sec_w, edu_y + 95, tert_w, 10))
 
     def draw_budget_panel(self, screen):
         # Semi-transparent overlay

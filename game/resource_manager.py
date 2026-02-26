@@ -1,8 +1,13 @@
 class ResourceManager:
     def __init__(self):
         self.funds = 20_800
-        self.population = 0
+        self._population = 0
         self.satisfaction = 100
+
+        # Education tracking
+        #self.edu_primary = 0  # All start here
+        self.edu_secondary = 0
+        self.edu_tertiary = 0
         
         # Win/Loss tracking
         self.years_negative_budget = 0
@@ -47,6 +52,26 @@ class ResourceManager:
         self.total_loan_amount = 0
 
         self.budget_history = [] # List of {year, income, expenses, balance}
+
+    @property
+    def population(self):
+        return self._population
+
+    @population.setter
+    def population(self, value):
+        self._population = max(0, int(value))
+        if self.edu_tertiary > self.population:
+            self.edu_tertiary = self.population
+        if self.edu_secondary + self.edu_tertiary > self._population:
+            self.edu_secondary = self._population - self.edu_tertiary
+
+    @property
+    def edu_primary(self):
+        return max(0, self._population - self.edu_secondary - self.edu_tertiary)
+
+    @edu_primary.setter
+    def edu_primary(self, value):
+        pass
 
     def take_loan(self, amount, game=None):
         interest_rate = 0.05 # 5% annual interest
@@ -94,8 +119,15 @@ class ResourceManager:
             self.budget_history.pop()
 
     def apply_daily_budget(self, world):
-        # The amount of tax collected depends on how many people live or work in the given zone field.
-        
+        # Calculate daily tax based on education levels
+        # University = 2.0x value, School = 1.5x value, Primary = 1.0x value
+        effective_pop = (self.edu_primary * 1.0) + \
+                        (self.edu_secondary * 1.5) + \
+                        (self.edu_tertiary * 2.0)
+
+        daily_tax_per_citizen = self.tax_per_citizen / 365.0
+        tax_income = effective_pop * daily_tax_per_citizen
+
         # Calculate total occupants across all zones (Residential, Industrial, Service)
         total_occupants = 0
         processed_zones = set()
@@ -105,25 +137,10 @@ class ResourceManager:
                 if b and hasattr(b, "occupants") and b not in processed_zones:
                     total_occupants += b.occupants
                     processed_zones.add(b)
-        
-        # Taxation: annual tax / 365 = daily tax
-        daily_tax_per_citizen = self.tax_per_citizen / 365.0
-        tax_income = total_occupants * daily_tax_per_citizen
-        
-        # Loan interest: 5% annual interest / 365 = daily interest
-        daily_loan_interest = (self.total_loan_amount * 0.05) / 365.0
-        
-        maintenance_cost = 0
-        processed_buildings = set()
-        for x in range(world.grid_length_x):
-            for y in range(world.grid_length_y):
-                b = world.buildings[x][y]
-                if b and b not in processed_buildings:
-                    # Maintenance fee / 365 = daily maintenance
-                    maintenance_cost += self.maintenance_fees.get(b.name, 0) / 365.0
-                    processed_buildings.add(b)
 
-        maintenance_cost += daily_loan_interest
+        # Loan interest: 5% annual interest / 365 = daily interest
+        maintenance_cost = (self.total_loan_amount * 0.05) / 365.0
+        
         self.funds += tax_income
         self.funds -= maintenance_cost
         
