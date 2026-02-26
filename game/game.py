@@ -140,6 +140,7 @@ class Game:
                 self.hud.width = self.width
                 self.hud.height = self.height
                 self.hud.__init__(self.resource_manager, self.width, self.height)
+                self.hud.game = self
 
                 # Update camera dimensions
                 self.camera.width = self.width
