@@ -81,6 +81,7 @@ class Game:
         self.music_on = True
         try:
             pg.mixer.music.load("assets/sounds/fly_me_to_the_moon.ogg")
+            pg.mixer.music.set_volume(0.1)  # Set volume to 10% (0.0 to 1.0)
             pg.mixer.music.play(-1)  # Loop indefinitely
         except Exception as e:
             print(f"Error loading music: {e}")
