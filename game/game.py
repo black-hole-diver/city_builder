@@ -231,7 +231,7 @@ class Game:
         self.notification_text = "Game Saved!"
         self.notification_timer = pg.time.get_ticks()
 
-    def load_game(self, filename="savegame.json", grid_pos=None):
+    def load_game(self, filename="savegame.json"):
         if not os.path.exists(filename):
             print("No save file found!")
             self.notification_text = "No save file found!"
