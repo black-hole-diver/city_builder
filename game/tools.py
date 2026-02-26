@@ -47,6 +47,13 @@ class Hammer(Tool):
 
             if has_building:
                 building_to_remove = world.buildings[grid_pos[0]][grid_pos[1]]
+
+                # --- NEW: Road connectivity check ---
+                if building_to_remove.name == "Road":
+                    if not world.is_road_safe_to_demolish(grid_pos[0], grid_pos[1]):
+                        world.game.add_notification("CANNOT DEMOLISH: BREAKS CONNECTIVITY!", (255, 100, 100))
+                        return
+
                 world.game.play_sound("destruction")
                 
                 # Pop-up for demolition

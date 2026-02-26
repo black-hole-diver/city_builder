@@ -459,3 +459,99 @@ class World:
                     if b and b.name == "Road":
                         roads.append((i, j))
         return roads
+
+    def is_road_safe_to_demolish(self, x, y):
+        """
+        Checks if a road at (x, y) can be safely demolished without breaking 
+        connectivity between existing zones.
+        """
+        from collections import deque
+        from .buildings import Zone
+
+        # 1. Identify all zones currently connected to the road network
+        # We need to know which zones are currently connected to each other.
+        # This is complex because we need to know if they WERE connected.
+        
+        # A simpler approach:
+        # If we remove the road at (x, y), do any zones that were previously
+        # connected to a road network become disconnected from each other?
+        
+        # Actually, the requirement is: "if they will destroy the connectivity, then the road cannot be demolished"
+        # This usually means if any pair of buildings that were connected become disconnected.
+        
+        # Let's find all zones that have road access.
+        all_zones = []
+        for bx in range(self.grid_length_x):
+            for by in range(self.grid_length_y):
+                b = self.buildings[bx][by]
+                if isinstance(b, Zone) and b.origin == (bx, by):
+                    all_zones.append(b)
+        
+        if not all_zones:
+            return True # No zones to disconnect
+            
+        # Helper to get road network connectivity
+        def get_road_networks(exclude_pos=None):
+            networks = {} # (rx, ry) -> network_id
+            visited = set()
+            net_id = 0
+            # Optimize: only iterate over coordinates that HAVE roads
+            road_positions = []
+            for rx in range(self.grid_length_x):
+                for ry in range(self.grid_length_y):
+                    b = self.buildings[rx][ry]
+                    if b and b.name == "Road":
+                        road_positions.append((rx, ry))
+
+            for rx, ry in road_positions:
+                if (rx, ry) == exclude_pos: continue
+                if (rx, ry) not in visited:
+                    queue = deque([(rx, ry)])
+                    visited.add((rx, ry))
+                    while queue:
+                        cx, cy = queue.popleft()
+                        networks[(cx, cy)] = net_id
+                        for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
+                            nx, ny = cx + dx, cy + dy
+                            if (nx, ny) == exclude_pos: continue
+                            if 0 <= nx < self.grid_length_x and 0 <= ny < self.grid_length_y:
+                                nb = self.buildings[nx][ny]
+                                if nb and nb.name == "Road" and (nx, ny) not in visited:
+                                    visited.add((nx, ny))
+                                    queue.append((nx, ny))
+                    net_id += 1
+            return networks
+
+        # Get networks BEFORE removal
+        current_networks = get_road_networks()
+        
+        # Map zones to their networks BEFORE removal
+        def get_zone_networks(zone, networks_map):
+            adj = self.get_adjacent_roads(zone.origin[0], zone.origin[1], zone.grid_width, zone.grid_height)
+            return {networks_map[r] for r in adj if r in networks_map}
+
+        zone_to_nets_before = {z: get_zone_networks(z, current_networks) for z in all_zones}
+        
+        # Get networks AFTER removal
+        future_networks = get_road_networks(exclude_pos=(x, y))
+        zone_to_nets_after = {z: get_zone_networks(z, future_networks) for z in all_zones}
+        
+        # Check if any previously connected zones are now in different networks or disconnected
+        # This is a bit tricky. If two zones shared a network before, they must share one after.
+        for i in range(len(all_zones)):
+            for j in range(i + 1, len(all_zones)):
+                z1 = all_zones[i]
+                z2 = all_zones[j]
+                
+                nets1_before = zone_to_nets_before[z1]
+                nets2_before = zone_to_nets_before[z2]
+                
+                # If they were connected via at least one common network
+                if nets1_before.intersection(nets2_before):
+                    # They MUST still be connected via at least one common network after
+                    nets1_after = zone_to_nets_after[z1]
+                    nets2_after = zone_to_nets_after[z2]
+                    if not nets1_after.intersection(nets2_after):
+                        return False
+        
+        return True
