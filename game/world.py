@@ -138,6 +138,8 @@ class World:
                             building_image = self.hud.selected_tile["image"]
                             ent = building_class((minx, miny), building_image, self.resource_manager, grid_pos)
                             ent.game = self.game # Set game reference
+                            self.resource_manager.apply_cost_to_resource(building_name, self.game)
+                            self.game.play_sound("creation")
                             
                             # Update initial road access
                             ent.has_road_access = self.has_road_access(grid_pos[0], grid_pos[1], b_width, b_height)
@@ -172,7 +174,14 @@ class World:
                                 # Recalculate satisfaction immediately to apply new bonuses
                                 self.game.calculate_satisfaction_and_growth()
 
-                        self.hud.selected_tile = None
+                        # Do not deselect if it's a Road or PowerLine for continuous construction
+                        if building_name not in ["Road", "PowerLine"]:
+                            self.hud.selected_tile = None
+                        else:
+                            # Re-check affordability for continuous placement
+                            if not self.resource_manager.is_affordable(building_name):
+                                self.hud.selected_tile = None
+                        
                         self.examine_tile = None
                         self.hud.examined_tile = None
                         self.examine_mask_points = None

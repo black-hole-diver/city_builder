@@ -65,8 +65,19 @@ class Game:
         self.playing = False
         self.notifications = []  # List of {text, color, timer, pos_y, offset_y}
 
-        self.menu_state = None
+        self.menu_state = "MAIN_MENU"
         self.save_slots = ["save_slot_1.json", "save_slot_2.json", "save_slot_3.json"]
+
+        # Sounds
+        self.sounds = {
+            "creation": pg.mixer.Sound("assets/sounds/creation.ogg"),
+            "destruction": pg.mixer.Sound("assets/sounds/destruction.ogg"),
+            "wood_chop": pg.mixer.Sound("assets/sounds/wood_chop.ogg")
+        }
+
+    def play_sound(self, sound_name):
+        if sound_name in self.sounds:
+            self.sounds[sound_name].play()
 
     def create_starry_background(self):
         surface = pg.Surface((self.width, self.height))
@@ -114,16 +125,20 @@ class Game:
                 self.background = self.create_starry_background()
             if event.type == pg.KEYDOWN:
                 if event.key == pg.K_ESCAPE:
-                    if self.menu_state is not None:
+                    if self.hud.show_help:
+                        self.hud.show_help = False
+                    elif self.hud.show_budget:
+                        self.hud.show_budget = False
+                    elif self.menu_state is not None:
                         self.menu_state = None
                     else:
                         self.quit_game()
                 if event.key == pg.K_SPACE:
                     self.paused = not self.paused
                 if event.key == pg.K_F5:
-                    self.save_game()
+                    self.menu_state = "SAVE"
                 if event.key == pg.K_F9:
-                    self.load_game()
+                    self.menu_state = "LOAD"
 
                 if event.key == pg.K_1:
                     self.current_speed = 1
@@ -146,15 +161,43 @@ class Game:
 
     def update(self):
         if self.hud.menu_action:
-            self.menu_state = self.hud.menu_action
+            if self.hud.menu_action == "SAVE":
+                self.menu_state = "SAVE"
+            elif self.hud.menu_action == "LOAD":
+                self.menu_state = "LOAD"
+            elif self.hud.menu_action == "MAIN_LOAD":
+                # Find the most recently modified save file among the 3 slots
+                latest_save = None
+                latest_time = 0
+                for slot in self.save_slots:
+                    if os.path.exists(slot):
+                        mtime = os.path.getmtime(slot)
+                        if mtime > latest_time:
+                            latest_time = mtime
+                            latest_save = slot
+                
+                if latest_save:
+                    self.load_game(latest_save)
+                    self.menu_state = None
+                else:
+                    self.add_notification("No save files found!", (255, 100, 100))
+            elif self.hud.menu_action == "RESTART":
+                self.restart_game()
+            elif self.hud.menu_action == "PLAY":
+                self.menu_state = None # Transition to active gameplay
+            
             self.hud.menu_action = None
+        
+        if self.menu_state == "MAIN_MENU":
+            self.hud.update()
+            return
+        
         if self.menu_state is not None:
             return
         
+        # When game over, hud.update must still run to handle the buttons
         if self.resource_manager.is_mayor_replaced:
-            self.add_notification("GAME OVER: MAYOR REPLACED", (255, 50, 50))
-            # In a real game we might want to trigger a menu or restart,
-            # but for now we'll just stop the updates.
+            self.hud.update()
             return
 
         self.camera.update()
@@ -178,6 +221,9 @@ class Game:
             if self.day_timer >= SPEEDS[self.current_speed]:
                 self.current_date += datetime.timedelta(days=1)
                 self.day_timer -= SPEEDS[self.current_speed]
+
+                # DAILY BUDGET UPDATE
+                self.resource_manager.apply_daily_budget(self.world)
 
                 # Monthly/Daily population influx for small starting population
                 # Check every few days for a small chance to increase population if there's capacity
@@ -228,23 +274,34 @@ class Game:
                 n["offset_y"] -= 1  # Float up
 
     def apply_annual_logic(self):
-        # 1. Budget
-        tax, maintenance = self.resource_manager.apply_annual_budget(self.world)
-        self.add_notification("TAXING TIME!", (255, 215, 0))
-        self.add_notification(f"Annual Budget: +${tax} -${maintenance}", (100, 255, 100) if tax >= maintenance else (255, 100, 100))
+        # 1. Budget Summary Notification
+        # We don't call apply_annual_budget anymore as it's daily.
+        # But we can still show an annual summary.
+        current_year = self.current_date.year - 1 # Logic triggers at start of new year
+        year_entry = next((item for item in self.resource_manager.budget_history if item.get("year") == current_year), None)
+        
+        if year_entry:
+            tax = int(year_entry["income"])
+            maintenance = int(year_entry["expenses"])
+            self.add_notification("TAXING TIME!", (255, 215, 0))
+            self.add_notification(f"Annual Budget: +${tax} -${maintenance}", (100, 255, 100) if tax >= maintenance else (255, 100, 100))
 
         # 2. Population Dynamics & Satisfaction
         self.calculate_satisfaction_and_growth()
 
-        # Workplace assignments are now part of calculate_satisfaction_and_growth
-        # or can be called here separately if needed, but it's currently inside.
-
         # 3. Check for Game Over
+        if self.resource_manager.funds < 0:
+            self.resource_manager.years_negative_budget += 1
+        else:
+            self.resource_manager.years_negative_budget = 0
+
         if self.resource_manager.satisfaction < 10:
              self.resource_manager.is_mayor_replaced = True
+             self.add_notification("YOU ARE FIRED!!!!", (255, 0, 0))
         
         if self.resource_manager.years_negative_budget > 5:
              self.resource_manager.is_mayor_replaced = True
+             self.add_notification("GAME OVER: DEBT LIMIT EXCEEDED", (255, 0, 0))
 
     def calculate_satisfaction_and_growth(self):
         from .buildings import ResZone, IndZone, SerZone
@@ -274,19 +331,42 @@ class Game:
 
         # Satisfaction logic
         total_sat = 100
-        # - Negative budget impact
-        if self.resource_manager.funds < 0:
-            total_sat -= self.resource_manager.years_negative_budget * 5
         
-        # - Unbalanced industrial/service
-        if ind_zones and ser_zones:
-            # Only count zones with road access for ratio balance
-            road_ind = [z for z in ind_zones if z.has_road_access]
-            road_ser = [z for z in ser_zones if z.has_road_access]
-            if road_ind and road_ser:
-                ratio = len(road_ind) / len(road_ser)
-                if ratio > 2 or ratio < 0.5:
-                    total_sat -= 10
+        # - Negative budget impact (Proportional to size of loan and years negative)
+        if self.resource_manager.total_loan_amount > 0:
+            # Penalty based on loan size (relative to a base of 1000) and years negative
+            loan_penalty = (self.resource_manager.total_loan_amount / 1000) * (1 + self.resource_manager.years_negative_budget)
+            total_sat -= int(loan_penalty)
+            # Add to bonuses for visibility if it's a zone
+            debt_penalty_text = f"Debt Penalty (-{int(loan_penalty)})"
+            
+        # - Tax impact (High taxes reduce satisfaction)
+        # Assuming base tax is 10. Every $1 above 10 reduces satisfaction by 2.
+        tax_impact = 0
+        if self.resource_manager.tax_per_citizen > 10:
+            tax_impact = (self.resource_manager.tax_per_citizen - 10) * 2
+            total_sat -= tax_impact
+        elif self.resource_manager.tax_per_citizen < 10:
+            # Low taxes bonus
+            tax_impact = (10 - self.resource_manager.tax_per_citizen) * 1
+            total_sat += tax_impact
+        
+        # - Unbalanced industrial/service production
+        total_ind_occ = sum(z.occupants for z in ind_zones)
+        total_ser_occ = sum(z.occupants for z in ser_zones)
+        
+        imbalance_penalty = 0
+        if total_ind_occ > 0 or total_ser_occ > 0:
+            # If one is much larger than the other
+            if total_ind_occ > 0 and total_ser_occ > 0:
+                ratio = total_ind_occ / total_ser_occ
+                if ratio > 2.0 or ratio < 0.5:
+                    imbalance_penalty = 15
+                    total_sat -= imbalance_penalty
+            else:
+                # If only one type has workers, it's very unbalanced
+                imbalance_penalty = 20
+                total_sat -= imbalance_penalty
         
         # Calculate individual zone satisfaction for ALL zones (Res, Ind, Ser)
         all_zones = res_zones + ind_zones + ser_zones
@@ -297,8 +377,20 @@ class Game:
                 rz.bonuses = [] # Clear bonuses if no road access
                 continue
 
-            # Police/Stadium bonus
+            # Add global bonuses/penalties to individual zones for HUD display
             rz.bonuses = []
+            if self.resource_manager.total_loan_amount > 0:
+                rz.bonuses.append(f"Debt Penalty (-{int(loan_penalty)})")
+            
+            if self.resource_manager.tax_per_citizen > 10:
+                rz.bonuses.append(f"High Taxes (-{tax_impact})")
+            elif self.resource_manager.tax_per_citizen < 10:
+                rz.bonuses.append(f"Low Taxes (+{tax_impact})")
+            
+            if imbalance_penalty > 0:
+                rz.bonuses.append(f"Imbalance Penalty (-{imbalance_penalty})")
+
+            # Police/Stadium bonus
             for s in services:
                 # Service building itself needs road access to provide benefit
                 if not s.has_road_access: continue
@@ -411,6 +503,11 @@ class Game:
             glow_color = (brightness, brightness, 180)
             pg.draw.circle(self.screen, glow_color, (x, y), radius)
 
+        if self.menu_state == "MAIN_MENU":
+            self.hud.draw_main_menu(self.screen)
+            pg.display.flip()
+            return
+
         self.world.draw(self.screen, self.camera)
         self.hud.draw(self.screen, self.current_date, self.current_speed)
 
@@ -469,8 +566,17 @@ class Game:
         pg.quit()
         sys.exit()
 
-    def save_game(self, filename="savegame.json"):
-        print("Saving game...")
+    def restart_game(self):
+        """Re-initializes the game state."""
+        self.__init__(self.screen, self.clock)
+        self.menu_state = None # Start playing immediately when restarting
+        self.playing = True # Ensure it continues running
+        self.hud.menu_action = None # Clear any lingering menu actions
+
+    def save_game(self, filename=None):
+        if filename is None:
+            filename = self.save_slots[0]
+        print(f"Saving game to {filename}...")
         data = {
             "funds": self.resource_manager.funds,
             "population": self.resource_manager.population,
@@ -479,6 +585,7 @@ class Game:
             "is_mayor_replaced": self.resource_manager.is_mayor_replaced,
             "tax_per_citizen": self.resource_manager.tax_per_citizen,
             "total_loan_amount": self.resource_manager.total_loan_amount,
+            "budget_history": self.resource_manager.budget_history,
 
             "camera": {"x": self.camera.scroll.x, "y": self.camera.scroll.y},
             "date": self.current_date.strftime("%Y-%m-%d"),
@@ -517,14 +624,16 @@ class Game:
         self.notification_text = "Game Saved!"
         self.notification_timer = pg.time.get_ticks()
 
-    def load_game(self, filename="savegame.json"):
+    def load_game(self, filename=None):
+        if filename is None:
+            filename = self.save_slots[0]
+            
         if not os.path.exists(filename):
-            print("No save file found!")
-            self.notification_text = "No save file found!"
-            self.notification_timer = pg.time.get_ticks()
+            print(f"No save file found at {filename}!")
+            self.add_notification("No save file found!", (255, 100, 100))
             return
 
-        print("Loading game...")
+        print(f"Loading game from {filename}...")
         with open(filename, "r") as f:
             data = json.load(f)
 
@@ -536,6 +645,7 @@ class Game:
         self.resource_manager.is_mayor_replaced = data.get("is_mayor_replaced", False)
         self.resource_manager.tax_per_citizen = data.get("tax_per_citizen", 10)
         self.resource_manager.total_loan_amount = data.get("total_loan_amount", 0)
+        self.resource_manager.budget_history = data.get("budget_history", [])
 
         self.camera.scroll.x = data["camera"]["x"]
         self.camera.scroll.y = data["camera"]["y"]
@@ -589,10 +699,8 @@ class Game:
                     if hasattr(ent, "update_image"):
                         ent.update_image()
 
-                # BUG PREVENTION: The Building class automatically charges resources upon creation.
-                # Since we are loading an existing game, we must refund this cost.
-                refund_amount = self.resource_manager.costs.get(name, 0)
-                self.resource_manager.funds += refund_amount
+                # BUG PREVENTION: Buildings now require manual charging.
+                # When loading, we just create the entity without calling apply_cost_to_resource.
 
                 self.entities.append(ent)
                 b_w = ent.grid_width
@@ -658,58 +766,62 @@ class Game:
 
        # Draw the 3 slots
        for i, filename in enumerate(self.save_slots):
-           slot_y = menu_y + 100 + (i * 80)
-           slot_rect = pg.Rect(menu_x + 50, slot_y, 300, 60)
-           reset_rect = pg.Rect(menu_x + 370, slot_y, 80, 60)
+          slot_y = menu_y + 100 + (i * 80)
+          slot_rect = pg.Rect(menu_x + 50, slot_y, 300, 60)
+          reset_rect = pg.Rect(menu_x + 370, slot_y, 80, 60)
 
-           # Peek into the file to get info
-           info_text = "Empty Slot"
-           if os.path.exists(filename):
-               try:
-                   with open(filename, "r") as f:
-                       data = json.load(f)
-                   if isinstance(data, dict):
-                       info_text = f"Day: {data.get('date', 'Unknown')}"
-                   else: info_text = "Corrupt Save"
-               except json.JSONDecodeError:
-                   info_text = "Corrupt JSON Save"
-               except OSError:
-                   info_text = "Unreadable Save"
+          # Peek into the file to get info
+          info_text = "Empty Slot"
+          if os.path.exists(filename):
+             try:
+                with open(filename, "r") as f:
+                   data = json.load(f)
+                if isinstance(data, dict):
+                   # Extract saved date and population/funds for more info
+                   date = data.get('date', 'Unknown')
+                   funds = int(data.get('funds', 0))
+                   pop = int(data.get('population', 0))
+                   info_text = f"{date} | ${funds:,} | Pop: {pop}"
+                else: info_text = "Corrupt Save"
+             except json.JSONDecodeError:
+                info_text = "Corrupt JSON Save"
+             except OSError:
+                info_text = "Unreadable Save"
 
-           # Draw Slot Button
-           color = (80, 80, 100) if slot_rect.collidepoint(mouse_pos) else (60, 60, 80)
-           pg.draw.rect(self.screen, color, slot_rect)
-           pg.draw.rect(self.screen, (255, 255, 255), slot_rect, 2)
-           draw_text(self.screen, f"Slot {i + 1}: {info_text}", 25, (255, 255, 255),
-                     (slot_rect.x + 10, slot_rect.y + 20))
+          # Draw Slot Button
+          color = (80, 80, 100) if slot_rect.collidepoint(mouse_pos) else (60, 60, 80)
+          pg.draw.rect(self.screen, color, slot_rect)
+          pg.draw.rect(self.screen, (255, 255, 255), slot_rect, 2)
+          draw_text(self.screen, f"Slot {i + 1}: {info_text}", 25, (255, 255, 255),
+                    (slot_rect.x + 10, slot_rect.y + 20))
 
-           # Draw Reset Button
-           r_color = (200, 50, 50) if reset_rect.collidepoint(mouse_pos) else (150, 40, 40)
-           pg.draw.rect(self.screen, r_color, reset_rect)
-           pg.draw.rect(self.screen, (255, 255, 255), reset_rect, 2)
-           draw_text(self.screen, "RESET", 25, (255, 255, 255), (reset_rect.x + 10, reset_rect.y + 20))
+          # Draw Reset Button
+          r_color = (200, 50, 50) if reset_rect.collidepoint(mouse_pos) else (150, 40, 40)
+          pg.draw.rect(self.screen, r_color, reset_rect)
+          pg.draw.rect(self.screen, (255, 255, 255), reset_rect, 2)
+          draw_text(self.screen, "RESET", 25, (255, 255, 255), (reset_rect.x + 10, reset_rect.y + 20))
 
-           # Handle Clicks
-           if mouse_clicked:
-               # --- NEW: Handle Close Button Click ---
-               if close_rect.collidepoint(mouse_pos):
-                   self.menu_state = None
-                   self.hud.mouse_pressed = True  # Prevent clicking things behind menu
-                   return  # Exit out early
+          # Handle Clicks
+          if mouse_clicked:
+             # --- NEW: Handle Close Button Click ---
+             if close_rect.collidepoint(mouse_pos):
+                self.menu_state = None
+                self.hud.mouse_pressed = True  # Prevent clicking things behind menu
+                return  # Exit out early
 
-               elif reset_rect.collidepoint(mouse_pos):
-                   self.delete_save(filename)
-               elif slot_rect.collidepoint(mouse_pos):
-                   if self.menu_state == "SAVE":
-                       self.save_game(filename)
-                   elif self.menu_state == "LOAD":
-                       if info_text != "Empty Slot":
-                           self.load_game(filename)
+             elif reset_rect.collidepoint(mouse_pos):
+                self.delete_save(filename)
+             elif slot_rect.collidepoint(mouse_pos):
+                if self.menu_state == "SAVE":
+                   self.save_game(filename)
+                elif self.menu_state == "LOAD":
+                   if info_text != "Empty Slot":
+                      self.load_game(filename)
 
-                   self.menu_state = None  # Close menu after action
-                   self.hud.mouse_pressed = True  # Prevent clicking things behind menu when returning
+                self.menu_state = None  # Close menu after action
+                self.hud.mouse_pressed = True  # Prevent clicking things behind menu when returning
 
        # Right-click to close
        if mouse_state[2]:
-           self.menu_state = None
-           self.hud.mouse_pressed = True
+          self.menu_state = None
+          self.hud.mouse_pressed = True

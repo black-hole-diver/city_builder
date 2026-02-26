@@ -13,8 +13,6 @@ class Building:
         self.grid_width = grid_width
         self.grid_height = grid_height
         self.has_road_access = False
-
-        self.resource_manager.apply_cost_to_resource(self.name)
         
     def update(self, game_speed=1):
         pass

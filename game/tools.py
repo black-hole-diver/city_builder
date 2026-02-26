@@ -28,6 +28,7 @@ class Axe(Tool):
             world.world[grid_pos[0]][grid_pos[1]]["tile"] = ""
             world.world[grid_pos[0]][grid_pos[1]]["collision"] = False
             world.collision_matrix[grid_pos[1]][grid_pos[0]] = 1
+            world.game.play_sound("wood_chop")
             world.game.add_notification("TIMBERRR! TREE CUT DOWN", (100, 255, 100))
 
 class Hammer(Tool):
@@ -46,6 +47,7 @@ class Hammer(Tool):
 
             if has_building:
                 building_to_remove = world.buildings[grid_pos[0]][grid_pos[1]]
+                world.game.play_sound("destruction")
                 
                 # Pop-up for demolition
                 if hasattr(building_to_remove, "occupants") and building_to_remove.occupants > 0:
@@ -90,7 +92,9 @@ class Hammer(Tool):
                         # since population doesn't change, but they lose their current workplace.
                 
                 cost = world.resource_manager.costs.get(building_to_remove.name, 0)
-                world.resource_manager.funds += int(cost * refund_percent)
+                refund_amount = int(cost * refund_percent)
+                world.resource_manager.funds += refund_amount
+                world.resource_manager.log_transaction(world.game, f"REFUND {building_to_remove.name}", refund_amount, 0)
 
                 if building_to_remove in world.entities:
                     world.entities.remove(building_to_remove)
@@ -130,4 +134,5 @@ class Hammer(Tool):
                 # Free up the tile for rocks
                 world.world[grid_pos[0]][grid_pos[1]]["collision"] = False
                 world.collision_matrix[grid_pos[1]][grid_pos[0]] = 1
+                world.game.play_sound("destruction")
                 world.game.add_notification("ROCK SMASHED!", (200, 200, 200))
