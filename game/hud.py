@@ -271,7 +271,8 @@ class Hud:
 
         for tile in self.tiles:
             tile["affordable"] = self.resource_manager.is_affordable(tile["name"])
-            if tile["rect"].collidepoint(mouse_pos):
+            # Check if mouse is in the full cell area, not just the icon
+            if tile["cell_rect"].collidepoint(mouse_pos):
                 self.hovered_tile = tile
                 if mouse_clicked and tile["affordable"]:
                     if self.selected_tile == tile:
