@@ -4,18 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="47aba308-f49c-4a93-9a5d-4695dc059ce0" name="Changes" comment="fixed the hovering of axe and hammer">
+    <list default="true" id="47aba308-f49c-4a93-9a5d-4695dc059ce0" name="Changes" comment="debug hud UI &amp; display name">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/assets/graphics/ResZone.png" beforeDir="false" afterPath="$PROJECT_DIR$/assets/graphics/ResZone.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/game/buildings.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/buildings.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/game/game.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/game.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/game/hud.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/hud.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/game/resource_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/resource_manager.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/game/tools.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/tools.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/game/world.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/world.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/save_slot_1.json" beforeDir="false" afterPath="$PROJECT_DIR$/save_slot_1.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/save_slot_2.json" beforeDir="false" afterPath="$PROJECT_DIR$/save_slot_2.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/save_slot_3.json" beforeDir="false" afterPath="$PROJECT_DIR$/save_slot_3.json" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -37,6 +28,18 @@
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
+  "lastFilter": {
+    "state": "OPEN",
+    "assignee": "black-hole-diver"
+  }
+}]]></component>
+  <component name="GithubPullRequestsUISettings"><![CDATA[{
+  "selectedUrlAndAccountId": {
+    "url": "https://github.com/black-hole-diver/city_builder.git",
+    "accountId": "ae9fbfc5-1460-4f7a-af04-d9105d98e5b8"
+  }
+}]]></component>
   <component name="McpProjectServerCommands">
     <commands />
     <urls />
@@ -52,27 +55,30 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "Python.buildings.executor": "Run",
-    "Python.camera.executor": "Run",
-    "Python.main.executor": "Run",
-    "Python.main_city_builder.executor": "Run",
-    "Python.world.executor": "Run",
-    "RunOnceActivity.MCP Project settings loaded": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "resource__repurpose",
-    "junie.onboarding.icon.badge.shown": "true",
-    "last_opened_file_path": "/Users/wittawinpanta/Desktop/city_builder/assets/graphics",
-    "to.speed.mode.migration.done": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;Python.buildings.executor&quot;: &quot;Run&quot;,
+    &quot;Python.camera.executor&quot;: &quot;Run&quot;,
+    &quot;Python.main.executor&quot;: &quot;Run&quot;,
+    &quot;Python.main_city_builder.executor&quot;: &quot;Run&quot;,
+    &quot;Python.world.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;Zones-UI&quot;,
+    &quot;junie.onboarding.icon.badge.shown&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/Users/wittawinpanta/Desktop/city_builder/assets/graphics&quot;,
+    &quot;to.speed.mode.migration.done&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/assets/graphics" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/assets/graphics" />
     </key>
   </component>
@@ -197,7 +203,31 @@
       <option name="project" value="LOCAL" />
       <updated>1772003615750</updated>
     </task>
-    <option name="localTasksCounter" value="11" />
+    <task id="LOCAL-00011" summary="fix the examine hud">
+      <option name="closed" value="true" />
+      <created>1772078819702</created>
+      <option name="number" value="00011" />
+      <option name="presentableId" value="LOCAL-00011" />
+      <option name="project" value="LOCAL" />
+      <updated>1772078819702</updated>
+    </task>
+    <task id="LOCAL-00012" summary="fix the examine hud">
+      <option name="closed" value="true" />
+      <created>1772078823618</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1772078823618</updated>
+    </task>
+    <task id="LOCAL-00013" summary="debug hud UI &amp; display name">
+      <option name="closed" value="true" />
+      <created>1772080338140</created>
+      <option name="number" value="00013" />
+      <option name="presentableId" value="LOCAL-00013" />
+      <option name="project" value="LOCAL" />
+      <updated>1772080338140</updated>
+    </task>
+    <option name="localTasksCounter" value="14" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -222,7 +252,9 @@
     <MESSAGE value="fixed the hovering of axe and hammer" />
     <MESSAGE value="multidimension" />
     <MESSAGE value="depth change, url of pics changed" />
-    <option name="LAST_COMMIT_MESSAGE" value="depth change, url of pics changed" />
+    <MESSAGE value="fix the examine hud" />
+    <MESSAGE value="debug hud UI &amp; display name" />
+    <option name="LAST_COMMIT_MESSAGE" value="debug hud UI &amp; display name" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>

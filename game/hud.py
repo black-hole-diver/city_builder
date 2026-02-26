@@ -37,15 +37,40 @@ class Hud:
         self.hovered_tile = None
         self.mouse_pressed = False
 
+        self.display_names = {
+            "ResZone": "Residential Zone",
+            "IndZone": "Industrial Zone",
+            "SerZone": "Service Zone",
+            "FireStation": "Fire Station",
+            "PowerPlant": "Power Plant",
+            "PowerLine": "Power Line"
+        }
+
         self.item_descriptions = {
-            "Axe": "Chops down trees.\nGrants 5 wood.",
-            "Hammer": "Demolishes buildings & rocks.\nGrants 5 stone.",
-            "ResZone": "Apartment complex for the residents",
-            "Lumbermill": "Produces 1 wood\nevery 2 seconds.",
-            "Stonemasonry": "Produces 1 stone\nevery 2 seconds.",
-            "Tree": "A natural forest tree.\nUse an Axe to harvest 5 Wood.",
-            "Rock": "A solid rock formation.\nUse a Hammer to harvest 5 Stone.",
-            "Stadium": "Hosts massive events.\nIncreases happiness and clout."
+            # Tools & Nature
+            "Axe": "Chops down trees to clear land for development.",
+            "Hammer": "Demolishes buildings, roads, and rocks.\nRefunds part of the construction cost.",
+            "Tree": "A natural forest tree.\nImproves the satisfaction of nearby residents.",
+            "Rock": "A solid rock formation.\nMust be cleared with a Hammer to build here.",
+
+            # Infrastructure
+            "Road": "Public Road.\nEssential for citizens to commute to work and for zones to develop.",
+            "PowerLine": "High-Voltage Transmission Line.\nTransmits electricity between non-contiguous areas.",
+
+            # Zones
+            "ResZone": "Residential Zone.\nCitizens will automatically build homes here if connected to a road.",
+            "IndZone": "Industrial Zone.\nProvides jobs, but lowers the satisfaction of nearby residential areas.",
+            "SerZone": "Service Zone.\nProvides jobs and helps balance out industrial production.",
+
+            # Basic Service Buildings
+            "Police": "Police Station.\nGuarantees public safety for fields within its radius.",
+            "Stadium": "Stadium.\nProvides a massive satisfaction bonus to citizens living or working nearby.",
+
+            # Advanced Service Buildings (Optional Features)
+            "FireStation": "Fire Station.\nReduces fire risk in its radius and dispatches fire trucks to emergencies.",
+            "School": "School.\nProvides secondary education, increasing citizen income and tax revenue.",
+            "University": "University.\nProvides tertiary education for maximum citizen income and tax revenue.",
+            "PowerPlant": "Power Plant.\nGenerates electricity. Must be adjacent to zones or connected via power lines."
         }
 
         self.save_btn_rect = pg.Rect(10,40,100,30)
@@ -75,45 +100,94 @@ class Hud:
             self.examined_tile_scaled_img = None
 
     def create_build_hud(self):
-        # Use existing rect properties instead of recalculating
-        start_x = self.build_rect.x + 10
-        render_x = self.build_rect.x + 10
-        render_y = self.build_rect.y + 10
-        object_width = self.build_rect.width // 5
+        # 1. Local Building Specs Dictionary (Single Source of Truth for the HUD)
+        building_specs = {
+            "Road": (1, 1),
+            "PowerLine": (1, 1),
+            "ResZone": (4, 4),
+            "IndZone": (4, 4),
+            "SerZone": (4, 4),
+            "Police": (2, 2),
+            "Stadium": (6, 6),
+            "FireStation": (2, 2),
+            "School": (2, 2),
+            "University": (4, 4),
+            "PowerPlant": (2, 2)
+        }
+
+        # 1. Grid Configuration
+        cols = 3
+        gap = 8
+        menu_padding = 12
+
+        # 2. Count valid images and calculate how many rows we need
+        valid_images = {k: v for k, v in self.images.items() if v.get_width() > 0}
+        total_items = len(valid_images)
+        rows = (total_items + cols - 1) // cols  # Math trick to always round up
+
+        # 3. Calculate dynamic cell size based on the width
+        available_width = self.build_rect.width - (menu_padding * 2) - (gap * (cols - 1))
+        cell_w = available_width // cols
+        cell_h = cell_w  # Keep slots square
+
+        # 4. Calculate the EXACT height the menu needs to be to hold all rows
+        total_height = (menu_padding * 2) + (rows * cell_h) + ((rows - 1) * gap)
+
+        # 5. Resize and Reposition the menu box!
+        self.build_rect.height = total_height
+        self.build_rect.bottom = self.height - 20  # Anchor it 20px above the bottom edge
+        self.build_rect.right = self.width - 20  # Anchor it 20px from the right edge
+
+        # Recreate the grey background surface so it stretches to the new height
+        self.build_surface = pg.Surface((self.build_rect.width, self.build_rect.height), pg.SRCALPHA)
+        self.build_surface.fill(self.hud_colour)
+
+        # Now start drawing from the newly calculated top-left corner
+        start_x = self.build_rect.x + menu_padding
+        start_y = self.build_rect.y + menu_padding
 
         tiles = []
+        col, row = 0, 0
 
-        for image_name, image in self.images.items():
-            # pg.transform.scale creates a new surface, so .copy() is unnecessary
-            image_scale = self.scale_image(image, w=object_width)
+        for image_name, image in valid_images.items():
+            # Scale icon to 85% of the slot
+            max_img_w = int(cell_w * 0.85)
+            max_img_h = int(cell_h * 0.85)
 
-            if render_x + image_scale.get_width() > self.build_rect.right - 10:
-                render_x = start_x
-                render_y += image_scale.get_height() + 10
+            orig_w, orig_h = image.get_size()
+            scale = min(max_img_w / orig_w, max_img_h / orig_h)
+            new_w, new_h = max(1, int(orig_w * scale)), max(1, int(orig_h * scale))
 
-            rect = image_scale.get_rect(topleft=(render_x, render_y))
+            image_scale = pg.transform.smoothscale(image, (new_w, new_h))
+
+            # Calculate slot positions
+            cell_x = start_x + (col * (cell_w + gap))
+            cell_y = start_y + (row * (cell_h + gap))
+
+            offset_x = (cell_w - new_w) // 2
+            offset_y = (cell_h - new_h) // 2
+
+            rect = image_scale.get_rect(topleft=(cell_x + offset_x, cell_y + offset_y))
+            cell_rect = pg.Rect(cell_x, cell_y, cell_w, cell_h)
 
             item_type = "Tool" if image_name in ["Axe", "Hammer"] else "Building"
-            w,h = 1,1
-            if image_name == "ResZone":
-                w,h = 4,4
-            if image_name == "Stadium":
-                w,h = 6,6
+            w, h = building_specs.get(image_name, (1, 1))
 
-            tiles.append(
-                {
-                    "name": image_name,
-                    "icon": image_scale,
-                    "image": image,
-                    "rect": rect,
-                    "affordable": True,
-                    "type": item_type,
-                    "grid_width": w,
-                    "grid_height": h
-                }
-            )
+            tiles.append({
+                "name": image_name,
+                "icon": image_scale,
+                "image": image,
+                "rect": rect,
+                "cell_rect": cell_rect,
+                "affordable": True,
+                "type": item_type,
+                "grid_width": w,
+                "grid_height": h
+            })
 
-            render_x += image_scale.get_width() + 10
+            col += 1
+            if col >= cols:
+                col, row = 0, row + 1
 
         return tiles
 
@@ -158,7 +232,11 @@ class Hud:
             screen.blit(self.select_surface, self.select_rect.topleft)
 
             # 1. Draw Title (Gold color)
-            title_text = self.examined_tile.name
+            raw_name = self.examined_tile.name
+
+            # Translate raw name to friendly name (defaults to raw name if not in dict)
+            title_text = self.display_names.get(raw_name, raw_name)
+
             draw_text(screen, title_text, 35, (255, 215, 0), (self.select_rect.x + 15, self.select_rect.y + 10))
 
             # 2. Draw a clean dividing line
@@ -170,17 +248,38 @@ class Hud:
             img_y = self.select_rect.y + 50
             screen.blit(self.examined_tile_scaled_img, (img_x, img_y))
 
-            # 4. Draw the Description Text
-            desc = self.item_descriptions.get(title_text, "A structure in your city.")
+            # 4. Draw the Description Text (Use raw_name to look up the description!)
+            desc = self.item_descriptions.get(raw_name, "A structure in your city.")
             desc_x = img_x + self.examined_tile_scaled_img.get_width() + 15
             desc_y = img_y
 
-            # Print multi-line text cleanly
-            for i, line in enumerate(desc.split('\n')):
-                draw_text(screen, line, 22, (220, 220, 220), (desc_x, desc_y + (i * 25)))
+            # --- NEW: Dynamic Word Wrapping ---
+            font = pg.font.SysFont(None, 22)
+            max_text_width = self.select_rect.right - desc_x - 15  # 15px padding from the right edge
 
-            # 5. Show Status (Only applies to active buildings with a cooldown)
-            # 5. Show Status (Check if the examined tile is a Zone)
+            wrapped_lines = []
+            for paragraph in desc.split('\n'):
+                words = paragraph.split(' ')
+                current_line = ""
+                for word in words:
+                    test_line = current_line + word + " "
+                    # Check if adding this word makes the line wider than our box
+                    if font.size(test_line)[0] < max_text_width:
+                        current_line = test_line
+                    else:
+                        wrapped_lines.append(current_line)
+                        current_line = word + " "
+                wrapped_lines.append(current_line)
+
+            # Print multi-line text and track our Y-coordinate
+            current_y = desc_y
+            for line in wrapped_lines:
+                draw_text(screen, line, 22, (220, 220, 220), (desc_x, current_y))
+                current_y += 25  # Move down a line
+
+            # --- 5. Show Status ---
+            current_y += 10  # Add a little extra visual padding before the stats
+
             if hasattr(self.examined_tile, 'capacity'):
                 cap = self.examined_tile.capacity
                 occ = self.examined_tile.occupants
@@ -188,9 +287,10 @@ class Hud:
 
                 # Draw Saturation
                 status_text = f"Saturation: {occ}/{cap} ({percent}%)"
-                draw_text(screen, status_text, 22, (200, 200, 255), (desc_x, desc_y + 60))
+                draw_text(screen, status_text, 22, (200, 200, 255), (desc_x, current_y))
+                current_y += 25
 
-                # NEW: Draw Local Satisfaction
+                # Draw Local Satisfaction
                 if hasattr(self.examined_tile, 'local_satisfaction'):
                     sat = self.examined_tile.local_satisfaction
                     sat_text = f"Local Satisfaction: {sat}%"
@@ -203,12 +303,28 @@ class Hud:
                     else:
                         sat_color = (255, 100, 100)  # Red
 
-                    draw_text(screen, sat_text, 22, sat_color, (desc_x, desc_y + 85))
+                    draw_text(screen, sat_text, 22, sat_color, (desc_x, current_y))
 
         for tile in self.tiles:
+            # 1. Draw the slot background (Dark grey with rounded corners)
+            pg.draw.rect(screen, (40, 40, 45, 200), tile["cell_rect"], border_radius=8)
+
+            # 2. Draw a subtle border around the slot
+            pg.draw.rect(screen, (90, 90, 100, 255), tile["cell_rect"], 2, border_radius=8)
+
+            # 3. Draw the actual icon
             icon = tile["icon"].copy()
-            if not tile["affordable"]: icon.set_alpha(100)
+            if not tile["affordable"]:
+                icon.set_alpha(100)  # Ghost it out if you can't afford it
             screen.blit(icon, tile["rect"].topleft)
+
+            # 4. Draw interactive highlights (Hover & Selected states)
+            if self.selected_tile == tile:
+                # Bright green thick border if currently selected
+                pg.draw.rect(screen, (100, 255, 100), tile["cell_rect"], 3, border_radius=8)
+            elif self.hovered_tile == tile:
+                # Gold border if the mouse is just hovering over it
+                pg.draw.rect(screen, (255, 215, 0), tile["cell_rect"], 2, border_radius=8)
 
         # --- TOP BAR: CITY STATS ---
         # Positioned to the top right
@@ -256,11 +372,12 @@ class Hud:
         draw_text(screen, "LOAD", 24, (255, 255, 255), (self.load_btn_rect.x + 25, self.load_btn_rect.y + 8))
 
     def draw_tooltip(self, screen, mouse_pos, tile):
-        name = tile["name"]
-        desc = self.item_descriptions.get(name, "No description available.")
+        raw_name = tile["name"]
+        display_name = self.display_names.get(raw_name,raw_name)
+        desc = self.item_descriptions.get(raw_name, "No description available.")
 
         # 1. Format the cost text
-        cost = self.resource_manager.costs.get(name, 0)
+        cost = self.resource_manager.costs.get(raw_name, 0)
         if cost > 0:
             cost_text = f"Cost: ${cost:,}"
         else:
@@ -271,7 +388,7 @@ class Hud:
         font_desc = pg.font.SysFont(None, 24)
 
         # 3. Render text surfaces
-        title_surf = font_title.render(name, True, (255, 255, 255))
+        title_surf = font_title.render(display_name, True, (255, 255, 255))
         cost_surf = font_desc.render(cost_text, True, (255, 200, 0))  # Gold color for cost
 
         # Handle multi-line descriptions (split by \n)
@@ -315,8 +432,14 @@ class Hud:
         images = {
             "Axe": pg.image.load(AXE_URL).convert_alpha(),
             "Hammer": pg.image.load(HAMMER_URL).convert_alpha(),
-            "ResZone": pg.image.load(RESZONE_URL).convert_alpha(),
-            "Stadium": pg.image.load(STADIUM_URL).convert_alpha()
+            "ResZone": pg.image.load(RESZONE_URL1).convert_alpha(),
+            "IndZone": pg.image.load(INDZONE_URL1).convert_alpha(),
+            "SerZone": pg.image.load(SERZONE_URL1).convert_alpha(),
+            "Stadium": pg.image.load(STADIUM_URL).convert_alpha(),
+            "University": pg.image.load(UNIVERSITY_URL).convert_alpha(),
+            "School": pg.image.load(SCHOOL_URL).convert_alpha(),
+            "FireStation": pg.image.load(FIRE_STATION_URL).convert_alpha(),
+            "Police": pg.image.load(POLICE_URL).convert_alpha()
         }
         return images
 

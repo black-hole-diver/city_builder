@@ -45,8 +45,14 @@ class World:
         # Map string names to classes for cleaner building instantiation
         self.building_types = {
             "ResZone" : ResZone,
+            "IndZone": IndZone,
+            "SerZone": SerZone,
             "Stadium" : Stadium,
-            "Police" : Police
+            "Police" : Police,
+            "FireStation": FireStation,
+            "School": School,
+            "University": University,
+            "PowerPlant": PowerPlant
         }
 
         self.tools = {
@@ -179,7 +185,7 @@ class World:
                     screen_y = render_pos[1] - (tile_img.get_height() - TILE_SIZE) + offset_y
 
                     # Calculate isometric depth (x + width + y + height)
-                    depth = x + 1 + y + 1
+                    depth = x + .5 + y + .5
 
                     mask = None
                     if self.examine_tile == (x, y) and self.buildings[x][y] is None and self.examine_mask_points:
@@ -215,7 +221,7 @@ class World:
                     b_screen_y = miny - (building.image.get_height() - floor_height) + offset_y
 
                     # Calculate depth specifically for multi-tile buildings
-                    depth = x + b_w + y + b_h
+                    depth = x + (b_w / 2.0) + y + (b_h/2.0)
 
                     mask = None
                     if self.examine_tile == (x, y) and self.examine_mask_points:
@@ -232,7 +238,7 @@ class World:
                 worker = self.workers[x][y]
                 if worker is not None:
                     w_screen_y = render_pos[1] - (worker.image.get_height() - TILE_SIZE) + offset_y
-                    depth = x + 1 + y + 1
+                    depth = x + .5 + y + .5
                     render_queue.append({
                         "image": worker.image,
                         "pos": (render_pos[0] + offset_x, w_screen_y),
@@ -348,8 +354,6 @@ class World:
     @staticmethod
     def load_images():
         return {
-            "building1": pg.image.load(BUILDING1_URL).convert_alpha(),
-            "building2": pg.image.load(BUILDING2_URL).convert_alpha(),
             "tree": pg.image.load(TREE_URL).convert_alpha(),
             "rock": pg.image.load(ROCK_URL).convert_alpha(),
             "block": pg.image.load(BLOCK_URL).convert_alpha()
