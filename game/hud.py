@@ -75,32 +75,33 @@ class Hud:
 
         # --- NEW: Improved Button Layout ---
         # 1. System Controls (Top Left)
-        self.save_btn_rect = pg.Rect(20, 45, 100, 35)
-        self.load_btn_rect = pg.Rect(130, 45, 100, 35)
+        self.save_btn_rect = pg.Rect(20, 45, 110, 35)
+        self.load_btn_rect = pg.Rect(140, 45, 110, 35)
         
         # 2. Financial Controls (Top Center-Left, further from System Controls)
-        finance_start_x = 280
+        finance_start_x = 300
         self.tax_plus_rect = pg.Rect(finance_start_x, 45, 35, 35)
         self.tax_minus_rect = pg.Rect(finance_start_x + 45, 45, 35, 35)
-        self.loan_btn_rect = pg.Rect(finance_start_x + 100, 45, 120, 35)
-        self.repay_btn_rect = pg.Rect(finance_start_x + 230, 45, 120, 35)
+        self.loan_btn_rect = pg.Rect(finance_start_x + 100, 45, 140, 35)
+        self.repay_btn_rect = pg.Rect(finance_start_x + 250, 45, 140, 35)
 
-        self.help_btn_rect = pg.Rect(20, self.height - 60, 100, 35)
-        self.budget_btn_rect = pg.Rect(130, self.height - 60, 100, 35)
+        self.help_btn_rect = pg.Rect(20, self.height - 60, 110, 35)
+        self.budget_btn_rect = pg.Rect(140, self.height - 60, 110, 35)
+        self.music_btn_rect = pg.Rect(260, self.height - 60, 130, 35)
         self.show_help = False
         self.show_budget = False
         self.budget_scroll = 0
 
         # Main Menu Buttons
-        self.play_btn_rect = pg.Rect((self.width - 200) // 2, self.height // 2 - 50, 200, 50)
-        self.main_load_btn_rect = pg.Rect((self.width - 200) // 2, self.height // 2 + 20, 200, 50)
+        self.play_btn_rect = pg.Rect((self.width - 250) // 2, self.height // 2 - 50, 250, 50)
+        self.main_load_btn_rect = pg.Rect((self.width - 250) // 2, self.height // 2 + 20, 250, 50)
 
         # Game Over Buttons (Center of Screen)
-        self.game_over_w, self.game_over_h = 500, 350
+        self.game_over_w, self.game_over_h = 600, 350
         self.game_over_rect = pg.Rect((self.width - self.game_over_w) // 2, (self.height - self.game_over_h) // 2, self.game_over_w, self.game_over_h)
         btn_y = self.game_over_rect.bottom - 80
-        self.restart_btn_rect = pg.Rect(self.game_over_rect.x + 100, btn_y, 120, 45)
-        self.load_save_btn_rect = pg.Rect(self.game_over_rect.right - 220, btn_y, 120, 45)
+        self.restart_btn_rect = pg.Rect(self.game_over_rect.x + 100, btn_y, 160, 45)
+        self.load_save_btn_rect = pg.Rect(self.game_over_rect.right - 260, btn_y, 160, 45)
 
         self.menu_action = None
         self.game = None # Set by Game class
@@ -215,6 +216,15 @@ class Hud:
         self.menu_action = None
 
         if mouse_clicked:
+            if self.game and self.game.menu_state == "MAIN_MENU":
+                if self.play_btn_rect.collidepoint(mouse_pos):
+                    self.menu_action = "PLAY"
+                elif self.main_load_btn_rect.collidepoint(mouse_pos):
+                    self.menu_action = "MAIN_LOAD"
+                elif hasattr(self, "music_btn_rect_main") and self.music_btn_rect_main.collidepoint(mouse_pos):
+                    self.game.toggle_music()
+                return
+
             if self.save_btn_rect.collidepoint(mouse_pos):
                 self.menu_action = "SAVE"
                 return
@@ -244,6 +254,9 @@ class Hud:
             elif self.budget_btn_rect.collidepoint(mouse_pos):
                 self.show_budget = not self.show_budget
                 if self.show_budget: self.show_help = False
+            elif self.music_btn_rect.collidepoint(mouse_pos):
+                if self.game:
+                    self.game.toggle_music()
             
             # Game Over Interactions
             if self.resource_manager.is_mayor_replaced:
@@ -251,13 +264,6 @@ class Hud:
                     self.menu_action = "RESTART"
                 elif self.load_save_btn_rect.collidepoint(mouse_pos):
                     self.menu_action = "LOAD"
-            
-            # Main Menu Interactions
-            if self.game and self.game.menu_state == "MAIN_MENU":
-                if self.play_btn_rect.collidepoint(mouse_pos):
-                    self.menu_action = "PLAY"
-                elif self.main_load_btn_rect.collidepoint(mouse_pos):
-                    self.menu_action = "MAIN_LOAD"
 
         # Right click deselects
         if mouse_action[2]:
@@ -490,6 +496,12 @@ class Hud:
         budget_hover = (70, 110, 110) if self.show_budget else (90, 90, 100)
         draw_styled_button(self.budget_btn_rect, "BUDGET", budget_color, budget_hover)
 
+        # Music Button
+        music_text = "MUSIC: ON" if (self.game and self.game.music_on) else "MUSIC: OFF"
+        music_color = (60, 90, 60) if (self.game and self.game.music_on) else (130, 60, 60)
+        music_hover = (80, 110, 80) if (self.game and self.game.music_on) else (150, 80, 80)
+        draw_styled_button(self.music_btn_rect, music_text, music_color, music_hover)
+
         if self.show_help:
             self.draw_help_overlay(screen)
         
@@ -589,9 +601,13 @@ class Hud:
         screen.blit(overlay, (0, 0))
 
         # Title
-        draw_text(screen, "CITY BUILDER", 80, (255, 215, 0), (self.width // 2 - 220, self.height // 2 - 180))
+        title_text = "CITY BUILDER by Wit"
+        font_title = pg.font.SysFont("Trebuchet MS", 80, bold=True)
+        title_surf = font_title.render(title_text, True, (255, 215, 0))
+        title_rect = title_surf.get_rect(center=(self.width // 2, self.height // 2 - 180))
+        screen.blit(title_surf, title_rect)
 
-        # Styled Button helper (copied for local use if needed, but we can call it)
+        # Styled Button helper
         mouse_pos = pg.mouse.get_pos()
         def draw_styled_button(rect, text, base_color=(60, 60, 70), hover_color=(90, 90, 110), border_color=(200, 200, 200), font_size=24):
             is_hovered = rect.collidepoint(mouse_pos)
@@ -608,6 +624,27 @@ class Hud:
 
         draw_styled_button(self.play_btn_rect, "PLAY NEW GAME", (60, 90, 60), (80, 110, 80))
         draw_styled_button(self.main_load_btn_rect, "LOAD LAST SAVE", (50, 70, 90), (70, 90, 110))
+        
+        # Music Button in Main Menu
+        music_text = "MUSIC: ON" if (self.game and self.game.music_on) else "MUSIC: OFF"
+        music_color = (60, 90, 60) if (self.game and self.game.music_on) else (130, 60, 60)
+        music_hover = (80, 110, 80) if (self.game and self.game.music_on) else (150, 80, 80)
+        
+        # Position music button below the load button
+        music_btn_menu_rect = self.music_btn_rect.copy()
+        music_btn_menu_rect.centerx = self.width // 2
+        music_btn_menu_rect.top = self.main_load_btn_rect.bottom + 20
+        
+        # Update the rect for interaction if needed, or just draw it and use the original rect if it's moved
+        # Let's update self.music_btn_rect if we are in main menu, but that's messy.
+        # Better: draw_main_menu uses a specific rect, and update() also checks that rect if in MAIN_MENU.
+        
+        draw_styled_button(music_btn_menu_rect, music_text, music_color, music_hover)
+        
+        # For interaction to work with the current update logic, we should probably update the rect
+        # But wait, I'll just change self.music_btn_rect's position when in MAIN_MENU if I want to reuse it.
+        # Actually, let's just make sure update() knows where it is.
+        self.music_btn_rect_main = music_btn_menu_rect
 
     def draw_game_over_panel(self, screen):
         # Semi-transparent overlay for game over
@@ -620,13 +657,13 @@ class Hud:
         pg.draw.rect(screen, (255, 50, 50), self.game_over_rect, 3, border_radius=12)
 
         # "YOU ARE FIRED!" text
-        draw_text(screen, "YOU ARE FIRED!", 50, (255, 50, 50), (self.game_over_rect.x + 85, self.game_over_rect.y + 50))
-        draw_text(screen, "THE PEOPLE HAS REVOLTED", 28, (220, 220, 220), (self.game_over_rect.x + 75, self.game_over_rect.y + 110))
+        draw_text(screen, "YOU ARE FIRED!", 50, (255, 50, 50), (self.game_over_rect.x + 135, self.game_over_rect.y + 50))
+        draw_text(screen, "THE PEOPLE HAS REVOLTED", 28, (220, 220, 220), (self.game_over_rect.x + 125, self.game_over_rect.y + 110))
 
         # Statistics summary
         stats_y = self.game_over_rect.y + 160
-        draw_text(screen, f"Final Population: {self.resource_manager.population}", 24, (200, 200, 200), (self.game_over_rect.x + 130, stats_y))
-        draw_text(screen, f"Final Funds: ${self.resource_manager.funds:,}", 24, (200, 200, 200), (self.game_over_rect.x + 130, stats_y + 30))
+        draw_text(screen, f"Final Population: {self.resource_manager.population}", 24, (200, 200, 200), (self.game_over_rect.x + 180, stats_y))
+        draw_text(screen, f"Final Funds: ${self.resource_manager.funds:,}", 24, (200, 200, 200), (self.game_over_rect.x + 180, stats_y + 30))
 
         # Buttons
         mouse_pos = pg.mouse.get_pos()
