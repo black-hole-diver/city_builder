@@ -6,7 +6,12 @@ from .workers import Worker
 from .buildings import *
 from .tools import Axe, Hammer
 from typing import List, Optional
-from .sceneries import Scenery
+
+class Scenery:
+    def __init__(self, name, image):
+        self.name = name.capitalize()
+        self.image = image
+        self.origin = None
 
 class World:
     def __init__(self, game, resource_manager, entities, hud, grid_length_x, grid_length_y, width, height):

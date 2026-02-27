@@ -1,5 +1,6 @@
 import pygame as pg
 from .setting import *
+
 class Building:
     def __init__(self, pos, image, name, resource_manager, grid_pos, grid_width=1, grid_height=1):
         self.image = image
