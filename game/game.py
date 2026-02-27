@@ -591,7 +591,6 @@ class Game:
                     continue
 
                 # Base demand scales dynamically based on type and occupants
-                demand = 0
                 if b.name in ["ResZone", "IndZone", "SerZone"]:
                     demand = 5 + getattr(b, 'occupants', 0) * 2
                 else:
@@ -999,6 +998,11 @@ class Game:
                     building_save_data = {"name": b.name, "x": x, "y": y}
                     if hasattr(b, "occupants"):
                         building_save_data["occupants"] = b.occupants
+                    if hasattr(b, "is_powered"):
+                        building_save_data["is_powered"] = b.is_powered
+                    if b.name == "PowerPlant":
+                        building_save_data["network_supply"] = getattr(b, "network_supply", 0)
+                        building_save_data["network_demand"] = getattr(b, "network_demand", 0)
                     if b.name == "Tree":
                         building_save_data["is_old_tree"] = getattr(b, "is_old_tree", True)
                         if b.plant_date:
@@ -1112,6 +1116,12 @@ class Game:
                     ent.occupants = occupants
                     if hasattr(ent, "update_image"):
                         ent.update_image()
+
+                if "is_powered" in b_data:
+                    ent.is_powered = b_data["is_powered"]
+                if name == "PowerPlant":
+                    ent.network_supply = b_data.get("network_supply", 0)
+                    ent.network_demand = b_data.get("network_demand", 0)
 
                 # Add entity to world without charging cost (already paid)
                 self.entities.append(ent)
