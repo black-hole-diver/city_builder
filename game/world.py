@@ -187,9 +187,11 @@ class World:
                                 ent.update_image()
                                 if building_name == "ResZone":
                                     self.game.add_notification("RESIDENT AREA BUILT", (100, 200, 255))
+                                    self.game.calculate_satisfaction_and_growth()
                                 elif building_name in ["IndZone", "SerZone"]:
                                     self.game.add_notification("NEW WORKPLACE BUILT", (255, 165, 0))
-                            
+                                    self.game.calculate_satisfaction_and_growth()
+
                             if building_name == "Road":
                                 self.game.add_notification("ROAD CONNECTED", (200, 200, 200))
                             elif building_name in ["Police", "Stadium", "FireStation", "School", "University", "PowerPlant"]:

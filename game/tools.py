@@ -35,7 +35,7 @@ class Axe(Tool):
 
             world.game.play_sound("wood_chop")
             world.game.add_notification("TIMBERRR! TREE CUT DOWN", (100, 255, 100))
-
+            world.game.calculate_satisfaction_and_growth()
 class Hammer(Tool):
     def __init__(self):
         super().__init__("Hammer")
@@ -146,6 +146,7 @@ class Hammer(Tool):
                     world.examine_tile = None
                     world.hud.examined_tile = None
                     world.examine_mask_points = None
+                world.game.calculate_satisfaction_and_growth()
 
             elif is_rock:
                 # Deselect if we destroy the currently examined rock

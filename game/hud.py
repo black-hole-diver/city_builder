@@ -22,8 +22,8 @@ class Hud:
         self.build_surface.fill(self.hud_colour)
 
         # Select HUD
-        self.select_surface = pg.Surface((width * 0.3, height * 0.2), pg.SRCALPHA)
-        self.select_rect = self.select_surface.get_rect(topleft=(self.width * 0.35, self.height * 0.79))
+        self.select_surface = pg.Surface((width * 0.3, height * 0.26), pg.SRCALPHA)
+        self.select_rect = self.select_surface.get_rect(topleft=(self.width * 0.34, self.height * 0.73))
         self.select_surface.fill(self.hud_colour)
 
         self.images = self.load_images()
@@ -236,17 +236,23 @@ class Hud:
             # Budget interactions
             elif self.tax_plus_rect.collidepoint(mouse_pos):
                 self.resource_manager.tax_per_citizen += 1
-                if self.game: self.game.add_notification(f"TAX INCREASED: ${self.resource_manager.tax_per_citizen}", (255, 255, 100))
+                if self.game:
+                    self.game.add_notification(f"TAX INCREASED: ${self.resource_manager.tax_per_citizen}", (255, 255, 100))
+                    self.game.calculate_satisfaction_and_growth()
             elif self.tax_minus_rect.collidepoint(mouse_pos):
                 if self.resource_manager.tax_per_citizen > 0:
                     self.resource_manager.tax_per_citizen -= 1
-                    if self.game: self.game.add_notification(f"TAX DECREASED: ${self.resource_manager.tax_per_citizen}", (100, 255, 255))
+                    if self.game:
+                        self.game.add_notification(f"TAX DECREASED: ${self.resource_manager.tax_per_citizen}", (100, 255, 255))
+                        self.game.calculate_satisfaction_and_growth()
             elif self.loan_btn_rect.collidepoint(mouse_pos):
                 self.resource_manager.take_loan(1000, self.game)
                 if self.game: self.game.add_notification("LOAN TAKEN: +$1,000", (100, 255, 100))
+                self.game.calculate_satisfaction_and_growth()
             elif self.repay_btn_rect.collidepoint(mouse_pos):
                 if self.resource_manager.repay_loan(1000, self.game):
                     if self.game: self.game.add_notification("LOAN REPAID: -$1,000", (255, 215, 0))
+                    self.game.calculate_satisfaction_and_growth()
                 else:
                     if self.game: self.game.add_notification("NOT ENOUGH FUNDS OR NO LOAN", (255, 100, 100))
             elif self.help_btn_rect.collidepoint(mouse_pos):

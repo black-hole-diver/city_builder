@@ -473,14 +473,14 @@ class Game:
             total_sat += tax_impact
 
         # --- Industrial/Service Balance ---
-        total_ind_occ = sum(z.occupants for z in ind_zones)
-        total_ser_occ = sum(z.occupants for z in ser_zones)
+        total_ind_jobs = sum(z.capacity for z in ind_zones if z.has_road_access)
+        total_ser_jobs = sum(z.capacity for z in ser_zones if z.has_road_access)
 
         imbalance_penalty = 0
-        if total_ind_occ > 0 or total_ser_occ > 0:
-            if total_ind_occ > 0 and total_ser_occ > 0:
+        if total_ind_jobs > 0 or total_ser_jobs > 0:
+            if total_ind_jobs > 0 and total_ser_jobs > 0:
                 # Check if ratio is unbalanced
-                ratio = total_ind_occ / total_ser_occ
+                ratio = total_ind_jobs / total_ser_jobs
                 if ratio > 2.0 or ratio < 0.5:
                     imbalance_penalty = 15
                     total_sat -= imbalance_penalty
@@ -608,12 +608,10 @@ class Game:
         # ============ Overall City Satisfaction ============
         # Only road-accessible zones with network connections contribute
         road_res = [z for z in res_zones if z.has_road_access and get_touched_networks(z)]
-        if road_res:
-            self.resource_manager.satisfaction = sum(z.local_satisfaction for z in road_res) / len(road_res)
-        elif not res_zones:
-            self.resource_manager.satisfaction = 100  # No zones = perfect satisfaction
+        if res_zones:
+            self.resource_manager.satisfaction = sum(z.local_satisfaction for z in res_zones) / len(res_zones)
         else:
-            self.resource_manager.satisfaction = 30  # Zones exist but no road access
+            self.resource_manager.satisfaction = 100  # No zones = perfect satisfaction
 
         # ============ Population Growth Logic ============
         growth_potential = 0

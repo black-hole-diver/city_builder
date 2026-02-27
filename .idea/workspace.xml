@@ -4,9 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="47aba308-f49c-4a93-9a5d-4695dc059ce0" name="Changes" comment="remove sceneries.py">
+    <list default="true" id="47aba308-f49c-4a93-9a5d-4695dc059ce0" name="Changes" comment="tree block logic fixed.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/game/game.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/game.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/game/hud.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/hud.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/game/tools.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/tools.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/game/world.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/world.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -353,7 +355,15 @@
       <option name="project" value="LOCAL" />
       <updated>1772160324657</updated>
     </task>
-    <option name="localTasksCounter" value="29" />
+    <task id="LOCAL-00029" summary="tree block logic fixed.">
+      <option name="closed" value="true" />
+      <created>1772161363865</created>
+      <option name="number" value="00029" />
+      <option name="presentableId" value="LOCAL-00029" />
+      <option name="project" value="LOCAL" />
+      <updated>1772161363865</updated>
+    </task>
+    <option name="localTasksCounter" value="30" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -368,7 +378,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="new file .env" />
     <MESSAGE value="bound of the world" />
     <MESSAGE value="fixed: camera bound" />
     <MESSAGE value="fixed: camera panning when paused" />
@@ -393,7 +402,8 @@
     <MESSAGE value="debug: music button" />
     <MESSAGE value="tree plantable object" />
     <MESSAGE value="remove sceneries.py" />
-    <option name="LAST_COMMIT_MESSAGE" value="remove sceneries.py" />
+    <MESSAGE value="tree block logic fixed." />
+    <option name="LAST_COMMIT_MESSAGE" value="tree block logic fixed." />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
