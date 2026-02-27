@@ -371,13 +371,10 @@ class Game:
             self.calculate_satisfaction_and_growth()
 
         # 3. Restore Main Soundtrack
-        try:
-            pg.mixer.music.load("assets/sounds/fly_me_to_the_moon.ogg")
-            pg.mixer.music.set_volume(0.1)
-            if self.music_on:
-                pg.mixer.music.play(-1)
-        except:
-            pass
+        pg.mixer.music.load("assets/sounds/fly_me_to_the_moon.ogg")
+        pg.mixer.music.set_volume(0.1)
+        if self.music_on:
+            pg.mixer.music.play(-1)
 
     def apply_annual_logic(self):
         """Handle annual events: budget summary, satisfaction, and game over conditions."""
@@ -841,50 +838,40 @@ class Game:
 
         # ============ Workplace Assignments ============
         # Reset occupants for all industrial and service zones
+
         for iz in ind_zones: iz.occupants = 0
         for sz in ser_zones: sz.occupants = 0
 
-        # --- Distribute Workers from Residential Zones ---
-        for rz in res_zones:
-            if rz.occupants == 0 or not rz.has_road_access:
-                continue
+        workforce = sum(rz.occupants for rz in res_zones)
+        ind_ser_zones = [z for z in (ind_zones + ser_zones) if z.has_road_access]
 
-            rz_networks = res_zone_networks[rz]
-            if not rz_networks:
-                rz.local_satisfaction = 0
-                rz.bonuses = ["No road connection!"]
-                continue
+        if ind_ser_zones and workforce > 0:
+            total_capacity = sum(z.capacity for z in ind_ser_zones)
 
-            # Find all reachable workplaces for this residential zone
-            reachable_ind = [iz for iz in ind_zones if iz.has_road_access and ind_zone_networks[iz].intersection(rz_networks)]
-            reachable_ser = [sz for sz in ser_zones if sz.has_road_access and ser_zone_networks[sz].intersection(rz_networks)]
-            
-            if not reachable_ind and not reachable_ser:
-                 rz.bonuses.append("No reachable workplaces!")
-                 continue
+            # 2. Calculate the global "Fill Ratio" (e.g., if we have 50 workers for 100 capacity, ratio is 0.5)
+            # We use assignable_workers to ensure we don't exceed city capacity
+            assignable_workers = min(workforce, total_capacity)
+            fill_ratio = assignable_workers / total_capacity
 
-            # Assign each resident to a workplace
-            for _ in range(rz.occupants):
-                eligible_ind = [z for z in reachable_ind if z.occupants < z.capacity]
-                eligible_ser = [z for z in reachable_ser if z.occupants < z.capacity]
+            # 3. Proportional Assignment
+            for zone in ind_ser_zones:
+                # Every building gets a slice of the workforce based on the global ratio
+                zone.occupants = int(zone.capacity * fill_ratio)
 
-                target = None
-                if eligible_ind and eligible_ser:
-                    # Balance between industrial and service jobs
-                    current_ind_occ = sum(z.occupants for z in ind_zones)
-                    current_ser_occ = sum(z.occupants for z in ser_zones)
+            # 4. Handle Rounding Remainders
+            # Because of 'int()', we might lose a few workers (e.g., 0.9 becomes 0).
+            # We distribute the remaining workers one-by-one to random buildings.
+            current_assigned = sum(z.occupants for z in ind_ser_zones)
+            remainder = assignable_workers - current_assigned
 
-                    if current_ind_occ <= current_ser_occ:
-                        target = random.choice(eligible_ind)
-                    else:
-                        target = random.choice(eligible_ser)
-                elif eligible_ind:
-                    target = random.choice(eligible_ind)
-                elif eligible_ser:
-                    target = random.choice(eligible_ser)
-
-                if target:
-                    target.occupants += 1
+            if remainder > 0:
+                # Shuffle so the same building doesn't always get the "extra" workers
+                random.shuffle(ind_ser_zones)
+                for zone in ind_ser_zones:
+                    if remainder <= 0: break
+                    if zone.occupants < zone.capacity:
+                        zone.occupants += 1
+                        remainder -= 1
 
         # --- Update Zone Images ---
         for iz in ind_zones: iz.update_image()
