@@ -173,6 +173,11 @@ class FireTruck:
     def update(self, game_speed=1):
         now = pg.time.get_ticks()
 
+        if self.target not in self.world.entities and self.state != "TO_STATION":
+            self.state = "TO_STATION"
+            self.create_path(self.station.origin)
+            return
+
         if self.state == "EXTINGUISHING":
             # Takes 2 seconds to put out the fire
             if now - self.extinguish_timer > 2000 / game_speed:
