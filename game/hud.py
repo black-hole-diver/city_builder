@@ -10,6 +10,7 @@ class Hud:
         self.width = width
         self.height = height
         self.hud_colour = HUD_COLOR
+        self.dino_action = False
 
         # Resource HUD
         self.resource_surface = pg.Surface((width, height * 0.02), pg.SRCALPHA)
@@ -225,6 +226,9 @@ class Hud:
                 elif hasattr(self, "music_btn_rect_main") and self.music_btn_rect_main.collidepoint(mouse_pos):
                     self.game.toggle_music()
                 return
+
+            if hasattr(self, 'dino_btn_rect') and self.dino_btn_rect.collidepoint(mouse_pos):
+                self.dino_action = True
 
             if self.save_btn_rect.collidepoint(mouse_pos):
                 self.menu_action = "SAVE"
@@ -544,6 +548,16 @@ class Hud:
             tert_w = (res.edu_tertiary / res.population) * bar_w
             pg.draw.rect(screen, (100, 255, 100), (30, edu_y + 95, sec_w, 10))
             pg.draw.rect(screen, (100, 100, 255), (30 + sec_w, edu_y + 95, tert_w, 10))
+
+        # Draw Dinosaur Button (Top Right)
+        self.dino_btn_rect = pg.Rect(self.width - 200, 150, 180, 40)
+
+        # Borrowing your style logic for buttons
+        # mouse_pos = pg.mouse.get_pos()
+        # d_color = (255, 50, 50) if self.dino_btn_rect.collidepoint(mouse_pos) else (200, 40, 40)
+        # pg.draw.rect(screen, d_color, self.dino_btn_rect)
+        # pg.draw.rect(screen, (255, 255, 255), self.dino_btn_rect, 2)
+        draw_styled_button(self.dino_btn_rect, "DINOSAUR!", (200, 40, 40), (255, 50, 50), (255,255,255), 24)
 
     def draw_budget_panel(self, screen):
         # Semi-transparent overlay

@@ -324,6 +324,22 @@ class World:
                         "mask": None
                     })
 
+        if getattr(self.game, "dinosaur_entity", None) is not None:
+            dino = self.game.dinosaur_entity
+            d_render_pos = dino.tile["render_pos"]
+            d_screen_x = d_render_pos[0] + offset_x
+            d_screen_y = d_render_pos[1] - (dino.image.get_height() - TILE_SIZE) + offset_y
+
+            dx,dy = dino.tile["grid"]
+            d_depth = dx + .5 + dy + .5
+            render_queue.append({
+                "image": dino.image,
+                "pos": (d_screen_x, d_screen_y),
+                "depth": d_depth,
+                "mask": None
+            })
+
+
         # 2. Sort the queue by our calculated depth!
         render_queue.sort(key=lambda q_item: q_item["depth"])
 
@@ -442,6 +458,10 @@ class World:
 
         # Check HUD panels using any() for cleaner, short-circuit logic
         hud_rects = [self.hud.resource_rect, self.hud.build_rect, self.hud.select_rect]
+
+        if hasattr(self.hud, 'dino_btn_rect'):
+            hud_rects.append(self.hud.dino_btn_rect)
+
         if any(rect.collidepoint(mouse_pos) for rect in hud_rects):
             return False
 

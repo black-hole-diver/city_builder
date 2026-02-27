@@ -66,6 +66,11 @@ class Game:
         self.notification_text = ""
         self.notification_timer = 0
 
+        # ============ Dino ============
+        self.rampage_active = False
+        self.rampage_timer = 0
+        self.dinosaur_entity = None
+
         # ============ Menu and Save System ============
         self.menu_state = "MAIN_MENU"
         self.save_slots = ["save_slot_1.json", "save_slot_2.json", "save_slot_3.json"]
@@ -233,6 +238,16 @@ class Game:
         self.world.update(self.camera, self.paused)
         self.hud.update()
 
+        # Handle Dinosaur Button Click
+        if getattr(self.hud, "dino_action", False) and not self.rampage_active:
+            self.start_rampage()
+            self.hud.dino_action = False
+
+        # Handle Dinosaur Timer
+        if getattr(self, "rampage_active", False):
+            if pg.time.get_ticks() - self.rampage_timer >= 28000:  # 28 seconds
+                self.end_rampage()
+
         # ============ Game Logic (When Not Paused) ============
         if not self.paused:
             # Animate stars
@@ -291,6 +306,78 @@ class Game:
                 self.notifications.remove(n)
             else:
                 n["offset_y"] -= 1  # Float up
+
+    # Dinosaur rampage
+
+    def start_rampage(self):
+        """Triggers the Dinosaur Rampage event."""
+        self.rampage_active = True
+        self.rampage_timer = pg.time.get_ticks()
+        self.add_notification("DINOSAUR IS COMINGGGG!!!!!!!", (255, 50, 50))
+
+        # 1. Spawn Dinosaur
+        from .workers import Dinosaur
+        spawned = False
+        attempts = 0
+        while not spawned and attempts < 1000:
+            x = random.randint(0, self.world.grid_length_x - 1)
+            y = random.randint(0, self.world.grid_length_y - 1)
+            if not self.world.world[x][y]["collision"]:
+                self.dinosaur_entity = Dinosaur(self.world.world[x][y], self.world)
+                spawned = True
+            attempts += 1
+
+        # 2. Swap Soundtrack
+        try:
+            pg.mixer.music.load("assets/sounds/dino_song_epic.ogg")
+            pg.mixer.music.set_volume(0.4)
+            pg.mixer.music.play()  # Play once
+        except Exception as e:
+            print(f"Error loading dino music: {e}")
+
+    def end_rampage(self):
+        """Concludes the Dinosaur Rampage event and calculates casualties."""
+        self.rampage_active = False
+        self.add_notification("THE DINOSAUR LEFT...", (200, 200, 200))
+
+        # 1. Remove Dinosaur Entity
+        if self.dinosaur_entity in self.entities:
+            self.entities.remove(self.dinosaur_entity)
+        self.dinosaur_entity = None
+
+        # 2. Calculate Casualties (5% to 20% of total population)
+        kill_pct = random.uniform(0.05, 0.20)
+        total_killed = int(self.resource_manager.population * kill_pct)
+
+        if total_killed > 0:
+            self.add_notification(f"Rampage Casualties: {total_killed} citizens", (255, 50, 50))
+
+            # Extract victims evenly from inhabited Residential Zones
+            res_zones = [e for e in self.entities if isinstance(e, ResZone) and getattr(e, "occupants", 0) > 0]
+            killed_remaining = total_killed
+
+            while killed_remaining > 0 and res_zones:
+                target = random.choice(res_zones)
+                target.occupants -= 1
+                killed_remaining -= 1
+                if target.occupants <= 0:
+                    res_zones.remove(target)
+
+            # Resync total population (Education automatically adjusts if you added the @property fix earlier!)
+            all_res_zones = [e for e in self.entities if isinstance(e, ResZone)]
+            self.resource_manager.population = sum(rz.occupants for rz in all_res_zones)
+
+            # Instantly recalculate satisfaction to reflect empty houses/lost taxes
+            self.calculate_satisfaction_and_growth()
+
+        # 3. Restore Main Soundtrack
+        try:
+            pg.mixer.music.load("assets/sounds/fly_me_to_the_moon.ogg")
+            pg.mixer.music.set_volume(0.1)
+            if self.music_on:
+                pg.mixer.music.play(-1)
+        except:
+            pass
 
     def apply_annual_logic(self):
         """Handle annual events: budget summary, satisfaction, and game over conditions."""
