@@ -996,6 +996,8 @@ class Game:
                 b = self.world.buildings[x][y]
                 if b is not None and b.origin == (x, y):
                     building_save_data = {"name": b.name, "x": x, "y": y}
+                    if getattr(b, "is_vip", False):
+                        building_save_data["is_vip"] = True
                     if hasattr(b, "occupants"):
                         building_save_data["occupants"] = b.occupants
                     if hasattr(b, "is_powered"):
@@ -1105,11 +1107,18 @@ class Game:
                 image = self.hud.images.get(name)
                 kwargs={}
                 if name == "Tree":
-                    kwargs["is_old_tree"] = b_data.get("is_old_tree", Tree)
+                    kwargs["is_old_tree"] = b_data.get("is_old_tree", True)
                     p_date_str = b_data.get("plant_date")
-                    kwargs["plant_date"] = datetime.datetime.strptime(p_date_str, "%Y-%m-%d")
+                    if p_date_str:
+                        kwargs["plant_date"] = datetime.datetime.strptime(p_date_str, "%Y-%m-%d")
+                    else:
+                        kwargs["plant_date"] = None
                 ent = building_class(render_pos, image, self.resource_manager, (x, y), **kwargs)
                 ent.game = self  # Set game reference
+
+                if b_data.get("is_vip", False):
+                    if hasattr(ent, "apply_vip"):
+                        ent.apply_vip()
 
                 # Restore occupants if applicable
                 if occupants is not None and hasattr(ent, "occupants"):
