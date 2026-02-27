@@ -54,6 +54,7 @@ class Hud:
             "Hammer": "Demolishes buildings, roads, and rocks.\nRefunds part of the construction cost.",
             "Tree": "A natural forest tree.\nImproves the satisfaction of nearby residents.",
             "Rock": "A solid rock formation.\nMust be cleared with a Hammer to build here.",
+            "VIP": "Upgrades a zone to VIP status. Doubles capacity and provides a unique luxury appearance.",
 
             # Infrastructure
             "Road": "Public Road.\nEssential for citizens to commute to work and for zones to develop.",
@@ -885,6 +886,7 @@ class Hud:
         raw_images = {
             "Axe": pg.image.load(AXE_URL).convert_alpha(),
             "Hammer": pg.image.load(HAMMER_URL).convert_alpha(),
+            "VIP": pg.image.load(VIP_URL).convert_alpha(),
             "Tree": pg.image.load(TREE_URL).convert_alpha(),
             "ResZone": pg.image.load(RESZONE_URL1).convert_alpha(),
             "IndZone": pg.image.load(INDZONE_URL1).convert_alpha(),
@@ -900,7 +902,7 @@ class Hud:
         }
         formatted_images = {}
         for name, img in raw_images.items():
-            if name in ["Axe", "Hammer"]:
+            if name in ["Axe", "Hammer", "VIP"]:
                 formatted_images[name] = img
                 continue
             is_flat_zone = name in ["ResZone", "IndZone", "SerZone"]

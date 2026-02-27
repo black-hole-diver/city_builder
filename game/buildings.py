@@ -49,6 +49,8 @@ class Zone(Building):
         super().__init__(pos, image, name, resource_manager, grid_pos, grid_width=4, grid_height=4)
         self.capacity = ZONE_CAPACITY
         self.occupants = 0
+        self.is_vip = False
+
         self.local_satisfaction = 100
         self.bonuses = []
         
@@ -56,8 +58,24 @@ class Zone(Building):
         self.base_image = image
         self.lvl1_image = None
         self.lvl2_image = None
+        self.lvl3_image = None
+
+    def apply_vip(self):
+        if not self.is_vip:
+            from .hud import Hud
+            self.is_vip = True
+            self.capacity *= 2
+            self.update_image()
+            return True
+        return False
 
     def update_image(self):
+        if self.is_vip and self.lvl3_image:
+            old_image = self.image
+            self.image = self.lvl3_image
+            if self.game and old_image != self.image:
+                self.game.add_notification(f"{self.name} UPGRADED TO VIP!", (255, 215, 0))
+            return
         saturation = self.occupants / self.capacity if self.capacity > 0 else 0
         old_image = self.image
         
@@ -89,6 +107,8 @@ class ResZone(Zone):
         from .hud import Hud
         self.lvl1_image = Hud.format_isometric_asset(pg.image.load(RESZONE_URL2).convert_alpha(), is_flat=True, grid_w=4, grid_h=4)
         self.lvl2_image = Hud.format_isometric_asset(pg.image.load(RESZONE_URL3).convert_alpha(), is_flat=True, grid_w=4, grid_h=4)
+        self.lvl3_image = pg.image.load(RESZONE_URL4).convert_alpha()
+
 
 class IndZone(Zone):
     def __init__(self, pos, image, resource_manager, grid_pos):
@@ -96,6 +116,7 @@ class IndZone(Zone):
         from .hud import Hud
         self.lvl1_image = Hud.format_isometric_asset(pg.image.load(INDZONE_URL2).convert_alpha(), is_flat=True, grid_w=4, grid_h=4)
         self.lvl2_image = Hud.format_isometric_asset(pg.image.load(INDZONE_URL3).convert_alpha(), is_flat=True, grid_w=4, grid_h=4)
+        self.lvl3_image = pg.image.load(INDZONE_URL4).convert_alpha()
 
 class SerZone(Zone):
     def __init__(self, pos, image, resource_manager, grid_pos):
@@ -103,6 +124,7 @@ class SerZone(Zone):
         from .hud import Hud
         self.lvl1_image = Hud.format_isometric_asset(pg.image.load(SERZONE_URL2).convert_alpha(), is_flat=True, grid_w=4, grid_h=4)
         self.lvl2_image = Hud.format_isometric_asset(pg.image.load(SERZONE_URL3).convert_alpha(), is_flat=True, grid_w=4, grid_h=4)
+        self.lvl3_image = pg.image.load(SERZONE_URL4).convert_alpha()
 
 # SECURITY & SERVICE
 

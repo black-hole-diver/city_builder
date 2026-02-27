@@ -28,7 +28,8 @@ class ResourceManager:
             "School": 1000,
             "University": 5000,
             "PowerPlant": 10000,
-            "PowerLine": 5
+            "PowerLine": 5,
+            "VIP": 2000
         }
 
         self.maintenance_fees = {

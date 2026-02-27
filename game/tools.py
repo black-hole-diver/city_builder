@@ -1,3 +1,4 @@
+from .buildings import Zone, SerZone, IndZone, ResZone
 from .setting import *
 
 class Tool:
@@ -162,3 +163,26 @@ class Hammer(Tool):
                 world.collision_matrix[grid_pos[1]][grid_pos[0]] = 1
                 world.game.play_sound("destruction")
                 world.game.add_notification("ROCK SMASHED!", (200, 200, 200))
+
+class VIP(Tool):
+    def __init__(self):
+        super().__init__("VIP")
+    def can_use(self, grid_pos, world):
+        b = world.buildings[grid_pos[0]][grid_pos[1]]
+        has_funds = world.resource_manager.is_affordable("VIP")
+        is_valid_zone = b is not None and b.name in ["ResZone", "IndZone", "SerZone"]
+        return is_valid_zone and not getattr(b, "is_vip", False) and has_funds
+    def use(self, grid_pos, world):
+        if self.can_use(grid_pos, world):
+            b = world.buildings[grid_pos[0]][grid_pos[1]]
+            if hasattr(b, "apply_vip") and b.apply_vip():
+                world.resource_manager.apply_cost_to_resource("VIP", world.game)
+                world.game.play_sound("creation")
+
+                # Deselect examine tile so the HUD updates immediately
+                if world.examine_tile == b.origin:
+                    world.examine_tile = None
+                    world.hud.examined_tile = None
+                    world.examine_mask_points = None
+
+                world.game.calculate_satisfaction_and_growth()

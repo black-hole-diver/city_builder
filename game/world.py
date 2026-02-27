@@ -4,7 +4,7 @@ import noise
 from .setting import *
 from .workers import Worker
 from .buildings import *
-from .tools import Axe, Hammer
+from .tools import Axe, Hammer, VIP
 from typing import List, Optional
 
 class Scenery:
@@ -66,7 +66,8 @@ class World:
 
         self.tools = {
             "Axe": Axe(),
-            "Hammer": Hammer()
+            "Hammer": Hammer(),
+            "VIP": VIP()
         }
 
         for gx in range(self.grid_length_x):

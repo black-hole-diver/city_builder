@@ -56,7 +56,9 @@ BUILDING_SPECS = {
     "FireStation": (2, 2),
     "School": (2, 2),
     "University": (4, 4),
-    "PowerPlant": (4, 4)
+    "PowerPlant": (4, 4),
+
+    "VIP": (1,1)
 }
 
 # ==========================================
@@ -101,6 +103,12 @@ INDZONE_URL3 = "assets/graphics/IndZone3.png"
 SERZONE_URL1 = "assets/graphics/SerZone1.png"
 SERZONE_URL2 = "assets/graphics/SerZone2.png"
 SERZONE_URL3 = "assets/graphics/SerZone3.png"
+
+# VIP Zones
+RESZONE_URL4 = "assets/graphics/ResZone4.png"
+INDZONE_URL4 = "assets/graphics/IndZone4.png"
+SERZONE_URL4 = "assets/graphics/SerZone4.png"
+VIP_URL = "assets/graphics/vip.png"
 
 # ==========================================
 # AI GENERATION PROMPTS
