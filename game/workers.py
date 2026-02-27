@@ -83,12 +83,11 @@ class Dinosaur(Worker):
         self.world.entities.append(self)
 
         try:
-            image = pg.image.load("assets/graphics/Dinosaur.png").convert_alpha()
+            self.image = pg.image.load("assets/graphics/Dinosaur.png").convert_alpha()
         except:
-            image = pg.image.load("assets/graphics/worker.png").convert_alpha()
+            self.image = pg.image.load("assets/graphics/worker.png").convert_alpha()
 
         self.name = "dinosaur"
-        self.image = pg.transform.scale(image, (image.get_width() * 4, image.get_height() * 4))
         self.tile = tile
 
         self.move_timer = pg.time.get_ticks()
