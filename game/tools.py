@@ -57,10 +57,15 @@ class Hammer(Tool):
                 b = world.buildings[grid_pos[0]][grid_pos[1]]
 
                 is_occupied_zone = hasattr(b, "occupants") and b.occupants > 0
-                is_road = b.name == "Road"
 
-                # Trigger warning for occupied zones or active roads
-                if is_occupied_zone or is_road:
+                # Check if it's a road and if its removal breaks connectivity
+                is_critical_road = False
+                if b.name == "Road":
+                    if not world.is_road_safe_to_demolish(grid_pos[0], grid_pos[1]):
+                        is_critical_road = True
+
+                # Trigger warning ONLY for occupied zones or critical roads
+                if is_occupied_zone or is_critical_road:
                     # Calculate consequences
                     stats = {
                         "type": b.name,
@@ -82,7 +87,7 @@ class Hammer(Tool):
                         else:
                             stats["cost"] = b.occupants * 50  # $50 severance per fired worker
                             stats["sat_penalty"] = 10
-                    elif is_road:
+                    elif is_critical_road:
                         stats["cost"] = 250  # Road disruption fee
                         stats["sat_penalty"] = 5
 
@@ -91,7 +96,7 @@ class Hammer(Tool):
                     world.game.demolish_stats = stats
                     world.game.menu_state = "CONFIRM_DEMOLISH"
                 else:
-                    # Empty buildings skip the warning and are destroyed instantly
+                    # Empty buildings and SAFE roads skip the warning and are destroyed instantly
                     world.execute_demolition(grid_pos)
             elif is_rock:
                 # Scenery is destroyed instantly
