@@ -74,6 +74,7 @@ class Worker:
 
 class Dinosaur(Worker):
     def __init__(self, tile, world):
+        super().__init__(tile, world)
         self.path = None
         self.path_index = None
         self.end = None

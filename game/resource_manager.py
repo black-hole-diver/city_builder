@@ -48,12 +48,14 @@ class ResourceManager:
 
         self.tax_per_citizen = 10
         self.tax_rate_satisfaction_impact = 0 # 0 means normal taxes
+        self.eviction_penalty = 0
 
         # Loans
         self.loans = [] # List of {amount, interest_rate}
         self.total_loan_amount = 0
 
         self.budget_history = [] # List of {year, income, expenses, balance}
+
 
     @property
     def population(self):
@@ -169,5 +171,8 @@ class ResourceManager:
             pass
         else:
             self.years_negative_budget = 0
+
+        if self.eviction_penalty > 0:
+            self.eviction_penalty = max(0.0, self.eviction_penalty - 0.5)
             
         return tax_income, maintenance_cost

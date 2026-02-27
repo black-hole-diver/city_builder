@@ -75,6 +75,10 @@ class Game:
         self.menu_state = "MAIN_MENU"
         self.save_slots = ["save_slot_1.json", "save_slot_2.json", "save_slot_3.json"]
 
+        # ============ Demolition Tracker ==========
+        self.demolish_target_pos = None
+        self.demolish_stats = {}
+
         # ============ Audio System ============
         self.sounds = {
             "creation": pg.mixer.Sound("assets/sounds/creation.ogg"),
@@ -634,6 +638,10 @@ class Game:
         # ============ Satisfaction Calculation ============
         total_sat = 100
 
+        # --- Apply lingering eviction penalty ---
+        if self.resource_manager.eviction_penalty > 0:
+            total_sat -= int(self.resource_manager.eviction_penalty)
+
         # --- Negative Budget Impact ---
         # Proportional to loan size and years negative
         loan_penalty = 0
@@ -896,7 +904,7 @@ class Game:
         self.world.draw(self.screen, self.camera)
         self.hud.draw(self.screen, self.current_date, self.current_speed)
 
-        if self.menu_state is not None:
+        if self.menu_state in ["SAVE", "LOAD"]:
             self.process_menu_overlay()
 
         if self.paused:
@@ -974,7 +982,7 @@ class Game:
             "total_loan_amount": self.resource_manager.total_loan_amount,
             "budget_history": self.resource_manager.budget_history,
             "music_on": self.music_on,
-
+            "eviction_penalty": getattr(self.resource_manager, "eviction_penalty", 0),
             "camera": {"x": self.camera.scroll.x, "y": self.camera.scroll.y},
             "date": self.current_date.strftime("%Y-%m-%d"),
             "speed": self.current_speed,
@@ -1051,6 +1059,7 @@ class Game:
         self.resource_manager.tax_per_citizen = data.get("tax_per_citizen", 10)
         self.resource_manager.total_loan_amount = data.get("total_loan_amount", 0)
         self.resource_manager.budget_history = data.get("budget_history", [])
+        self.resource_manager.eviction_penalty = data.get("eviction_penalty", 0)
 
         # Restore music state
         self.music_on = data.get("music_on", True)
