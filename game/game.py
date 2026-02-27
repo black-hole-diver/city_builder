@@ -403,8 +403,8 @@ class Game:
         sec_cap = int(self.resource_manager.population * 0.50)
         tert_cap = int(self.resource_manager.population * 0.25)
 
-        schools = [e for e in self.entities if e.name == "School" and e.has_road_access]
-        unis = [e for e in self.entities if e.name == "University" and e.has_road_access]
+        schools = [e for e in self.entities if e.name == "School" and e.has_road_access and getattr(e, 'is_powered', False)]
+        unis = [e for e in self.entities if e.name == "University" and e.has_road_access and getattr(e, 'is_powered', False)]
 
         # Schools graduate Primary -> Secondary
         for s in schools:
@@ -669,6 +669,9 @@ class Game:
                 imbalance_penalty = 20
                 total_sat -= imbalance_penalty
 
+        workforce = sum(rz.occupants for rz in res_zones)
+        total_jobs_available = total_ind_jobs + total_ser_jobs
+
         # ============ Individual Zone Satisfaction ============
         # Calculate for all zones (Res, Ind, Ser)
         all_zones = res_zones + ind_zones + ser_zones
@@ -694,14 +697,13 @@ class Game:
                 rz.local_satisfaction -= 25
                 rz.bonuses.append("No Electricity (-25)")
 
-            # --- Apply Bonuses and Penalties ---
-            rz.bonuses = []
-
-
+            if isinstance(rz, ResZone):
+                if workforce > 0 and total_jobs_available < (.5 * workforce):
+                    rz.local_satisfaction -= 15
+                    rz.bonuses.append("Severe Job Shortage (-15)")
 
             if self.resource_manager.total_loan_amount > 0:
                 rz.bonuses.append(f"Debt Penalty (-{int(loan_penalty)})")
-
             
             if self.resource_manager.tax_per_citizen > 10:
                 rz.bonuses.append(f"High Taxes (-{tax_impact})")
