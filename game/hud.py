@@ -399,6 +399,28 @@ class Hud:
                 age_text = self.examined_tile.get_age_formatted(self.game.current_date)
                 draw_text(screen, f"Age: {age_text}", 22, (150, 255, 150), (desc_x, current_y))
                 current_y += 20
+            # ==========================================
+            # NEW: Power Status Display
+            # ==========================================
+            b = self.examined_tile
+            # We don't show power status for nature, tools, or basic infrastructure
+            if b.name not in ["Tree", "Rock", "Road", "PowerLine", "Axe", "Hammer"]:
+                current_y += 5  # Add a tiny bit of padding
+
+                if b.name == "PowerPlant":
+                    supply = getattr(b, 'network_supply', 0)
+                    demand = getattr(b, 'network_demand', 0)
+                    # Green if we have enough power, Red if overloaded
+                    p_color = (100, 255, 100) if supply >= demand else (255, 100, 100)
+                    draw_text(screen, f"Grid Load: {demand} / {supply} MW", 22, p_color, (desc_x, current_y))
+                    current_y += 20
+                else:
+                    if getattr(b, 'is_powered', False):
+                        draw_text(screen, "Power: Connected", 22, (100, 255, 100), (desc_x, current_y))
+                    else:
+                        draw_text(screen, "Power: NO POWER", 22, (255, 100, 100), (desc_x, current_y))
+                    current_y += 20
+            # ==========================================
         for tile in self.tiles:
             # 1. Draw the slot background (Dark grey with rounded corners)
             pg.draw.rect(screen, (40, 40, 45, 200), tile["cell_rect"], border_radius=8)

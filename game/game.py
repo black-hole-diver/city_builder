@@ -371,13 +371,10 @@ class Game:
             self.calculate_satisfaction_and_growth()
 
         # 3. Restore Main Soundtrack
-        try:
-            pg.mixer.music.load("assets/sounds/fly_me_to_the_moon.ogg")
-            pg.mixer.music.set_volume(0.1)
-            if self.music_on:
-                pg.mixer.music.play(-1)
-        except:
-            pass
+        pg.mixer.music.load("assets/sounds/fly_me_to_the_moon.ogg")
+        pg.mixer.music.set_volume(0.1)
+        if self.music_on:
+            pg.mixer.music.play(-1)
 
     def apply_annual_logic(self):
         """Handle annual events: budget summary, satisfaction, and game over conditions."""
@@ -406,8 +403,8 @@ class Game:
         sec_cap = int(self.resource_manager.population * 0.50)
         tert_cap = int(self.resource_manager.population * 0.25)
 
-        schools = [e for e in self.entities if e.name == "School" and e.has_road_access]
-        unis = [e for e in self.entities if e.name == "University" and e.has_road_access]
+        schools = [e for e in self.entities if e.name == "School" and e.has_road_access and getattr(e, 'is_powered', False)]
+        unis = [e for e in self.entities if e.name == "University" and e.has_road_access and getattr(e, 'is_powered', False)]
 
         # Schools graduate Primary -> Secondary
         for s in schools:
@@ -448,6 +445,43 @@ class Game:
         if self.resource_manager.years_negative_budget > 5:
              self.resource_manager.is_mayor_replaced = True
              self.add_notification("GAME OVER: DEBT LIMIT EXCEEDED", (255, 0, 0))
+
+    @staticmethod
+    def get_power_networks(power_capable):
+        """BFS algorithm to group adjacent buildings into contiguous power grids."""
+        from collections import deque
+        visited_power = set()
+        power_networks = []
+
+        for b in power_capable:
+            if b not in visited_power:
+                network = []
+                queue = deque([b])
+                visited_power.add(b)
+
+                while queue:
+                    curr = queue.popleft()
+                    network.append(curr)
+
+                    for other in power_capable:
+                        if other not in visited_power:
+                            x_overlap = curr.origin[0] < other.origin[0] + other.grid_width and curr.origin[
+                                0] + curr.grid_width > other.origin[0]
+                            y_overlap = curr.origin[1] < other.origin[1] + other.grid_height and curr.origin[
+                                1] + curr.grid_height > other.origin[1]
+
+                            x_adj = (curr.origin[0] == other.origin[0] + other.grid_width or curr.origin[
+                                0] + curr.grid_width == other.origin[0]) and y_overlap
+                            y_adj = (curr.origin[1] == other.origin[1] + other.grid_height or curr.origin[
+                                1] + curr.grid_height == other.origin[1]) and x_overlap
+
+                            if x_adj or y_adj:
+                                visited_power.add(other)
+                                queue.append(other)
+
+                power_networks.append(network)
+
+        return power_networks
 
     @staticmethod
     def get_line(x1, y1, x2, y2):
@@ -529,6 +563,65 @@ class Game:
                                 queue.append((nx, ny))
                 next_network_id += 1
 
+        # ============ Power Network Connectivity & Distribution ============
+        # 1. Identify all buildings that can conduct or produce electricity
+        power_capable = [e for e in self.entities if e.name in [
+            "PowerPlant", "PowerLine", "ResZone", "IndZone", "SerZone",
+            "Police", "Stadium", "FireStation", "School", "University"
+        ]]
+
+        # Reset power states
+        for e in power_capable:
+            e.is_powered = False
+
+        # 2. Use the standalone BFS function to find all contiguous grids
+        power_networks = Game.get_power_networks(power_capable)
+
+        # 3. Calculate Supply vs Demand per grid
+        for network in power_networks:
+            power_plants = [b for b in network if b.name == "PowerPlant"]
+            total_supply = len(power_plants) * 1000
+
+            demand_list = []
+            total_demand = 0
+
+            for b in network:
+                if b.name in ["PowerPlant", "PowerLine"]:
+                    b.is_powered = True  # Infrastructure is always "powered"
+                    continue
+
+                # Base demand scales dynamically based on type and occupants
+                demand = 0
+                if b.name in ["ResZone", "IndZone", "SerZone"]:
+                    demand = 5 + getattr(b, 'occupants', 0) * 2
+                else:
+                    demand = 50
+                    if b.name == "Stadium":
+                        demand = 200
+                    elif b.name == "University":
+                        demand = 100
+
+                if demand > 0:
+                    demand_list.append((b, demand))
+                    total_demand += demand  # Track the total demand
+
+            # --- NEW: Save network stats to the Power Plants for the UI ---
+            for pp in power_plants:
+                pp.network_supply = total_supply
+                pp.network_demand = total_demand
+
+            # 4. Distribute electricity until supply runs out
+            current_supply = total_supply
+            # Prioritize essential service buildings before zones
+            demand_list.sort(key=lambda x: 0 if x[0].name in ["ResZone", "IndZone", "SerZone"] else 1, reverse=True)
+
+            for b, dem in demand_list:
+                if current_supply >= dem:
+                    current_supply -= dem
+                    b.is_powered = True
+                else:
+                    b.is_powered = False
+
         # ============ Zone Network Mapping ============
         def get_touched_networks(zone):
             """Get all road networks adjacent to this zone."""
@@ -576,6 +669,9 @@ class Game:
                 imbalance_penalty = 20
                 total_sat -= imbalance_penalty
 
+        workforce = sum(rz.occupants for rz in res_zones)
+        total_jobs_available = total_ind_jobs + total_ser_jobs
+
         # ============ Individual Zone Satisfaction ============
         # Calculate for all zones (Res, Ind, Ser)
         all_zones = res_zones + ind_zones + ser_zones
@@ -595,8 +691,17 @@ class Game:
                 rz.bonuses = ["Disconnected road!"]
                 continue
 
-            # --- Apply Bonuses and Penalties ---
             rz.bonuses = []
+            # NEW: Severe penalty for lack of electricity
+            if not getattr(rz, 'is_powered', False):
+                rz.local_satisfaction -= 25
+                rz.bonuses.append("No Electricity (-25)")
+
+            if isinstance(rz, ResZone):
+                if workforce > 0 and total_jobs_available < (.5 * workforce):
+                    rz.local_satisfaction -= 15
+                    rz.bonuses.append("Severe Job Shortage (-15)")
+
             if self.resource_manager.total_loan_amount > 0:
                 rz.bonuses.append(f"Debt Penalty (-{int(loan_penalty)})")
             
@@ -612,7 +717,7 @@ class Game:
             # Police and Stadium provide bonuses if reachable
             for s in services:
                 # Service building must have road access
-                if not s.has_road_access:
+                if not s.has_road_access or not getattr(s, 'is_powered', False):
                     continue
 
                 # Check if service is reachable via road network
@@ -713,7 +818,7 @@ class Game:
         if growth_potential > 0:
             self.add_notification(f"City Population Growth: +{growth_potential}", (100, 255, 100))
             for _ in range(growth_potential):
-                eligible = [rz for rz in res_zones if rz.occupants < rz.capacity and rz.has_road_access]
+                eligible = [rz for rz in res_zones if rz.occupants < rz.capacity and rz.has_road_access and getattr(rz, 'is_powered', False)]
                 if eligible:
                     weights = [1 + getattr(rz, 'tree_bonus', 0) for rz in eligible]
                     target = random.choices(eligible, weights=weights, k=1)[0]
@@ -735,50 +840,40 @@ class Game:
 
         # ============ Workplace Assignments ============
         # Reset occupants for all industrial and service zones
+
         for iz in ind_zones: iz.occupants = 0
         for sz in ser_zones: sz.occupants = 0
 
-        # --- Distribute Workers from Residential Zones ---
-        for rz in res_zones:
-            if rz.occupants == 0 or not rz.has_road_access:
-                continue
+        workforce = sum(rz.occupants for rz in res_zones)
+        ind_ser_zones = [z for z in (ind_zones + ser_zones) if z.has_road_access]
 
-            rz_networks = res_zone_networks[rz]
-            if not rz_networks:
-                rz.local_satisfaction = 0
-                rz.bonuses = ["No road connection!"]
-                continue
+        if ind_ser_zones and workforce > 0:
+            total_capacity = sum(z.capacity for z in ind_ser_zones)
 
-            # Find all reachable workplaces for this residential zone
-            reachable_ind = [iz for iz in ind_zones if iz.has_road_access and ind_zone_networks[iz].intersection(rz_networks)]
-            reachable_ser = [sz for sz in ser_zones if sz.has_road_access and ser_zone_networks[sz].intersection(rz_networks)]
-            
-            if not reachable_ind and not reachable_ser:
-                 rz.bonuses.append("No reachable workplaces!")
-                 continue
+            # 2. Calculate the global "Fill Ratio" (e.g., if we have 50 workers for 100 capacity, ratio is 0.5)
+            # We use assignable_workers to ensure we don't exceed city capacity
+            assignable_workers = min(workforce, total_capacity)
+            fill_ratio = assignable_workers / total_capacity
 
-            # Assign each resident to a workplace
-            for _ in range(rz.occupants):
-                eligible_ind = [z for z in reachable_ind if z.occupants < z.capacity]
-                eligible_ser = [z for z in reachable_ser if z.occupants < z.capacity]
+            # 3. Proportional Assignment
+            for zone in ind_ser_zones:
+                # Every building gets a slice of the workforce based on the global ratio
+                zone.occupants = int(zone.capacity * fill_ratio)
 
-                target = None
-                if eligible_ind and eligible_ser:
-                    # Balance between industrial and service jobs
-                    current_ind_occ = sum(z.occupants for z in ind_zones)
-                    current_ser_occ = sum(z.occupants for z in ser_zones)
+            # 4. Handle Rounding Remainders
+            # Because of 'int()', we might lose a few workers (e.g., 0.9 becomes 0).
+            # We distribute the remaining workers one-by-one to random buildings.
+            current_assigned = sum(z.occupants for z in ind_ser_zones)
+            remainder = assignable_workers - current_assigned
 
-                    if current_ind_occ <= current_ser_occ:
-                        target = random.choice(eligible_ind)
-                    else:
-                        target = random.choice(eligible_ser)
-                elif eligible_ind:
-                    target = random.choice(eligible_ind)
-                elif eligible_ser:
-                    target = random.choice(eligible_ser)
-
-                if target:
-                    target.occupants += 1
+            if remainder > 0:
+                # Shuffle so the same building doesn't always get the "extra" workers
+                random.shuffle(ind_ser_zones)
+                for zone in ind_ser_zones:
+                    if remainder <= 0: break
+                    if zone.occupants < zone.capacity:
+                        zone.occupants += 1
+                        remainder -= 1
 
         # --- Update Zone Images ---
         for iz in ind_zones: iz.update_image()
