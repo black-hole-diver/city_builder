@@ -62,6 +62,7 @@ class Game:
         self.playing = False
         self.background = self.create_starry_background()
         self.star_offset = 0  # For slow swirl animation
+        self.car_spawn_timer = 0
         self.notifications = []  # List of {text, color, timer, offset_y}
         self.notification_text = ""
         self.notification_timer = 0
@@ -256,6 +257,13 @@ class Game:
         if not self.paused:
             # Animate stars
             self.star_offset += .2
+
+            now = pg.time.get_ticks()
+
+            # --- Car Spawning Logic ---
+            if now - self.car_spawn_timer > 2000 / self.current_speed:  # Try spawning every 2s
+                self.spawn_cars()
+                self.car_spawn_timer = now
 
             # --- Time and Budget System ---
             old_year = self.current_date.year
@@ -1283,3 +1291,28 @@ class Game:
         if mouse_state[2]:
             self.menu_state = None
             self.hud.mouse_pressed = True
+
+    def spawn_cars(self):
+        """Spawns cars between Residential Zones and Workplaces based on population."""
+        # 1. Gather eligible zones
+        res_zones = [e for e in self.entities if
+                     isinstance(e, ResZone) and getattr(e, "occupants", 0) > 0 and e.has_road_access]
+        work_zones = [e for e in self.entities if
+                      isinstance(e, (IndZone, SerZone)) and getattr(e, "occupants", 0) > 0 and e.has_road_access]
+
+        if not res_zones or not work_zones:
+            return
+
+        # 2. Cap maximum cars to prevent performance drops and gridlock
+        current_cars = sum(1 for e in self.entities if getattr(e, "name", "") == "Car")
+        if current_cars >= 40:
+            return
+
+        # 3. Weighted choice for start zone (More occupants = higher chance to spawn)
+        weights = [rz.occupants for rz in res_zones]
+        start_zone = random.choices(res_zones, weights=weights, k=1)[0]
+        target_zone = random.choice(work_zones)
+
+        # 4. Spawn the car
+        from .workers import Car
+        Car(start_zone, target_zone, self.world)

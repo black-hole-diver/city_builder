@@ -360,7 +360,7 @@ class World:
             })
 
         for ent in self.entities:
-            if getattr(ent, "name", "") == "FireTruck":
+            if getattr(ent, "name", "") in ["FireTruck", "Car"]:
                 ft_render_pos = ent.tile["render_pos"]
                 ft_screen_x = ft_render_pos[0] + offset_x
                 ft_screen_y = ft_render_pos[1] - (ent.image.get_height() - TILE_SIZE) + offset_y
@@ -756,9 +756,9 @@ class World:
 
             # --- START LOGIC ---
             if not b.on_fire:
-                chance = CHANCE
+                chance = CHANCE * .01
                 if b.name in ["PowerPlant", "IndZone"]:
-                    chance = CHANCE * 10  # Higher risk
+                    chance = CHANCE * .1  # Higher risk
 
                 # Check station radius
                 is_protected = False
@@ -779,22 +779,29 @@ class World:
                     self.game.add_notification("IT'S FUCKING BURNING!!!!", (255, 50, 50))
 
             # --- SPREAD LOGIC ---
+            # --- SPREAD LOGIC ---
             elif b.on_fire:
                 if now - b.fire_start_time > FIRE_SPREAD_TIME:
                     adj = [(0, 1), (0, -1), (1, 0), (-1, 0)]
-                    for dx, dy in adj:
-                        nx, ny = b.origin[0] + dx, b.origin[1] + dy
-                        if 0 <= nx < self.grid_length_x and 0 <= ny < self.grid_length_y:
-                            neighbor = self.buildings[nx][ny]
-                            if neighbor and hasattr(neighbor,"on_fire") and not neighbor.on_fire and neighbor.name not in [
-                                "Road", "Tree", "FireStation"]:
-                                neighbor.on_fire = True
-                                neighbor.fire_start_time = now
-                                neighbor.targeted_by_truck = False
-                                self.game.add_notification("FIRE SPREAD!", (255, 100, 50))
+                    # Check every tile the building occupies, not just the top-left!
+                    for x in range(b.origin[0], b.origin[0] + b.grid_width):
+                        for y in range(b.origin[1], b.origin[1] + b.grid_height):
+                            for dx, dy in adj:
+                                nx, ny = x + dx, y + dy
+                                if 0 <= nx < self.grid_length_x and 0 <= ny < self.grid_length_y:
+                                    neighbor = self.buildings[nx][ny]
+                                    if neighbor and neighbor != b and hasattr(neighbor,
+                                                                              "on_fire") and not neighbor.on_fire and neighbor.name not in [
+                                        "Road", "Tree", "FireStation"]:
+                                        neighbor.on_fire = True
+                                        neighbor.fire_start_time = now
+                                        neighbor.targeted_by_truck = False
+                                        self.game.add_notification("FIRE SPREAD!", (255, 100, 50))
+
                     self.game.add_notification(f"{b.name.upper()} BURNED DOWN!", (255, 50, 50))
                     self.execute_demolition(b.origin, apply_penalty=10, refund=False)
                     continue
+
                 # --- DISPATCH TRUCK ---
                 if not b.targeted_by_truck and stations:
                     closest_station = min(stations, key=lambda st: abs(b.origin[0] - st.origin[0]) + abs(
