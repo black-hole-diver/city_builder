@@ -641,7 +641,7 @@ class World:
         
         return True
 
-    def execute_demolition(self, grid_pos, pay_compensation=0, apply_penalty=0):
+    def execute_demolition(self, grid_pos, pay_compensation=0, apply_penalty=0, refund=True):
         has_building = self.buildings[grid_pos[0]][grid_pos[1]] is not None
         is_rock = self.world[grid_pos[0]][grid_pos[1]]["tile"] == "rock"
 
@@ -692,12 +692,19 @@ class World:
                     self.game.add_notification("ALL DISPLACED CITIZENS REHOUSED", (100, 255, 100))
 
             # 3. Process Salvage Refund
-            refund_percent = ZONE_REFUND_PERCENT if hasattr(b, "occupants") else BUILDING_REFUND_PERCENT
-            cost = self.resource_manager.costs.get(b.name, 0)
-            refund_amount = int(cost * refund_percent)
-            self.resource_manager.funds += refund_amount
-            if refund_amount > 0:
-                self.resource_manager.log_transaction(self.game, f"SALVAGE {b.name}", refund_amount, 0)
+            # refund_percent = ZONE_REFUND_PERCENT if hasattr(b, "occupants") else BUILDING_REFUND_PERCENT
+            # cost = self.resource_manager.costs.get(b.name, 0)
+            # refund_amount = int(cost * refund_percent)
+            # self.resource_manager.funds += refund_amount
+            # if refund_amount > 0:
+            #     self.resource_manager.log_transaction(self.game, f"SALVAGE {b.name}", refund_amount, 0)
+            if refund:
+                refund_percent = ZONE_REFUND_PERCENT if hasattr(b, "occupants") else BUILDING_REFUND_PERCENT
+                cost = self.resource_manager.costs.get(b.name, 0)
+                refund_amount = int(cost * refund_percent)
+                self.resource_manager.funds += refund_amount
+                if refund_amount > 0:
+                    self.resource_manager.log_transaction(self.game, f"SALVAGE {b.name}", refund_amount, 0)
 
             # 4. Remove Entity and Clear Matrix
             if b in self.entities:
@@ -774,22 +781,20 @@ class World:
             # --- SPREAD LOGIC ---
             elif b.on_fire:
                 if now - b.fire_start_time > FIRE_SPREAD_TIME:
-                    b.fire_start_time = now  # Reset timer so it triggers again later
-
-                    # Ignite adjacent tiles
                     adj = [(0, 1), (0, -1), (1, 0), (-1, 0)]
                     for dx, dy in adj:
                         nx, ny = b.origin[0] + dx, b.origin[1] + dy
                         if 0 <= nx < self.grid_length_x and 0 <= ny < self.grid_length_y:
                             neighbor = self.buildings[nx][ny]
-                            if neighbor and hasattr(neighbor,
-                                                    "on_fire") and not neighbor.on_fire and neighbor.name not in [
+                            if neighbor and hasattr(neighbor,"on_fire") and not neighbor.on_fire and neighbor.name not in [
                                 "Road", "Tree", "FireStation"]:
                                 neighbor.on_fire = True
                                 neighbor.fire_start_time = now
                                 neighbor.targeted_by_truck = False
                                 self.game.add_notification("FIRE SPREAD!", (255, 100, 50))
-
+                    self.game.add_notification(f"{b.name.upper()} BURNED DOWN!", (255, 50, 50))
+                    self.execute_demolition(b.origin, apply_penalty=10, refund=False)
+                    continue
                 # --- DISPATCH TRUCK ---
                 if not b.targeted_by_truck and stations:
                     closest_station = min(stations, key=lambda st: abs(b.origin[0] - st.origin[0]) + abs(

@@ -6,9 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="47aba308-f49c-4a93-9a5d-4695dc059ce0" name="Changes" comment="tree block logic fixed.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/game/buildings.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/buildings.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/game/game.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/game.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/game/setting.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/setting.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/game/workers.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/workers.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/game/world.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/world.py" afterDir="false" />
     </list>
@@ -435,7 +432,7 @@
     </breakpoint-manager>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/Welcome$main_city_builder.coverage" NAME="main_city_builder Coverage Results" MODIFIED="1772209352859" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/Welcome$main_city_builder.coverage" NAME="main_city_builder Coverage Results" MODIFIED="1772209964357" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
   <component name="github-copilot-workspace">
     <instructionFileLocations>
