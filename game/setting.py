@@ -79,7 +79,7 @@ ROAD_URL = "assets/graphics/Road.png"
 POWERLINE_URL = "assets/graphics/Powerline.png"
 WORKER_URL = "assets/graphics/worker.png"
 CAR_URL = "assets/graphics/Car.png"
-FIRETRUCK_URL = "assets/graphics/Firetruck.png"
+FIRETRUCK_URL = "assets/graphics/FireTruck.png"
 
 # Service Buildings
 POLICE_URL = "assets/graphics/Police.png"
@@ -109,6 +109,12 @@ RESZONE_URL4 = "assets/graphics/ResZone4.png"
 INDZONE_URL4 = "assets/graphics/IndZone4.png"
 SERZONE_URL4 = "assets/graphics/SerZone4.png"
 VIP_URL = "assets/graphics/vip.png"
+
+# FIRE
+FIRE_URL = "assets/graphics/Fire.png"
+FIRE_SPREAD_TIME = 30000  # 30 seconds in milliseconds
+FIRE_STATION_RADIUS = 20  # Tiles
+CHANCE = 0.001
 
 # ==========================================
 # AI GENERATION PROMPTS

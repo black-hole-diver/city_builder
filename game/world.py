@@ -38,6 +38,12 @@ class World:
         self.world = self.create_world()
         self.collision_matrix = self.create_collision_matrix()
 
+        try:
+            self.fire_image = pg.image.load(FIRE_URL).convert_alpha()
+        except Exception as e:
+            print(f"Warning: Could not load fire image: {e}")
+            self.fire_image = None
+
         self.buildings: List[List[Optional['Building']]] = [[None for _ in range(self.grid_length_y)] for _ in range(self.grid_length_x)]
         self.workers: List[List[Optional['Worker']]] = [[None for _ in range(self.grid_length_y)] for _ in
                                                             range(self.grid_length_x)]
@@ -84,6 +90,10 @@ class World:
 
     def update(self, camera, game_paused):
         self.game_paused = game_paused
+
+        if not self.game_paused:
+            self.process_fires()
+
         mouse_pos = pg.mouse.get_pos()
         mouse_action = pg.mouse.get_pressed()
 
@@ -318,7 +328,8 @@ class World:
                         "image": building.image,
                         "pos": (b_screen_x, b_screen_y),
                         "depth": depth,
-                        "mask": mask
+                        "mask": mask,
+                        "on_fire": getattr(building, "on_fire", False)
                     })
 
                 # --- Workers ---
@@ -348,6 +359,21 @@ class World:
                 "mask": None
             })
 
+        for ent in self.entities:
+            if getattr(ent, "name", "") == "FireTruck":
+                ft_render_pos = ent.tile["render_pos"]
+                ft_screen_x = ft_render_pos[0] + offset_x
+                ft_screen_y = ft_render_pos[1] - (ent.image.get_height() - TILE_SIZE) + offset_y
+
+                dx, dy = ent.tile["grid"]
+                ft_depth = dx + .5 + dy + .5
+                render_queue.append({
+                    "image": ent.image,
+                    "pos": (ft_screen_x, ft_screen_y),
+                    "depth": ft_depth,
+                    "mask": None
+                })
+
 
         # 2. Sort the queue by our calculated depth!
         render_queue.sort(key=lambda q_item: q_item["depth"])
@@ -357,6 +383,11 @@ class World:
             screen.blit(item["image"], item["pos"])
             if item["mask"]:
                 pg.draw.polygon(screen, (255, 255, 255), item["mask"], 3)
+
+            if item.get("on_fire") and self.fire_image:
+                fx = item["pos"][0] + (item["image"].get_width() // 2) - (self.fire_image.get_width() // 2)
+                fy = item["pos"][1] + (item["image"].get_height() // 2) - (self.fire_image.get_height() // 2)
+                screen.blit(self.fire_image, (fx, fy))
 
         # 4. Draw Ghost Tile last so it stays completely visible as a UI overlay
         if self.temp_tile is not None:
@@ -707,3 +738,62 @@ class World:
             self.collision_matrix[grid_pos[1]][grid_pos[0]] = 1
             self.game.play_sound("destruction")
             self.game.add_notification("ROCK SMASHED!", (200, 200, 200))
+
+    def process_fires(self):
+        now = pg.time.get_ticks()
+        stations = [b for b in self.entities if getattr(b, "name", "") == "FireStation"]
+
+        for b in self.entities.copy():
+            if not hasattr(b, "on_fire") or b.name in ["Road", "Tree", "FireStation"]:
+                continue
+
+            # --- START LOGIC ---
+            if not b.on_fire:
+                chance = CHANCE
+                if b.name in ["PowerPlant", "IndZone"]:
+                    chance = CHANCE * 10  # Higher risk
+
+                # Check station radius
+                is_protected = False
+                for station in stations:
+                    dist = abs(b.origin[0] - station.origin[0]) + abs(b.origin[1] - station.origin[1])
+                    if dist <= FIRE_STATION_RADIUS:
+                        is_protected = True
+                        break
+
+                if is_protected:
+                    chance *= 0.1  # 90% reduction
+
+                import random
+                if random.random() < chance:
+                    b.on_fire = True
+                    b.fire_start_time = now
+                    b.targeted_by_truck = False
+                    self.game.add_notification("IT'S FUCKING BURNING!!!!", (255, 50, 50))
+
+            # --- SPREAD LOGIC ---
+            elif b.on_fire:
+                if now - b.fire_start_time > FIRE_SPREAD_TIME:
+                    b.fire_start_time = now  # Reset timer so it triggers again later
+
+                    # Ignite adjacent tiles
+                    adj = [(0, 1), (0, -1), (1, 0), (-1, 0)]
+                    for dx, dy in adj:
+                        nx, ny = b.origin[0] + dx, b.origin[1] + dy
+                        if 0 <= nx < self.grid_length_x and 0 <= ny < self.grid_length_y:
+                            neighbor = self.buildings[nx][ny]
+                            if neighbor and hasattr(neighbor,
+                                                    "on_fire") and not neighbor.on_fire and neighbor.name not in [
+                                "Road", "Tree", "FireStation"]:
+                                neighbor.on_fire = True
+                                neighbor.fire_start_time = now
+                                neighbor.targeted_by_truck = False
+                                self.game.add_notification("FIRE SPREAD!", (255, 100, 50))
+
+                # --- DISPATCH TRUCK ---
+                if not b.targeted_by_truck and stations:
+                    closest_station = min(stations, key=lambda st: abs(b.origin[0] - st.origin[0]) + abs(
+                        b.origin[1] - st.origin[1]))
+                    from .workers import FireTruck
+                    FireTruck(closest_station, b, self)
+                    b.targeted_by_truck = True

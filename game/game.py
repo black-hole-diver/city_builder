@@ -915,14 +915,14 @@ class Game:
                 WHITE,
                 (self.width // 2 - 200, self.height // 2 - 40)
             )
-        # Display FPS counter
-        draw_text(
-            self.screen,
-            f"FPS: {int(self.clock.get_fps())}",
-            25,
-            (255, 255, 255),
-            (10, 10)
-        )
+        # # Display FPS counter
+        # draw_text(
+        #     self.screen,
+        #     f"FPS: {int(self.clock.get_fps())}",
+        #     25,
+        #     (255, 255, 255),
+        #     (10, 10)
+        # )
 
         # ============ Draw Notifications ============
         if self.notifications:
@@ -1017,6 +1017,11 @@ class Game:
                         building_save_data["is_old_tree"] = getattr(b, "is_old_tree", True)
                         if b.plant_date:
                             building_save_data["plant_date"] = b.plant_date.strftime("%Y-%m-%d")
+
+                    if getattr(b, "on_fire", False):
+                        building_save_data["on_fire"] = True
+                        building_save_data["burning_time"] = pg.time.get_ticks() - b.fire_start_time
+
                     data["buildings"].append(building_save_data)
 
         # Save workers
@@ -1128,6 +1133,13 @@ class Game:
                 if b_data.get("is_vip", False):
                     if hasattr(ent, "apply_vip"):
                         ent.apply_vip()
+
+                if b_data.get("on_fire", False):
+                    ent.on_fire = True
+                    # Backdate the timer so it remembers how close it was to spreading
+                    burning_time = b_data.get("burning_time", 0)
+                    ent.fire_start_time = pg.time.get_ticks() - burning_time
+                    ent.targeted_by_truck = False
 
                 # Restore occupants if applicable
                 if occupants is not None and hasattr(ent, "occupants"):

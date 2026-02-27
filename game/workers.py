@@ -115,3 +115,90 @@ class Dinosaur(Worker):
                 self.change_tile(new_pos)
                 self.path_index += 1
                 self.move_timer = now
+
+
+class FireTruck:
+    def __init__(self, station, target_building, world):
+        self.name = "FireTruck"
+        self.world = world
+        self.station = station
+        self.target = target_building
+        self.state = "TO_FIRE"  # States: TO_FIRE, EXTINGUISHING, TO_STATION
+        self.extinguish_timer = 0
+
+        try:
+            self.image = pg.image.load("assets/graphics/FireTruck.png").convert_alpha()
+        except:
+            self.image = pg.image.load("assets/graphics/worker.png").convert_alpha()
+
+        self.image = pg.transform.scale(self.image, (self.image.get_width() * 2, self.image.get_height() * 2))
+
+        self.tile = self.world.world[station.origin[0]][station.origin[1]]
+        self.path = []
+        self.path_index = 0
+        self.move_timer = pg.time.get_ticks()
+
+        self.world.entities.append(self)
+        self.create_path(self.target.origin)
+
+    def create_path(self, dest_origin):
+        # Create a temporary copy of the collision matrix
+        matrix_copy = [row[:] for row in self.world.collision_matrix]
+
+        for x in range(self.world.grid_length_x):
+            for y in range(self.world.grid_length_y):
+                b = self.world.buildings[x][y]
+                if b and b.name == "Road":
+                    matrix_copy[y][x] = 1
+
+        # Unblock the Station and the Target so the truck can enter them
+        for b in [self.station, self.target]:
+            for x in range(b.origin[0], b.origin[0] + b.grid_width):
+                for y in range(b.origin[1], b.origin[1] + b.grid_height):
+                    if 0 <= x < self.world.grid_length_x and 0 <= y < self.world.grid_length_y:
+                        matrix_copy[y][x] = 1  # 1 is Walkable
+
+        grid = Grid(matrix=matrix_copy)
+        start = grid.node(self.tile["grid"][0], self.tile["grid"][1])
+        end = grid.node(dest_origin[0], dest_origin[1])
+
+        finder = AStarFinder(diagonal_movement=DiagonalMovement.never)
+        raw_path, _ = finder.find_path(start, end, grid)
+        if raw_path:
+            self.path = [(node.x, node.y) for node in raw_path]
+        else:
+            self.path = []
+        self.path_index = 0
+
+    def update(self, game_speed=1):
+        now = pg.time.get_ticks()
+
+        if self.state == "EXTINGUISHING":
+            # Takes 2 seconds to put out the fire
+            if now - self.extinguish_timer > 2000 / game_speed:
+                self.target.on_fire = False
+                self.target.targeted_by_truck = False
+                self.target.fire_start_time = 0
+                self.world.game.add_notification("FIRE EXTINGUISHED!", (100, 200, 255))
+                self.state = "TO_STATION"
+                self.create_path(self.station.origin)
+            return
+
+        # Movement Logic
+        if not self.path or self.path_index >= len(self.path):
+            if self.state == "TO_FIRE":
+                self.state = "EXTINGUISHING"
+                self.extinguish_timer = now
+            elif self.state == "TO_STATION":
+                # Despawn when arriving back at station
+                if self in self.world.entities:
+                    self.world.entities.remove(self)
+            return
+
+        # Truck moves faster than workers (15ms delay vs 25ms)
+        adjusted_delay = 60 / game_speed
+        if now - self.move_timer > adjusted_delay:
+            new_pos = self.path[self.path_index]
+            self.tile = self.world.world[new_pos[0]][new_pos[1]]
+            self.path_index += 1
+            self.move_timer = now
