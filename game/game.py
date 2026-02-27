@@ -1107,9 +1107,12 @@ class Game:
                 image = self.hud.images.get(name)
                 kwargs={}
                 if name == "Tree":
-                    kwargs["is_old_tree"] = b_data.get("is_old_tree", Tree)
+                    kwargs["is_old_tree"] = b_data.get("is_old_tree", True)
                     p_date_str = b_data.get("plant_date")
-                    kwargs["plant_date"] = datetime.datetime.strptime(p_date_str, "%Y-%m-%d")
+                    if p_date_str:
+                        kwargs["plant_date"] = datetime.datetime.strptime(p_date_str, "%Y-%m-%d")
+                    else:
+                        kwargs["plant_date"] = None
                 ent = building_class(render_pos, image, self.resource_manager, (x, y), **kwargs)
                 ent.game = self  # Set game reference
 
