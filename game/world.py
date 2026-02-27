@@ -157,7 +157,7 @@ class World:
                             kwargs={}
                             if building_name == "Tree":
                                 kwargs["plant_date"] = self.game.current_date
-                            ent = building_class((minx, miny), building_image, self.resource_manager, grid_pos)
+                            ent = building_class((minx, miny), building_image, self.resource_manager, grid_pos, **kwargs)
                             ent.game = self.game # Set game reference
                             self.resource_manager.apply_cost_to_resource(building_name, self.game)
                             self.game.play_sound("creation")

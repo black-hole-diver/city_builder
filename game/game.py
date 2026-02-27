@@ -554,10 +554,18 @@ class Game:
                                              iz.origin[0]+iz.grid_width/2, iz.origin[1]+iz.grid_height/2)
                         forest_blocked = False
                         for px, py in line:
-                            if 0 <= px < self.world.grid_length_x and 0 <= py < self.world.grid_length_y:
-                                if getattr(self.world.buildings[px][py], "name", "") == "Tree":
-                                    forest_blocked = True
+                            for dx in [-1, 0, 1]:
+                                for dy in [-1, 0, 1]:
+                                    nx, ny = px + dx, py + dy
+                                    if 0 <= nx < self.world.grid_length_x and 0 <= ny < self.world.grid_length_y:
+                                        if getattr(self.world.buildings[nx][ny], "name", "") == "Tree":
+                                            forest_blocked = True
+                                            break
+                                if forest_blocked:
                                     break
+                            if forest_blocked:
+                                break
+
                         if forest_blocked:
                             rz.local_satisfaction -= 5
                             rz.bonuses.append("Pollution (Forest Blocked) (-5)")
@@ -916,7 +924,7 @@ class Game:
                     kwargs["is_old_tree"] = b_data.get("is_old_tree", Tree)
                     p_date_str = b_data.get("plant_date")
                     kwargs["plant_date"] = datetime.datetime.strptime(p_date_str, "%Y-%m-%d")
-                ent = building_class(render_pos, image, self.resource_manager, (x, y))
+                ent = building_class(render_pos, image, self.resource_manager, (x, y), **kwargs)
                 ent.game = self  # Set game reference
 
                 # Restore occupants if applicable
