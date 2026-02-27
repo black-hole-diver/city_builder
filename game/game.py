@@ -450,6 +450,43 @@ class Game:
              self.add_notification("GAME OVER: DEBT LIMIT EXCEEDED", (255, 0, 0))
 
     @staticmethod
+    def get_power_networks(power_capable):
+        """BFS algorithm to group adjacent buildings into contiguous power grids."""
+        from collections import deque
+        visited_power = set()
+        power_networks = []
+
+        for b in power_capable:
+            if b not in visited_power:
+                network = []
+                queue = deque([b])
+                visited_power.add(b)
+
+                while queue:
+                    curr = queue.popleft()
+                    network.append(curr)
+
+                    for other in power_capable:
+                        if other not in visited_power:
+                            x_overlap = curr.origin[0] < other.origin[0] + other.grid_width and curr.origin[
+                                0] + curr.grid_width > other.origin[0]
+                            y_overlap = curr.origin[1] < other.origin[1] + other.grid_height and curr.origin[
+                                1] + curr.grid_height > other.origin[1]
+
+                            x_adj = (curr.origin[0] == other.origin[0] + other.grid_width or curr.origin[
+                                0] + curr.grid_width == other.origin[0]) and y_overlap
+                            y_adj = (curr.origin[1] == other.origin[1] + other.grid_height or curr.origin[
+                                1] + curr.grid_height == other.origin[1]) and x_overlap
+
+                            if x_adj or y_adj:
+                                visited_power.add(other)
+                                queue.append(other)
+
+                power_networks.append(network)
+
+        return power_networks
+
+    @staticmethod
     def get_line(x1, y1, x2, y2):
         """Bresenham's Line Algorithm for Line of Sight and intersection check"""
         points = []
@@ -529,6 +566,65 @@ class Game:
                                 queue.append((nx, ny))
                 next_network_id += 1
 
+        # ============ Power Network Connectivity & Distribution ============
+        # 1. Identify all buildings that can conduct or produce electricity
+        power_capable = [e for e in self.entities if e.name in [
+            "PowerPlant", "PowerLine", "ResZone", "IndZone", "SerZone",
+            "Police", "Stadium", "FireStation", "School", "University"
+        ]]
+
+        # Reset power states
+        for e in power_capable:
+            e.is_powered = False
+
+        # 2. Use the standalone BFS function to find all contiguous grids
+        power_networks = Game.get_power_networks(power_capable)
+
+        # 3. Calculate Supply vs Demand per grid
+        for network in power_networks:
+            power_plants = [b for b in network if b.name == "PowerPlant"]
+            total_supply = len(power_plants) * 1000
+
+            demand_list = []
+            total_demand = 0
+
+            for b in network:
+                if b.name in ["PowerPlant", "PowerLine"]:
+                    b.is_powered = True  # Infrastructure is always "powered"
+                    continue
+
+                # Base demand scales dynamically based on type and occupants
+                demand = 0
+                if b.name in ["ResZone", "IndZone", "SerZone"]:
+                    demand = 5 + getattr(b, 'occupants', 0) * 2
+                else:
+                    demand = 50
+                    if b.name == "Stadium":
+                        demand = 200
+                    elif b.name == "University":
+                        demand = 100
+
+                if demand > 0:
+                    demand_list.append((b, demand))
+                    total_demand += demand  # Track the total demand
+
+            # --- NEW: Save network stats to the Power Plants for the UI ---
+            for pp in power_plants:
+                pp.network_supply = total_supply
+                pp.network_demand = total_demand
+
+            # 4. Distribute electricity until supply runs out
+            current_supply = total_supply
+            # Prioritize essential service buildings before zones
+            demand_list.sort(key=lambda x: 0 if x[0].name in ["ResZone", "IndZone", "SerZone"] else 1, reverse=True)
+
+            for b, dem in demand_list:
+                if current_supply >= dem:
+                    current_supply -= dem
+                    b.is_powered = True
+                else:
+                    b.is_powered = False
+
         # ============ Zone Network Mapping ============
         def get_touched_networks(zone):
             """Get all road networks adjacent to this zone."""
@@ -595,10 +691,20 @@ class Game:
                 rz.bonuses = ["Disconnected road!"]
                 continue
 
+            rz.bonuses = []
+            # NEW: Severe penalty for lack of electricity
+            if not getattr(rz, 'is_powered', False):
+                rz.local_satisfaction -= 25
+                rz.bonuses.append("No Electricity (-25)")
+
             # --- Apply Bonuses and Penalties ---
             rz.bonuses = []
+
+
+
             if self.resource_manager.total_loan_amount > 0:
                 rz.bonuses.append(f"Debt Penalty (-{int(loan_penalty)})")
+
             
             if self.resource_manager.tax_per_citizen > 10:
                 rz.bonuses.append(f"High Taxes (-{tax_impact})")
@@ -612,7 +718,7 @@ class Game:
             # Police and Stadium provide bonuses if reachable
             for s in services:
                 # Service building must have road access
-                if not s.has_road_access:
+                if not s.has_road_access or not getattr(s, 'is_powered', False):
                     continue
 
                 # Check if service is reachable via road network
@@ -713,7 +819,7 @@ class Game:
         if growth_potential > 0:
             self.add_notification(f"City Population Growth: +{growth_potential}", (100, 255, 100))
             for _ in range(growth_potential):
-                eligible = [rz for rz in res_zones if rz.occupants < rz.capacity and rz.has_road_access]
+                eligible = [rz for rz in res_zones if rz.occupants < rz.capacity and rz.has_road_access and getattr(rz, 'is_powered', False)]
                 if eligible:
                     weights = [1 + getattr(rz, 'tree_bonus', 0) for rz in eligible]
                     target = random.choices(eligible, weights=weights, k=1)[0]

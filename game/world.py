@@ -180,7 +180,15 @@ class World:
                                 # Recalculate satisfaction immediately for better responsiveness
                                 self.game.calculate_satisfaction_and_growth()
 
+                            # NEW: Instant Power Recalculation Trigger
+                            power_conductors = [
+                                "ResZone", "IndZone", "SerZone", "PowerPlant",
+                                "PowerLine", "Police", "FireStation", "Stadium",
+                                "School", "University"
+                            ]
 
+                            if building_name in power_conductors:
+                                self.game.calculate_satisfaction_and_growth()
                             
                             # Initial image update for zones
                             if hasattr(ent, "update_image"):

@@ -128,6 +128,17 @@ class ResourceManager:
 
         daily_tax_per_citizen = self.tax_per_citizen / 365.0
         tax_income = effective_pop * daily_tax_per_citizen
+
+        ind_ser_zones = [e for e in world.entities if getattr(e, "name", "") in ["IndZone", "SerZone"]]
+        total_workers = sum(getattr(z, 'occupants', 0) for z in ind_ser_zones)
+        unpowered_workers = sum(
+            getattr(z, 'occupants', 0) for z in ind_ser_zones if not getattr(z, 'is_powered', False))
+
+        if total_workers > 0:
+            penalty_ratio = unpowered_workers / total_workers
+            # Reduce total daily tax proportionally (up to 50% loss if all workplaces lose power)
+            tax_income *= (1.0 - (penalty_ratio * 0.5))
+
         maintenance_cost = (self.total_loan_amount * 0.05) / 365.0
 
         # Calculate total occupants across all zones (Residential, Industrial, Service)
