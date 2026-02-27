@@ -55,13 +55,26 @@ class World:
             "University": University,
             "PowerPlant": PowerPlant,
             "Road": Road,
-            "PowerLine": PowerLine
+            "PowerLine": PowerLine,
+            "Tree": Tree
         }
 
         self.tools = {
             "Axe": Axe(),
             "Hammer": Hammer()
         }
+
+        for gx in range(self.grid_length_x):
+            for gy in range(self.grid_length_y):
+                if self.world[gx][gy]["tile"] == "tree":
+                    self.world[gx][gy]["tile"] = ""  # Remove scenery
+                    render_pos = self.world[gx][gy]["render_pos"]
+                    tree = Tree(render_pos, self.tiles["tree"], self.resource_manager, (gx, gy), is_old_tree=True)
+                    tree.game = self.game
+                    self.entities.append(tree)
+                    self.buildings[gx][gy] = tree
+                    self.world[gx][gy]["collision"] = True
+                    self.collision_matrix[gy][gx] = 0
 
     def update(self, camera, game_paused):
         self.game_paused = game_paused
@@ -136,6 +149,9 @@ class World:
 
                         if building_class:
                             building_image = self.hud.selected_tile["image"]
+                            kwargs={}
+                            if building_name == "Tree":
+                                kwargs["plant_date"] = self.game.current_date
                             ent = building_class((minx, miny), building_image, self.resource_manager, grid_pos)
                             ent.game = self.game # Set game reference
                             self.resource_manager.apply_cost_to_resource(building_name, self.game)
@@ -158,6 +174,8 @@ class World:
                                         e.has_road_access = self.has_road_access(e.origin[0], e.origin[1], e.grid_width, e.grid_height)
                                 # Recalculate satisfaction immediately for better responsiveness
                                 self.game.calculate_satisfaction_and_growth()
+
+
                             
                             # Initial image update for zones
                             if hasattr(ent, "update_image"):

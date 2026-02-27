@@ -385,7 +385,10 @@ class Hud:
                     for bonus in self.examined_tile.bonuses[:4]: # Show max 4 bonuses
                         draw_text(screen, f"• {bonus}", 18, (255, 255, 150), (desc_x, current_y))
                         current_y += 18
-
+            if hasattr(self.examined_tile, 'get_age_formatted') and self.game:
+                age_text = self.examined_tile.get_age_formatted(self.game.current_date)
+                draw_text(screen, f"Age: {age_text}", 22, (150, 255, 150), (desc_x, current_y))
+                current_y += 20
         for tile in self.tiles:
             # 1. Draw the slot background (Dark grey with rounded corners)
             pg.draw.rect(screen, (40, 40, 45, 200), tile["cell_rect"], border_radius=8)
@@ -840,6 +843,7 @@ class Hud:
         raw_images = {
             "Axe": pg.image.load(AXE_URL).convert_alpha(),
             "Hammer": pg.image.load(HAMMER_URL).convert_alpha(),
+            "Tree": pg.image.load(TREE_URL).convert_alpha(),
             "ResZone": pg.image.load(RESZONE_URL1).convert_alpha(),
             "IndZone": pg.image.load(INDZONE_URL1).convert_alpha(),
             "SerZone": pg.image.load(SERZONE_URL1).convert_alpha(),

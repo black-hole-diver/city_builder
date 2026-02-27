@@ -15,19 +15,24 @@ class Axe(Tool):
         super().__init__("Axe")
 
     def can_use(self, grid_pos, world):
-        return world.world[grid_pos[0]][grid_pos[1]]["tile"] == "tree"
+        b = world.buildings[grid_pos[0]][grid_pos[1]]
+        return b is not None and b.name == "Tree"
 
     def use(self, grid_pos, world):
         if self.can_use(grid_pos, world):
-            # Deselect if we destroy the currently examined tree
-            if world.examine_tile == (grid_pos[0], grid_pos[1]):
+            b = world.buildings[grid_pos[0]][grid_pos[1]]
+
+            if world.examine_tile == b.origin:
                 world.examine_tile = None
                 world.hud.examined_tile = None
                 world.examine_mask_points = None
 
-            world.world[grid_pos[0]][grid_pos[1]]["tile"] = ""
+            world.buildings[grid_pos[0]][grid_pos[1]] = None
             world.world[grid_pos[0]][grid_pos[1]]["collision"] = False
             world.collision_matrix[grid_pos[1]][grid_pos[0]] = 1
+            if b in world.entities:
+                world.entities.remove(b)
+
             world.game.play_sound("wood_chop")
             world.game.add_notification("TIMBERRR! TREE CUT DOWN", (100, 255, 100))
 

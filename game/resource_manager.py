@@ -17,6 +17,7 @@ class ResourceManager:
         self.costs = {
             "Axe":0,
             "Hammer":0,
+            "Tree": 100,
             "IndZone": 50,
             "SerZone": 50,
             "ResZone": 50,
@@ -127,19 +128,21 @@ class ResourceManager:
 
         daily_tax_per_citizen = self.tax_per_citizen / 365.0
         tax_income = effective_pop * daily_tax_per_citizen
+        maintenance_cost = (self.total_loan_amount * 0.05) / 365.0
 
         # Calculate total occupants across all zones (Residential, Industrial, Service)
-        total_occupants = 0
-        processed_zones = set()
+        processed_buildings = set()
         for x in range(world.grid_length_x):
             for y in range(world.grid_length_y):
                 b = world.buildings[x][y]
-                if b and hasattr(b, "occupants") and b not in processed_zones:
-                    total_occupants += b.occupants
-                    processed_zones.add(b)
-
-        # Loan interest: 5% annual interest / 365 = daily interest
-        maintenance_cost = (self.total_loan_amount * 0.05) / 365.0
+                if b and b not in processed_buildings:
+                    if b.name == "Tree":
+                        if not getattr(b, 'is_old_tree', False) and getattr(b, 'plant_date', None):
+                            if (world.game.current_date - b.plant_date).days < 3650:
+                                maintenance_cost += 20 / 365.0
+                    else:
+                        maintenance_cost += self.maintenance_fees.get(b.name, 0)/365.0
+                    processed_buildings.add(b)
         
         self.funds += tax_income
         self.funds -= maintenance_cost

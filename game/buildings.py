@@ -17,6 +17,32 @@ class Building:
     def update(self, game_speed=1):
         pass
 
+class Tree(Building):
+    def __init__(self, pos, image, resource_manager, grid_pos, is_old_tree=False, plant_date=None):
+        super().__init__(pos, image, "Tree", resource_manager, grid_pos, grid_width=1, grid_height=1)
+        self.is_old_tree = is_old_tree
+        self.plant_date = plant_date
+
+    def get_age_days(self, current_date):
+        if self.is_old_tree or not self.plant_date:
+            return 3650  # Max age (10 years)
+        return (current_date - self.plant_date).days
+
+    def get_age_formatted(self, current_date):
+        if self.is_old_tree:
+            return "Old tree (Mature)"
+        days = self.get_age_days(current_date)
+        years = days // 365
+        months = (days % 365) // 30
+        rem_days = (days % 365) % 30
+        return f"{years} Years, {months} Months, {rem_days} Days"
+
+    def get_bonus_multiplier(self, current_date):
+        if self.is_old_tree:
+            return 1.0
+        days = self.get_age_days(current_date)
+        return min(1.0, days / 3650.0) # Scales from 0.0 to 1.0 over 10 years
+
 class Zone(Building):
     def __init__(self, pos, image, name, resource_manager, grid_pos):
         super().__init__(pos, image, name, resource_manager, grid_pos, grid_width=4, grid_height=4)

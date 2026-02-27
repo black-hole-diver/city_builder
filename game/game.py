@@ -8,7 +8,7 @@ from .camera import Camera
 from .hud import Hud
 from .workers import Worker
 from .resource_manager import ResourceManager
-from .buildings import ResZone, IndZone, SerZone, Road
+from .buildings import ResZone, IndZone, SerZone, Road, Tree
 from .setting import *
 
 import json
@@ -362,6 +362,31 @@ class Game:
              self.resource_manager.is_mayor_replaced = True
              self.add_notification("GAME OVER: DEBT LIMIT EXCEEDED", (255, 0, 0))
 
+    @staticmethod
+    def get_line(x1, y1, x2, y2):
+        """Bresenham's Line Algorithm for Line of Sight and intersection check"""
+        points = []
+        dx, dy = abs(x2 - x1), abs(y2 - y1)
+        x, y = int(x1), int(y1)
+        sx = -1 if x1 > x2 else 1
+        sy = -1 if y1 > y2 else 1
+        if dx > dy:
+            err = dx / 2.0
+            while x != int(x2):
+                points.append((x, y))
+                err -= dy
+                if err < 0: y += sy; err += dx
+                x += sx
+        else:
+            err = dy / 2.0
+            while y != int(y2):
+                points.append((x, y))
+                err -= dx
+                if err < 0: x += sx; err += dy
+                y += sy
+        points.append((x, y))
+        return points
+
     def calculate_satisfaction_and_growth(self):
         """Calculate satisfaction levels, population growth, and workplace assignments."""
         from collections import deque
@@ -525,8 +550,49 @@ class Game:
                     dist = ((rz.origin[0]+rz.grid_width/2 - (iz.origin[0]+iz.grid_width/2))**2 +
                             (rz.origin[1]+rz.grid_height/2 - (iz.origin[1]+iz.grid_height/2))**2)**0.5
                     if dist < INDUSTRIAL_NEGATIVE_RADIUS:
-                        rz.local_satisfaction -= 10
-                        rz.bonuses.append("Industrial Pollution (-10)")
+                        line = Game.get_line(rz.origin[0]+rz.grid_width/2, rz.origin[1]+rz.grid_height/2,
+                                             iz.origin[0]+iz.grid_width/2, iz.origin[1]+iz.grid_height/2)
+                        forest_blocked = False
+                        for px, py in line:
+                            if 0 <= px < self.world.grid_length_x and 0 <= py < self.world.grid_length_y:
+                                if getattr(self.world.buildings[px][py], "name", "") == "Tree":
+                                    forest_blocked = True
+                                    break
+                        if forest_blocked:
+                            rz.local_satisfaction -= 5
+                            rz.bonuses.append("Pollution (Forest Blocked) (-5)")
+                        else:
+                            rz.local_satisfaction -= 10
+                            rz.bonuses.append("Industrial Pollution (-10)")
+
+            # --- Tree Satisfaction Bonus (Line of Sight) ---
+            if isinstance(rz, ResZone):
+                rz.tree_bonus = 0
+                all_trees = [e for e in self.entities if e.name == "Tree"]
+                for tree in all_trees:
+                    # Get closest point on the ResZone to the tree
+                    cx = max(rz.origin[0], min(tree.origin[0], rz.origin[0] + rz.grid_width - 1))
+                    cy = max(rz.origin[1], min(tree.origin[1], rz.origin[1] + rz.grid_height - 1))
+
+                    # Check distance <= 3 squares (Chebyshev distance)
+                    if max(abs(cx - tree.origin[0]), abs(cy - tree.origin[1])) <= 3:
+                        # Check Line of Sight
+                        line = Game.get_line(cx, cy, tree.origin[0], tree.origin[1])
+                        los = True
+                        for px, py in line:
+                            if (px, py) == (cx, cy) or (px, py) == tree.origin: continue
+                            if self.world.buildings[px][py] is not None:
+                                los = False
+                                break
+
+                        if los:
+                            # Base bonus * growth multiplier
+                            bonus = 5 * tree.get_bonus_multiplier(self.current_date)
+                            rz.tree_bonus += bonus
+
+                if rz.tree_bonus > 0:
+                    rz.local_satisfaction += int(rz.tree_bonus)
+                    rz.bonuses.append(f"Nature Bonus (+{int(rz.tree_bonus)})")
 
             # Clamp satisfaction between 0 and 100
             rz.local_satisfaction = max(0, min(100, rz.local_satisfaction))
@@ -556,7 +622,8 @@ class Game:
             for _ in range(growth_potential):
                 eligible = [rz for rz in res_zones if rz.occupants < rz.capacity and rz.has_road_access]
                 if eligible:
-                    target = random.choice(eligible)
+                    weights = [1 + getattr(rz, 'tree_bonus', 0) for rz in eligible]
+                    target = random.choices(eligible, weights=weights, k=1)[0]
                     target.occupants += 1
                     self.resource_manager.edu_primary += 1
             # Sync population after growth
@@ -744,6 +811,10 @@ class Game:
                     building_save_data = {"name": b.name, "x": x, "y": y}
                     if hasattr(b, "occupants"):
                         building_save_data["occupants"] = b.occupants
+                    if b.name == "Tree":
+                        building_save_data["is_old_tree"] = getattr(b, "is_old_tree", True)
+                        if b.plant_date:
+                            building_save_data["plant_date"] = b.plant_date.strftime("%Y-%m-%d")
                     data["buildings"].append(building_save_data)
 
         # Save workers
@@ -840,6 +911,11 @@ class Game:
 
             if building_class:
                 image = self.hud.images.get(name)
+                kwargs={}
+                if name == "Tree":
+                    kwargs["is_old_tree"] = b_data.get("is_old_tree", Tree)
+                    p_date_str = b_data.get("plant_date")
+                    kwargs["plant_date"] = datetime.datetime.strptime(p_date_str, "%Y-%m-%d")
                 ent = building_class(render_pos, image, self.resource_manager, (x, y))
                 ent.game = self  # Set game reference
 
