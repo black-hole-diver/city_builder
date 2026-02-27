@@ -219,6 +219,16 @@ class Hud:
         self.menu_action = None
 
         if mouse_clicked:
+            if self.game and self.game.menu_state == "CONFIRM_DEMOLISH":
+                if hasattr(self, 'demo_yes_rect') and self.demo_yes_rect.collidepoint(mouse_pos):
+                    pos = self.game.demolish_target_pos
+                    stats = self.game.demolish_stats
+                    self.game.world.execute_demolition(pos, stats["cost"], stats["sat_penalty"])
+                    self.game.menu_state = None
+                elif hasattr(self, 'demo_no_rect') and self.demo_no_rect.collidepoint(mouse_pos):
+                    self.game.menu_state = None
+                self.mouse_pressed = True  # Prevent clicking through
+                return
             if self.game and self.game.menu_state == "MAIN_MENU":
                 if self.play_btn_rect.collidepoint(mouse_pos):
                     self.menu_action = "PLAY"
@@ -291,6 +301,96 @@ class Hud:
                         self.selected_tile = None
                     else: self.selected_tile = tile
                     break
+
+    def draw_demolish_confirmation(self, screen):
+        # Darken the background to focus on the popup
+        overlay = pg.Surface((self.width, self.height), pg.SRCALPHA)
+        overlay.fill((0, 0, 0, 180))
+        screen.blit(overlay, (0, 0))
+
+        # Size and position the box
+        box_w, box_h = 550, 340
+        box_rect = pg.Rect((self.width - box_w) // 2, (self.height - box_h) // 2, box_w, box_h)
+
+        # Draw background and border
+        pg.draw.rect(screen, (40, 45, 55), box_rect, border_radius=12)  # Dark slate grey
+        pg.draw.rect(screen, (255, 100, 100), box_rect, 2, border_radius=12)  # Red warning border
+
+        stats = self.game.demolish_stats
+
+        # Title
+        draw_text(screen, "DEMOLITION NOTICE", 35, (255, 100, 100), (box_rect.x + 130, box_rect.y + 20))
+        pg.draw.line(screen, (100, 100, 100), (box_rect.x + 30, box_rect.y + 60),
+                     (box_rect.right - 30, box_rect.y + 60), 2)
+
+        y = box_rect.y + 80
+
+        # Dynamic Text based on what is being destroyed
+        if stats["occupants"] > 0:
+            if stats["type"] == "ResZone":
+                draw_text(screen, f"Residents to Relocate: {stats['occupants']}", 26, (220, 220, 220),
+                          (box_rect.x + 40, y))
+                y += 35
+                if stats["leavers"] > 0:
+                    draw_text(screen, f"Housing Shortage: {stats['leavers']} residents will leave the city.", 22,
+                              (255, 120, 120), (box_rect.x + 40, y))
+                else:
+                    draw_text(screen, "Status: Sufficient housing available for relocation.", 22, (120, 255, 120),
+                              (box_rect.x + 40, y))
+            else:
+                draw_text(screen, f"Displaced Workers: {stats['occupants']} (Loss of local jobs)", 26, (220, 220, 220),
+                          (box_rect.x + 40, y))
+            y += 45
+        elif stats["type"] == "Road":
+            draw_text(screen, "Warning: Destroying infrastructure disrupts city connectivity.", 22, (220, 220, 220),
+                      (box_rect.x + 40, y))
+            y += 45
+
+        # Financial & Satisfaction Penalties
+        draw_text(screen, f"Relocation & Severance Costs: ${stats['cost']:,}", 26, (255, 215, 0), (box_rect.x + 40, y))
+        y += 35
+        draw_text(screen, f"Public Approval Impact: -{stats['sat_penalty']}%", 26, (255, 100, 100),
+                  (box_rect.x + 40, y))
+
+        # Buttons (Authorize vs Cancel)
+        self.demo_yes_rect = pg.Rect(box_rect.x + 40, box_rect.bottom - 65, 200, 45)
+        self.demo_no_rect = pg.Rect(box_rect.right - 240, box_rect.bottom - 65, 200, 45)
+
+        mouse_pos = pg.mouse.get_pos()
+        mouse_pressed = pg.mouse.get_pressed()[0]  # Check left click
+
+        # AUTHORIZE Button Drawing
+        yes_color = (150, 50, 50) if self.demo_yes_rect.collidepoint(mouse_pos) else (110, 40, 40)
+        pg.draw.rect(screen, yes_color, self.demo_yes_rect, border_radius=6)
+        pg.draw.rect(screen, (255, 150, 150), self.demo_yes_rect, 2, border_radius=6)
+        draw_text(screen, "AUTHORIZE", 24, (255, 255, 255), (self.demo_yes_rect.x + 45, self.demo_yes_rect.y + 12))
+
+        # CANCEL Button Drawing
+        no_color = (60, 90, 60) if self.demo_no_rect.collidepoint(mouse_pos) else (50, 70, 50)
+        pg.draw.rect(screen, no_color, self.demo_no_rect, border_radius=6)
+        pg.draw.rect(screen, (150, 255, 150), self.demo_no_rect, 2, border_radius=6)
+        draw_text(screen, "CANCEL", 24, (255, 255, 255), (self.demo_no_rect.x + 65, self.demo_no_rect.y + 12))
+
+        # --- SELF-CONTAINED CLICK LOGIC ---
+        if mouse_pressed:
+            if not getattr(self, "demo_click_handled", False):  # Debounce check
+                self.demo_click_handled = True
+
+                if self.demo_yes_rect.collidepoint(mouse_pos):
+                    # Execute demolition
+                    pos = self.game.demolish_target_pos
+                    self.game.world.execute_demolition(
+                        pos,
+                        pay_compensation=stats["cost"],
+                        apply_penalty=stats["sat_penalty"]
+                    )
+                    self.game.menu_state = None
+
+                elif self.demo_no_rect.collidepoint(mouse_pos):
+                    # Cancel demolition
+                    self.game.menu_state = None
+        else:
+            self.demo_click_handled = False  # Reset debounce when mouse is released
 
     def draw(self, screen, current_date=None, current_speed=1):
         # Draw HUD elements using their pre-calculated Rects
@@ -550,6 +650,9 @@ class Hud:
         
         if self.show_budget:
             self.draw_budget_panel(screen)
+
+        if self.game and self.game.menu_state == "CONFIRM_DEMOLISH":
+            self.draw_demolish_confirmation(screen)
 
         if self.resource_manager.is_mayor_replaced:
             self.draw_game_over_panel(screen)

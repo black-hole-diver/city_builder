@@ -609,3 +609,101 @@ class World:
                         return False
         
         return True
+
+    def execute_demolition(self, grid_pos, pay_compensation=0, apply_penalty=0):
+        has_building = self.buildings[grid_pos[0]][grid_pos[1]] is not None
+        is_rock = self.world[grid_pos[0]][grid_pos[1]]["tile"] == "rock"
+
+        if has_building:
+            b = self.buildings[grid_pos[0]][grid_pos[1]]
+
+            self.game.play_sound("destruction")
+
+            # 1. Apply financial and satisfaction consequences
+            if pay_compensation > 0:
+                self.resource_manager.funds -= pay_compensation
+                self.resource_manager.log_transaction(self.game, "EVICTION PAYOUT", 0, pay_compensation)
+                self.game.add_notification(f"PAID COMPENSATION: -${pay_compensation:,}", (255, 100, 100))
+
+            if apply_penalty > 0:
+                self.resource_manager.eviction_penalty += apply_penalty
+                self.game.add_notification(f"CITIZENS ANGERED! (-{apply_penalty}% Sat)", (255, 50, 50))
+
+            # 2. Rehousing Logic for ResZones
+            if b.name == "ResZone" and getattr(b, "occupants", 0) > 0:
+                displaced = b.occupants
+                other_res = [z for z in self.entities if getattr(z, "name", "") == "ResZone" and z != b]
+
+                # Try to fit them into other zones
+                for z in other_res:
+                    if displaced <= 0: break
+                    space = z.capacity - z.occupants
+                    if space > 0:
+                        moved = min(displaced, space)
+                        z.occupants += moved
+                        displaced -= moved
+                        if hasattr(z, "update_image"):
+                            z.update_image()
+
+                # Citizens who couldn't find a home leave the city forever
+                if displaced > 0:
+                    self.resource_manager.population = max(0, self.resource_manager.population - displaced)
+                    res = self.resource_manager
+                    for _ in range(displaced):
+                        if res.edu_primary > 0:
+                            res.edu_primary -= 1
+                        elif res.edu_secondary > 0:
+                            res.edu_secondary -= 1
+                        elif res.edu_tertiary > 0:
+                            res.edu_tertiary -= 1
+                    self.game.add_notification(f"{displaced} CITIZENS LEFT THE CITY!", (255, 50, 50))
+                else:
+                    self.game.add_notification("ALL DISPLACED CITIZENS REHOUSED", (100, 255, 100))
+
+            # 3. Process Salvage Refund
+            refund_percent = ZONE_REFUND_PERCENT if hasattr(b, "occupants") else BUILDING_REFUND_PERCENT
+            cost = self.resource_manager.costs.get(b.name, 0)
+            refund_amount = int(cost * refund_percent)
+            self.resource_manager.funds += refund_amount
+            if refund_amount > 0:
+                self.resource_manager.log_transaction(self.game, f"SALVAGE {b.name}", refund_amount, 0)
+
+            # 4. Remove Entity and Clear Matrix
+            if b in self.entities:
+                self.entities.remove(b)
+
+            b_w = b.grid_width
+            b_h = b.grid_height
+            ox, oy = b.origin
+
+            for x in range(ox, ox + b_w):
+                for y in range(oy, oy + b_h):
+                    self.buildings[x][y] = None
+                    self.world[x][y]["collision"] = False
+                    self.collision_matrix[y][x] = 1
+
+            # 5. Handle Connectivity Updates
+            if b.name == "Road":
+                for e in self.entities:
+                    if hasattr(e, "has_road_access"):
+                        e.has_road_access = self.has_road_access(e.origin[0], e.origin[1], e.grid_width, e.grid_height)
+
+            # 6. Clear UI targeting
+            if self.examine_tile == b.origin:
+                self.examine_tile = None
+                self.hud.examined_tile = None
+                self.examine_mask_points = None
+
+            self.game.calculate_satisfaction_and_growth()
+
+        elif is_rock:
+            if self.examine_tile == (grid_pos[0], grid_pos[1]):
+                self.examine_tile = None
+                self.hud.examined_tile = None
+                self.examine_mask_points = None
+
+            self.world[grid_pos[0]][grid_pos[1]]["tile"] = ""
+            self.world[grid_pos[0]][grid_pos[1]]["collision"] = False
+            self.collision_matrix[grid_pos[1]][grid_pos[0]] = 1
+            self.game.play_sound("destruction")
+            self.game.add_notification("ROCK SMASHED!", (200, 200, 200))
