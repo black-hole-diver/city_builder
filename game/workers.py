@@ -70,3 +70,48 @@ class Worker:
             self.change_tile(new_pos)
             self.path_index += 1
             self.move_timer = now
+
+
+class Dinosaur(Worker):
+    def __init__(self, tile, world):
+        self.path = None
+        self.path_index = None
+        self.end = None
+        self.start = None
+        self.grid = None
+        self.world = world
+        self.world.entities.append(self)
+
+        try:
+            image = pg.image.load("assets/graphics/Dinosaur.png").convert_alpha()
+        except:
+            image = pg.image.load("assets/graphics/worker.png").convert_alpha()
+
+        self.name = "dinosaur"
+        self.image = pg.transform.scale(image, (image.get_width() * 4, image.get_height() * 4))
+        self.tile = tile
+
+        self.move_timer = pg.time.get_ticks()
+        self.create_path()
+
+    def change_tile(self, new_tile):
+        # We don't register the dinosaur in the self.world.workers grid
+        # so it doesn't accidentally block normal citizens.
+        self.tile = self.world.world[new_tile[0]][new_tile[1]]
+
+    def update(self, game_speed=1):
+        now = pg.time.get_ticks()
+        if not self.path:
+            if now > self.move_timer:
+                self.create_path()
+            return
+
+        adjusted_delay = 25 / game_speed
+        if now - self.move_timer > adjusted_delay:
+            if self.path_index >= len(self.path):
+                self.create_path()
+            else:
+                new_pos = self.path[self.path_index]
+                self.change_tile(new_pos)
+                self.path_index += 1
+                self.move_timer = now
