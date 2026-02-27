@@ -14,6 +14,10 @@ class Building:
         self.grid_width = grid_width
         self.grid_height = grid_height
         self.has_road_access = False
+
+        self.on_fire = False
+        self.fire_start_time = 0
+        self.targeted_by_truck = False
         
     def update(self, game_speed=1):
         pass
