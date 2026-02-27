@@ -22,8 +22,8 @@ class Hud:
         self.build_surface.fill(self.hud_colour)
 
         # Select HUD
-        self.select_surface = pg.Surface((width * 0.3, height * 0.2), pg.SRCALPHA)
-        self.select_rect = self.select_surface.get_rect(topleft=(self.width * 0.35, self.height * 0.79))
+        self.select_surface = pg.Surface((width * 0.3, height * 0.26), pg.SRCALPHA)
+        self.select_rect = self.select_surface.get_rect(topleft=(self.width * 0.34, self.height * 0.73))
         self.select_surface.fill(self.hud_colour)
 
         self.images = self.load_images()
@@ -236,17 +236,23 @@ class Hud:
             # Budget interactions
             elif self.tax_plus_rect.collidepoint(mouse_pos):
                 self.resource_manager.tax_per_citizen += 1
-                if self.game: self.game.add_notification(f"TAX INCREASED: ${self.resource_manager.tax_per_citizen}", (255, 255, 100))
+                if self.game:
+                    self.game.add_notification(f"TAX INCREASED: ${self.resource_manager.tax_per_citizen}", (255, 255, 100))
+                    self.game.calculate_satisfaction_and_growth()
             elif self.tax_minus_rect.collidepoint(mouse_pos):
                 if self.resource_manager.tax_per_citizen > 0:
                     self.resource_manager.tax_per_citizen -= 1
-                    if self.game: self.game.add_notification(f"TAX DECREASED: ${self.resource_manager.tax_per_citizen}", (100, 255, 255))
+                    if self.game:
+                        self.game.add_notification(f"TAX DECREASED: ${self.resource_manager.tax_per_citizen}", (100, 255, 255))
+                        self.game.calculate_satisfaction_and_growth()
             elif self.loan_btn_rect.collidepoint(mouse_pos):
                 self.resource_manager.take_loan(1000, self.game)
                 if self.game: self.game.add_notification("LOAN TAKEN: +$1,000", (100, 255, 100))
+                self.game.calculate_satisfaction_and_growth()
             elif self.repay_btn_rect.collidepoint(mouse_pos):
                 if self.resource_manager.repay_loan(1000, self.game):
                     if self.game: self.game.add_notification("LOAN REPAID: -$1,000", (255, 215, 0))
+                    self.game.calculate_satisfaction_and_growth()
                 else:
                     if self.game: self.game.add_notification("NOT ENOUGH FUNDS OR NO LOAN", (255, 100, 100))
             elif self.help_btn_rect.collidepoint(mouse_pos):
@@ -385,7 +391,10 @@ class Hud:
                     for bonus in self.examined_tile.bonuses[:4]: # Show max 4 bonuses
                         draw_text(screen, f"• {bonus}", 18, (255, 255, 150), (desc_x, current_y))
                         current_y += 18
-
+            if hasattr(self.examined_tile, 'get_age_formatted') and self.game:
+                age_text = self.examined_tile.get_age_formatted(self.game.current_date)
+                draw_text(screen, f"Age: {age_text}", 22, (150, 255, 150), (desc_x, current_y))
+                current_y += 20
         for tile in self.tiles:
             # 1. Draw the slot background (Dark grey with rounded corners)
             pg.draw.rect(screen, (40, 40, 45, 200), tile["cell_rect"], border_radius=8)
@@ -840,6 +849,7 @@ class Hud:
         raw_images = {
             "Axe": pg.image.load(AXE_URL).convert_alpha(),
             "Hammer": pg.image.load(HAMMER_URL).convert_alpha(),
+            "Tree": pg.image.load(TREE_URL).convert_alpha(),
             "ResZone": pg.image.load(RESZONE_URL1).convert_alpha(),
             "IndZone": pg.image.load(INDZONE_URL1).convert_alpha(),
             "SerZone": pg.image.load(SERZONE_URL1).convert_alpha(),

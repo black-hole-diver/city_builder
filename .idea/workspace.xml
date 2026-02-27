@@ -4,10 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="47aba308-f49c-4a93-9a5d-4695dc059ce0" name="Changes" comment="debug: music button">
+    <list default="true" id="47aba308-f49c-4a93-9a5d-4695dc059ce0" name="Changes" comment="tree block logic fixed.">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/game/resource_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/resource_manager.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/save_slot_1.json" beforeDir="false" afterPath="$PROJECT_DIR$/save_slot_1.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/game/game.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/game.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/game/hud.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/hud.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/game/tools.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/tools.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/game/world.py" beforeDir="false" afterPath="$PROJECT_DIR$/game/world.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -73,7 +75,7 @@
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
     "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
-    "git-widget-placeholder": "education",
+    "git-widget-placeholder": "trees",
     "junie.onboarding.icon.badge.shown": "true",
     "last_opened_file_path": "/Users/wittawinpanta/Desktop/city_builder",
     "to.speed.mode.migration.done": "true"
@@ -337,7 +339,31 @@
       <option name="project" value="LOCAL" />
       <updated>1772124439764</updated>
     </task>
-    <option name="localTasksCounter" value="27" />
+    <task id="LOCAL-00027" summary="tree plantable object">
+      <option name="closed" value="true" />
+      <created>1772160234556</created>
+      <option name="number" value="00027" />
+      <option name="presentableId" value="LOCAL-00027" />
+      <option name="project" value="LOCAL" />
+      <updated>1772160234556</updated>
+    </task>
+    <task id="LOCAL-00028" summary="remove sceneries.py">
+      <option name="closed" value="true" />
+      <created>1772160324657</created>
+      <option name="number" value="00028" />
+      <option name="presentableId" value="LOCAL-00028" />
+      <option name="project" value="LOCAL" />
+      <updated>1772160324657</updated>
+    </task>
+    <task id="LOCAL-00029" summary="tree block logic fixed.">
+      <option name="closed" value="true" />
+      <created>1772161363865</created>
+      <option name="number" value="00029" />
+      <option name="presentableId" value="LOCAL-00029" />
+      <option name="project" value="LOCAL" />
+      <updated>1772161363865</updated>
+    </task>
+    <option name="localTasksCounter" value="30" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -352,8 +378,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="self.star to __init__" />
-    <MESSAGE value="new file .env" />
     <MESSAGE value="bound of the world" />
     <MESSAGE value="fixed: camera bound" />
     <MESSAGE value="fixed: camera panning when paused" />
@@ -376,6 +400,19 @@
     <MESSAGE value="fix: selecting item in build hud" />
     <MESSAGE value="feature: education (school and universities)" />
     <MESSAGE value="debug: music button" />
-    <option name="LAST_COMMIT_MESSAGE" value="debug: music button" />
+    <MESSAGE value="tree plantable object" />
+    <MESSAGE value="remove sceneries.py" />
+    <MESSAGE value="tree block logic fixed." />
+    <option name="LAST_COMMIT_MESSAGE" value="tree block logic fixed." />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/game/buildings.py</url>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
   </component>
 </project>
