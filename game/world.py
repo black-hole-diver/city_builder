@@ -38,11 +38,21 @@ class World:
         self.world = self.create_world()
         self.collision_matrix = self.create_collision_matrix()
 
+        self.fire_images = []
+        self.fire_current_frame = 0
+        self.fire_frame_timer = pg.time.get_ticks()
+
         try:
-            self.fire_image = pg.image.load(FIRE_URL).convert_alpha()
+            for i in range(24):
+                filename = f"assets/graphics/Fire/frame_{i:02d}_delay-0.08s.png"
+                img = pg.image.load(filename).convert_alpha()
+                target_width = 256
+                scale_factor = target_width / img.get_width()
+                target_height = int(img.get_height() * scale_factor)
+                img = pg.transform.smoothscale(img, (target_width, target_height))
+                self.fire_images.append(img)
         except Exception as e:
-            print(f"Warning: Could not load fire image: {e}")
-            self.fire_image = None
+            print(f"Warning: Could not load fire animation image: {e}")
 
         self.buildings: List[List[Optional['Building']]] = [[None for _ in range(self.grid_length_y)] for _ in range(self.grid_length_x)]
         self.workers: List[List[Optional['Worker']]] = [[None for _ in range(self.grid_length_y)] for _ in
@@ -90,6 +100,12 @@ class World:
 
     def update(self, camera, game_paused):
         self.game_paused = game_paused
+
+        if self.fire_images:
+            now = pg.time.get_ticks()
+            if now - self.fire_frame_timer > 80:
+                self.fire_current_frame = (self.fire_current_frame + 1) % len(self.fire_images)
+                self.fire_frame_timer = now
 
         if not self.game_paused:
             self.process_fires()
@@ -384,10 +400,11 @@ class World:
             if item["mask"]:
                 pg.draw.polygon(screen, (255, 255, 255), item["mask"], 3)
 
-            if item.get("on_fire") and self.fire_image:
-                fx = item["pos"][0] + (item["image"].get_width() // 2) - (self.fire_image.get_width() // 2)
-                fy = item["pos"][1] + (item["image"].get_height() // 2) - (self.fire_image.get_height() // 2)
-                screen.blit(self.fire_image, (fx, fy))
+            if item.get("on_fire") and self.fire_images:
+                curr_fire_img = self.fire_images[self.fire_current_frame]
+                fx = item["pos"][0] + (item["image"].get_width() // 2) - (curr_fire_img.get_width() // 2)
+                fy = item["pos"][1] + (item["image"].get_height() // 2) - (curr_fire_img.get_height() // 2)
+                screen.blit(curr_fire_img, (fx, fy))
 
         # 4. Draw Ghost Tile last so it stays completely visible as a UI overlay
         if self.temp_tile is not None:
