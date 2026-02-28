@@ -235,7 +235,7 @@ class World:
                                 self.game.calculate_satisfaction_and_growth()
 
                         # Do not deselect if it's a Road or PowerLine for continuous construction
-                        if building_name not in ["Road", "PowerLine"]:
+                        if building_name not in ["Road", "PowerLine", "Tree"]:
                             self.hud.selected_tile = None
                         else:
                             # Re-check affordability for continuous placement
