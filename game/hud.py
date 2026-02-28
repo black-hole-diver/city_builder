@@ -505,7 +505,7 @@ class Hud:
             # ==========================================
             b = self.examined_tile
             # We don't show power status for nature, tools, or basic infrastructure
-            if b.name not in ["Tree", "Rock", "Road", "PowerLine", "Axe", "Hammer"]:
+            if b.name not in ["Tree", "Rock", "Road", "Axe", "Hammer"]:
                 current_y += 5  # Add a tiny bit of padding
 
                 if b.name == "PowerPlant":

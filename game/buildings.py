@@ -152,6 +152,18 @@ class Road(Building):
 class PowerLine(Building):
     def __init__(self, pos, image, resource_manager, grid_pos):
         super().__init__(pos, image, "PowerLine", resource_manager, grid_pos, grid_width=1, grid_height=1)
+        self.base_image = image
+        self.powered_image = image.copy()
+
+        mask = pg.mask.from_surface(self.base_image)
+        yellow_overlay = mask.to_surface(setcolor=(255, 255, 0, 80), unsetcolor=(0, 0, 0, 0))
+        self.powered_image.blit(yellow_overlay, (0, 0))
+
+    def update_image(self):
+        if getattr(self, 'is_powered', False):
+            self.image = self.powered_image
+        else:
+            self.image = self.base_image
 
 # ADVANCED ENTITIES
 

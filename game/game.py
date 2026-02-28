@@ -599,7 +599,7 @@ class Game:
 
             for b in network:
                 if b.name in ["PowerPlant", "PowerLine"]:
-                    b.is_powered = True  # Infrastructure is always "powered"
+                    b.is_powered = (total_supply > 0)
                     continue
 
                 # Base demand scales dynamically based on type and occupants
@@ -895,6 +895,10 @@ class Game:
         for sz in ser_zones: sz.update_image()
         for rz in res_zones: rz.update_image()
 
+        for pl in self.entities:
+            if getattr(pl, "name", "") == "PowerLine" and hasattr(pl, "update_image"):
+                pl.update_image()
+
     def draw(self):
         self.screen.fill(BACKGROUND_COLOR)
 
@@ -1157,6 +1161,8 @@ class Game:
 
                 if "is_powered" in b_data:
                     ent.is_powered = b_data["is_powered"]
+                    if hasattr(ent, "update_image"):
+                        ent.update_image()
                 if name == "PowerPlant":
                     ent.network_supply = b_data.get("network_supply", 0)
                     ent.network_demand = b_data.get("network_demand", 0)

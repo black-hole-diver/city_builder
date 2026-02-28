@@ -2,8 +2,8 @@ import pygame as pg
 from pygame.constants import FULLSCREEN
 from game.game import Game
 
-# City builder tutorial series | Pathfinding | pygame (#9)
-# Arachnid 56
+# City builder tutorial series | A*Pathfinding | pygame
+# Skeleton from Arachnid56
 
 def main():
     running = True
@@ -15,11 +15,6 @@ def main():
     screen = pg.display.set_mode((window_width, window_height), pg.RESIZABLE)
     pg.display.set_caption("City Builder")
     clock = pg.time.Clock()
-
-    # implement menus
-
-
-    # implement game
     game = Game(screen, clock)
 
     while running:
