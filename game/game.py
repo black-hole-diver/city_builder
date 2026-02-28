@@ -1205,14 +1205,14 @@ class Game:
         self.screen.blit(overlay, (0, 0))
 
         # ============ Draw Menu Box ============
-        menu_w, menu_h = 500, 400
+        menu_w, menu_h = 650, 400
         menu_x, menu_y = (self.width - menu_w) // 2, (self.height - menu_h) // 2
         menu_rect = pg.Rect(menu_x, menu_y, menu_w, menu_h)
         pg.draw.rect(self.screen, (40, 40, 60), menu_rect)
         pg.draw.rect(self.screen, (255, 255, 255), menu_rect, 3)
 
         title = f"{self.menu_state} GAME"
-        draw_text(self.screen, title, 50, (255, 255, 255), (menu_x + 130, menu_y + 20))
+        draw_text(self.screen, title, 50, (255, 255, 255), (menu_x + 190, menu_y + 20))
 
         # ============ Mouse Input Handling ============
         mouse_pos = pg.mouse.get_pos()
@@ -1226,17 +1226,17 @@ class Game:
         self.menu_mouse_pressed = mouse_state[0]
 
         # ============ Draw Close Button ============
-        close_rect = pg.Rect(menu_x + menu_w - 40, menu_y + 10, 30, 30)
+        close_rect = pg.Rect(menu_x + menu_w - 45, menu_y + 15, 30, 30)
         c_color = (255, 80, 80) if close_rect.collidepoint(mouse_pos) else (200, 50, 50)
-        pg.draw.rect(self.screen, c_color, close_rect)
-        pg.draw.rect(self.screen, (255, 255, 255), close_rect, 2)
+        pg.draw.rect(self.screen, c_color, close_rect, border_radius=6)
+        pg.draw.rect(self.screen, (255, 255, 255), close_rect, 2, border_radius=6)
         draw_text(self.screen, "X", 30, (255, 255, 255), (close_rect.x + 8, close_rect.y + 6))
 
         # ============ Draw Save Slots ============
         for i, filename in enumerate(self.save_slots):
             slot_y = menu_y + 100 + (i * 80)
-            slot_rect = pg.Rect(menu_x + 50, slot_y, 300, 60)
-            reset_rect = pg.Rect(menu_x + 370, slot_y, 80, 60)
+            slot_rect = pg.Rect(menu_x + 40, slot_y, 450, 60) 
+            reset_rect = pg.Rect(menu_x + 510, slot_y, 100, 60)
 
             # Get save file info
             info_text = "Empty Slot"
@@ -1259,16 +1259,16 @@ class Game:
 
             # Draw slot button
             color = (80, 80, 100) if slot_rect.collidepoint(mouse_pos) else (60, 60, 80)
-            pg.draw.rect(self.screen, color, slot_rect)
-            pg.draw.rect(self.screen, (255, 255, 255), slot_rect, 2)
-            draw_text(self.screen, f"Slot {i + 1}: {info_text}", 25, (255, 255, 255),
-                      (slot_rect.x + 10, slot_rect.y + 20))
+            pg.draw.rect(self.screen, color, slot_rect, border_radius=6)
+            pg.draw.rect(self.screen, (255, 255, 255), slot_rect, 2, border_radius=6)
+            draw_text(self.screen, f"Slot {i + 1}: {info_text}", 24, (255, 255, 255),
+                      (slot_rect.x + 15, slot_rect.y + 20))
 
             # Draw reset button
             r_color = (200, 50, 50) if reset_rect.collidepoint(mouse_pos) else (150, 40, 40)
-            pg.draw.rect(self.screen, r_color, reset_rect)
-            pg.draw.rect(self.screen, (255, 255, 255), reset_rect, 2)
-            draw_text(self.screen, "RESET", 25, (255, 255, 255), (reset_rect.x + 10, reset_rect.y + 20))
+            pg.draw.rect(self.screen, r_color, reset_rect, border_radius=6)
+            pg.draw.rect(self.screen, (255, 255, 255), reset_rect, 2, border_radius=6)
+            draw_text(self.screen, "RESET", 24, (255, 255, 255), (reset_rect.x + 18, reset_rect.y + 20))
 
             # ============ Handle Clicks ============
             if mouse_clicked:
