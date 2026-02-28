@@ -1,8 +1,12 @@
 # Isometric City Builder
 
 A tycoon-like real-time city builder game built with Python and Pygame. As the mayor, you are tasked with developing a prosperous city, managing the economy, and keeping your citizens satisfied. 
-
+<p align="center">
+  <img src="Game_Cover.jpg" alt="Power City Builder Gameplay">
+</p>
 This engine features a fully functional 2.5D isometric grid system, dynamic multi-tile building placement, interactive tools, and a real-time calendar system.
+
+
 
 ## ELTE University Task Description
 
