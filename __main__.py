@@ -4,9 +4,10 @@ import sys
 import os
 
 # producing a .app with pyinstaller:
-# pyinstaller --noconfirm --onedir --windowed --name "Power City Builder" \ --add-data "assets:assets" \ __main__.py
+# `pyinstaller --noconfirm --onedir --windowed --name "Power City Builder" \
+# --add-data "assets:assets" \ __main__.py``
 
-if getattr(sys, 'frozen', False):
+if getattr(sys, "frozen", False):
     application_path = os.path.dirname(sys.executable)
 else:
     application_path = os.path.dirname(os.path.abspath(__file__))
@@ -14,6 +15,7 @@ os.chdir(application_path)
 
 # City builder tutorial series | A*Pathfinding | pygame
 # Skeleton from Arachnid56
+
 
 def main():
     running = True
@@ -30,6 +32,7 @@ def main():
     while running:
         while playing:
             game.run()
+
 
 if __name__ == "__main__":
     main()

@@ -9,11 +9,23 @@ from .hud import Hud
 from .workers import Worker
 from .resource_manager import ResourceManager
 from .buildings import ResZone, IndZone, SerZone, Road
-from .setting import SPEEDS, INITIAL_WORKER, MAP_WIDTH, MAP_HEIGHT, WHITE, POWER_PLANT_SUPPLY, POLICE_RADIUS, STADIUM_RADIUS, INDUSTRIAL_NEGATIVE_RADIUS, BACKGROUND_COLOR
+from .setting import (
+    SPEEDS,
+    INITIAL_WORKER,
+    MAP_WIDTH,
+    MAP_HEIGHT,
+    WHITE,
+    POWER_PLANT_SUPPLY,
+    POLICE_RADIUS,
+    STADIUM_RADIUS,
+    INDUSTRIAL_NEGATIVE_RADIUS,
+    BACKGROUND_COLOR,
+)
 
 import json
 import os
 import datetime
+
 
 class Game:
     def __init__(self, screen, clock):
@@ -24,7 +36,7 @@ class Game:
         self.clock = clock
         self.width, self.height = screen.get_size()
 
-        self.current_date = datetime.datetime(2000,1,1)
+        self.current_date = datetime.datetime(2000, 1, 1)
         self.current_speed = 1
         self.day_timer = 0
 
@@ -33,9 +45,11 @@ class Game:
         self.resource_manager = ResourceManager()
 
         # Initialize HUD and world
-        self.hud = Hud(self.resource_manager,self.width, self.height)
+        self.hud = Hud(self.resource_manager, self.width, self.height)
         self.hud.game = self  # Give HUD a reference to game
-        self.world = World(self, self.resource_manager, self.entities, self.hud, 50, 50, self.width, self.height)
+        self.world = World(
+            self, self.resource_manager, self.entities, self.hud, 50, 50, self.width, self.height
+        )
 
         # ============ Initial Worker Spawning ============
         # Robust worker spawning: search for free tile
@@ -84,7 +98,7 @@ class Game:
         self.sounds = {
             "creation": pg.mixer.Sound("assets/sounds/creation.ogg"),
             "destruction": pg.mixer.Sound("assets/sounds/destruction.ogg"),
-            "wood_chop": pg.mixer.Sound("assets/sounds/wood_chop.ogg")
+            "wood_chop": pg.mixer.Sound("assets/sounds/wood_chop.ogg"),
         }
 
         # Load and play background music
@@ -187,12 +201,9 @@ class Game:
 
     def add_notification(self, text, color=WHITE):
         """Add a notification message that floats up and fades out."""
-        self.notifications.append({
-            "text": text,
-            "color": color,
-            "timer": pg.time.get_ticks(),
-            "offset_y": 0
-        })
+        self.notifications.append(
+            {"text": text, "color": color, "timer": pg.time.get_ticks(), "offset_y": 0}
+        )
 
     def update(self):
         """Update game state, handle menu actions, and process game logic."""
@@ -212,7 +223,7 @@ class Game:
                         if mtime > latest_time:
                             latest_time = mtime
                             latest_save = slot
-                
+
                 if latest_save:
                     self.load_game(latest_save)
                     self.menu_state = None
@@ -256,7 +267,7 @@ class Game:
         # ============ Game Logic (When Not Paused) ============
         if not self.paused:
             # Animate stars
-            self.star_offset += .2
+            self.star_offset += 0.2
 
             now = pg.time.get_ticks()
 
@@ -281,27 +292,33 @@ class Game:
                 threshold_chance = 0.5 if self.resource_manager.population < 10 else 0.05
                 satisfaction_bonus = self.resource_manager.satisfaction > 70
 
-                if random.random() < threshold_chance and (self.resource_manager.population < 10 or satisfaction_bonus):
-                     # Find all eligible residential zones with capacity
-                     res_zones = [b for b in self.entities if isinstance(b, ResZone) and b.has_road_access and b.occupants < b.capacity]
+                if random.random() < threshold_chance and (
+                    self.resource_manager.population < 10 or satisfaction_bonus
+                ):
+                    # Find all eligible residential zones with capacity
+                    res_zones = [
+                        b
+                        for b in self.entities
+                        if isinstance(b, ResZone) and b.has_road_access and b.occupants < b.capacity
+                    ]
 
-                     if res_zones:
-                         target = random.choice(res_zones)
-                         target.occupants += 1
-                         target.update_image()
+                    if res_zones:
+                        target = random.choice(res_zones)
+                        target.occupants += 1
+                        target.update_image()
 
-                         # Sync population count to prevent drift
-                         all_res_zones = [b for b in self.entities if isinstance(b, ResZone)]
-                         self.resource_manager.population = sum(rz.occupants for rz in all_res_zones)
+                        # Sync population count to prevent drift
+                        all_res_zones = [b for b in self.entities if isinstance(b, ResZone)]
+                        self.resource_manager.population = sum(rz.occupants for rz in all_res_zones)
 
-                         # Display appropriate notification
-                         if self.resource_manager.population <= 10:
-                             self.add_notification("New citizen moved in!", (50, 255, 50))
-                         else:
-                             self.add_notification("City is growing!", (150, 255, 150))
+                        # Display appropriate notification
+                        if self.resource_manager.population <= 10:
+                            self.add_notification("New citizen moved in!", (50, 255, 50))
+                        else:
+                            self.add_notification("City is growing!", (150, 255, 150))
 
-                         # Recalculate satisfaction and workplace assignments
-                         self.calculate_satisfaction_and_growth()
+                        # Recalculate satisfaction and workplace assignments
+                        self.calculate_satisfaction_and_growth()
 
             # --- Annual Logic Trigger ---
             if self.current_date.year > old_year:
@@ -329,6 +346,7 @@ class Game:
 
         # 1. Spawn Dinosaur
         from .workers import Dinosaur
+
         spawned = False
         attempts = 0
         while not spawned and attempts < 1000:
@@ -365,7 +383,11 @@ class Game:
             self.add_notification(f"Rampage Casualties: {total_killed} citizens", (255, 50, 50))
 
             # Extract victims evenly from inhabited Residential Zones
-            res_zones = [e for e in self.entities if isinstance(e, ResZone) and getattr(e, "occupants", 0) > 0]
+            res_zones = [
+                e
+                for e in self.entities
+                if isinstance(e, ResZone) and getattr(e, "occupants", 0) > 0
+            ]
             killed_remaining = total_killed
 
             while killed_remaining > 0 and res_zones:
@@ -375,7 +397,7 @@ class Game:
                 if target.occupants <= 0:
                     res_zones.remove(target)
 
-            # Resync total population (Education automatically adjusts if you added the @property fix earlier!)
+            # Resync total population
             all_res_zones = [e for e in self.entities if isinstance(e, ResZone)]
             self.resource_manager.population = sum(rz.occupants for rz in all_res_zones)
 
@@ -393,13 +415,23 @@ class Game:
         # ============ Annual Budget Summary ============
         # Budget is applied daily, but show annual summary
         current_year = self.current_date.year - 1  # Logic triggers at start of new year
-        year_entry = next((item for item in self.resource_manager.budget_history if item.get("year") == current_year), None)
-        
+        year_entry = next(
+            (
+                item
+                for item in self.resource_manager.budget_history
+                if item.get("year") == current_year
+            ),
+            None,
+        )
+
         if year_entry:
             tax = int(year_entry["income"])
             maintenance = int(year_entry["expenses"])
             self.add_notification("TAXING TIME!", (255, 215, 0))
-            self.add_notification(f"Annual Budget: +${tax} -${maintenance}", (100, 255, 100) if tax >= maintenance else (255, 100, 100))
+            self.add_notification(
+                f"Annual Budget: +${tax} -${maintenance}",
+                (100, 255, 100) if tax >= maintenance else (255, 100, 100),
+            )
 
         # Attrition (Death/Retirement)
 
@@ -415,21 +447,37 @@ class Game:
         sec_cap = int(self.resource_manager.population * 0.50)
         tert_cap = int(self.resource_manager.population * 0.25)
 
-        schools = [e for e in self.entities if e.name == "School" and e.has_road_access and getattr(e, 'is_powered', False)]
-        unis = [e for e in self.entities if e.name == "University" and e.has_road_access and getattr(e, 'is_powered', False)]
+        schools = [
+            e
+            for e in self.entities
+            if e.name == "School" and e.has_road_access and getattr(e, "is_powered", False)
+        ]
+        unis = [
+            e
+            for e in self.entities
+            if e.name == "University" and e.has_road_access and getattr(e, "is_powered", False)
+        ]
 
         # Schools graduate Primary -> Secondary
         for s in schools:
             # Each school can handle a specific number of students per year
-            potential = min(20, getattr(s, 'occupants', 0))
-            graduates = min(potential, self.resource_manager.edu_primary, max(0, sec_cap - self.resource_manager.edu_secondary))
+            potential = min(20, getattr(s, "occupants", 0))
+            graduates = min(
+                potential,
+                self.resource_manager.edu_primary,
+                max(0, sec_cap - self.resource_manager.edu_secondary),
+            )
             self.resource_manager.edu_primary -= graduates
             self.resource_manager.edu_secondary += graduates
 
         # Universities graduate Secondary -> Tertiary
         for u in unis:
-            potential = min(10, getattr(u, 'occupants', 0))
-            graduates = min(potential, self.resource_manager.edu_secondary, max(0, tert_cap - self.resource_manager.edu_tertiary))
+            potential = min(10, getattr(u, "occupants", 0))
+            graduates = min(
+                potential,
+                self.resource_manager.edu_secondary,
+                max(0, tert_cap - self.resource_manager.edu_tertiary),
+            )
             self.resource_manager.edu_secondary -= graduates
             self.resource_manager.edu_tertiary += graduates
 
@@ -448,18 +496,19 @@ class Game:
 
         # Game over: satisfaction too low
         if self.resource_manager.satisfaction < 10:
-             self.resource_manager.is_mayor_replaced = True
-             self.add_notification("YOU ARE FIRED!!!!", (255, 0, 0))
+            self.resource_manager.is_mayor_replaced = True
+            self.add_notification("YOU ARE FIRED!!!!", (255, 0, 0))
 
         # Game over: debt limit exceeded
         if self.resource_manager.years_negative_budget > 5:
-             self.resource_manager.is_mayor_replaced = True
-             self.add_notification("GAME OVER: DEBT LIMIT EXCEEDED", (255, 0, 0))
+            self.resource_manager.is_mayor_replaced = True
+            self.add_notification("GAME OVER: DEBT LIMIT EXCEEDED", (255, 0, 0))
 
     @staticmethod
     def get_power_networks(power_capable):
         """BFS algorithm to group adjacent buildings into contiguous power grids."""
         from collections import deque
+
         visited_power = set()
         power_networks = []
 
@@ -475,15 +524,23 @@ class Game:
 
                     for other in power_capable:
                         if other not in visited_power:
-                            x_overlap = curr.origin[0] < other.origin[0] + other.grid_width and curr.origin[
-                                0] + curr.grid_width > other.origin[0]
-                            y_overlap = curr.origin[1] < other.origin[1] + other.grid_height and curr.origin[
-                                1] + curr.grid_height > other.origin[1]
+                            x_overlap = (
+                                curr.origin[0] < other.origin[0] + other.grid_width
+                                and curr.origin[0] + curr.grid_width > other.origin[0]
+                            )
+                            y_overlap = (
+                                curr.origin[1] < other.origin[1] + other.grid_height
+                                and curr.origin[1] + curr.grid_height > other.origin[1]
+                            )
 
-                            x_adj = (curr.origin[0] == other.origin[0] + other.grid_width or curr.origin[
-                                0] + curr.grid_width == other.origin[0]) and y_overlap
-                            y_adj = (curr.origin[1] == other.origin[1] + other.grid_height or curr.origin[
-                                1] + curr.grid_height == other.origin[1]) and x_overlap
+                            x_adj = (
+                                curr.origin[0] == other.origin[0] + other.grid_width
+                                or curr.origin[0] + curr.grid_width == other.origin[0]
+                            ) and y_overlap
+                            y_adj = (
+                                curr.origin[1] == other.origin[1] + other.grid_height
+                                or curr.origin[1] + curr.grid_height == other.origin[1]
+                            ) and x_overlap
 
                             if x_adj or y_adj:
                                 visited_power.add(other)
@@ -543,13 +600,15 @@ class Game:
                 ser_zones.append(entity)
             elif isinstance(entity, Road):
                 roads.append(entity)
-            elif hasattr(entity, 'name') and entity.name in ["Police", "Stadium"]:
+            elif hasattr(entity, "name") and entity.name in ["Police", "Stadium"]:
                 services.append(entity)
 
         # ============ Update Road Access ============
         for e in self.entities:
             if hasattr(e, "has_road_access"):
-                e.has_road_access = self.world.has_road_access(e.origin[0], e.origin[1], e.grid_width, e.grid_height)
+                e.has_road_access = self.world.has_road_access(
+                    e.origin[0], e.origin[1], e.grid_width, e.grid_height
+                )
 
         # ============ Road Network Connectivity ============
         # Map each road to its network ID using BFS
@@ -570,7 +629,10 @@ class Game:
                     # Check all adjacent cells
                     for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
                         nx, ny = cx + dx, cy + dy
-                        if 0 <= nx < self.world.grid_length_x and 0 <= ny < self.world.grid_length_y:
+                        if (
+                            0 <= nx < self.world.grid_length_x
+                            and 0 <= ny < self.world.grid_length_y
+                        ):
                             nb = self.world.buildings[nx][ny]
                             if isinstance(nb, Road) and (nx, ny) not in visited_roads:
                                 visited_roads.add((nx, ny))
@@ -579,10 +641,23 @@ class Game:
 
         # ============ Power Network Connectivity & Distribution ============
         # 1. Identify all buildings that can conduct or produce electricity
-        power_capable = [e for e in self.entities if e.name in [
-            "PowerPlant", "PowerLine", "ResZone", "IndZone", "SerZone",
-            "Police", "Stadium", "FireStation", "School", "University"
-        ]]
+        power_capable = [
+            e
+            for e in self.entities
+            if e.name
+            in [
+                "PowerPlant",
+                "PowerLine",
+                "ResZone",
+                "IndZone",
+                "SerZone",
+                "Police",
+                "Stadium",
+                "FireStation",
+                "School",
+                "University",
+            ]
+        ]
 
         # Reset power states
         for e in power_capable:
@@ -601,12 +676,12 @@ class Game:
 
             for b in network:
                 if b.name in ["PowerPlant", "PowerLine"]:
-                    b.is_powered = (total_supply > 0)
+                    b.is_powered = total_supply > 0
                     continue
 
                 # Base demand scales dynamically based on type and occupants
                 if b.name in ["ResZone", "IndZone", "SerZone"]:
-                    demand = 5 + getattr(b, 'occupants', 0) * 2
+                    demand = 5 + getattr(b, "occupants", 0) * 2
                 else:
                     demand = 50
                     if b.name == "Stadium":
@@ -626,7 +701,10 @@ class Game:
             # 4. Distribute electricity until supply runs out
             current_supply = total_supply
             # Prioritize essential service buildings before zones
-            demand_list.sort(key=lambda x: 0 if x[0].name in ["ResZone", "IndZone", "SerZone"] else 1, reverse=True)
+            demand_list.sort(
+                key=lambda x: 0 if x[0].name in ["ResZone", "IndZone", "SerZone"] else 1,
+                reverse=True,
+            )
 
             for b, dem in demand_list:
                 if current_supply >= dem:
@@ -638,7 +716,9 @@ class Game:
         # ============ Zone Network Mapping ============
         def get_touched_networks(zone):
             """Get all road networks adjacent to this zone."""
-            adj_roads = self.world.get_adjacent_roads(zone.origin[0], zone.origin[1], zone.grid_width, zone.grid_height)
+            adj_roads = self.world.get_adjacent_roads(
+                zone.origin[0], zone.origin[1], zone.grid_width, zone.grid_height
+            )
             return {road_networks[r_pos] for r_pos in adj_roads if r_pos in road_networks}
 
         # ============ Satisfaction Calculation ============
@@ -652,7 +732,9 @@ class Game:
         # Proportional to loan size and years negative
         loan_penalty = 0
         if self.resource_manager.total_loan_amount > 0:
-            loan_penalty = (self.resource_manager.total_loan_amount / 1000) * (1 + self.resource_manager.years_negative_budget)
+            loan_penalty = (self.resource_manager.total_loan_amount / 1000) * (
+                1 + self.resource_manager.years_negative_budget
+            )
             total_sat -= int(loan_penalty)
 
         # --- Tax Impact ---
@@ -706,23 +788,23 @@ class Game:
 
             rz.bonuses = []
             # NEW: Severe penalty for lack of electricity
-            if not getattr(rz, 'is_powered', False):
+            if not getattr(rz, "is_powered", False):
                 rz.local_satisfaction -= 25
                 rz.bonuses.append("No Electricity (-25)")
 
             if isinstance(rz, ResZone):
-                if workforce > 0 and total_jobs_available < (.5 * workforce):
+                if workforce > 0 and total_jobs_available < (0.5 * workforce):
                     rz.local_satisfaction -= 15
                     rz.bonuses.append("Severe Job Shortage (-15)")
 
             if self.resource_manager.total_loan_amount > 0:
                 rz.bonuses.append(f"Debt Penalty (-{int(loan_penalty)})")
-            
+
             if self.resource_manager.tax_per_citizen > 10:
                 rz.bonuses.append(f"High Taxes (-{tax_impact})")
             elif self.resource_manager.tax_per_citizen < 10:
                 rz.bonuses.append(f"Low Taxes (+{tax_impact})")
-            
+
             if imbalance_penalty > 0:
                 rz.bonuses.append(f"Imbalance Penalty (-{imbalance_penalty})")
 
@@ -730,7 +812,7 @@ class Game:
             # Police and Stadium provide bonuses if reachable
             for s in services:
                 # Service building must have road access
-                if not s.has_road_access or not getattr(s, 'is_powered', False):
+                if not s.has_road_access or not getattr(s, "is_powered", False):
                     continue
 
                 # Check if service is reachable via road network
@@ -739,8 +821,10 @@ class Game:
                     continue
 
                 # Calculate distance between zone and service
-                dist = ((rz.origin[0]+rz.grid_width/2 - (s.origin[0]+s.grid_width/2))**2 +
-                        (rz.origin[1]+rz.grid_height/2 - (s.origin[1]+s.grid_height/2))**2)**0.5
+                dist = (
+                    (rz.origin[0] + rz.grid_width / 2 - (s.origin[0] + s.grid_width / 2)) ** 2
+                    + (rz.origin[1] + rz.grid_height / 2 - (s.origin[1] + s.grid_height / 2)) ** 2
+                ) ** 0.5
 
                 if s.name == "Police" and dist < POLICE_RADIUS:
                     rz.local_satisfaction += 10
@@ -752,18 +836,31 @@ class Game:
             # --- Industrial Pollution Penalty (Residential Only) ---
             if isinstance(rz, ResZone):
                 for iz in ind_zones:
-                    dist = ((rz.origin[0]+rz.grid_width/2 - (iz.origin[0]+iz.grid_width/2))**2 +
-                            (rz.origin[1]+rz.grid_height/2 - (iz.origin[1]+iz.grid_height/2))**2)**0.5
+                    dist = (
+                        (rz.origin[0] + rz.grid_width / 2 - (iz.origin[0] + iz.grid_width / 2)) ** 2
+                        + (rz.origin[1] + rz.grid_height / 2 - (iz.origin[1] + iz.grid_height / 2))
+                        ** 2
+                    ) ** 0.5
                     if dist < INDUSTRIAL_NEGATIVE_RADIUS:
-                        line = Game.get_line(rz.origin[0]+rz.grid_width/2, rz.origin[1]+rz.grid_height/2,
-                                             iz.origin[0]+iz.grid_width/2, iz.origin[1]+iz.grid_height/2)
+                        line = Game.get_line(
+                            rz.origin[0] + rz.grid_width / 2,
+                            rz.origin[1] + rz.grid_height / 2,
+                            iz.origin[0] + iz.grid_width / 2,
+                            iz.origin[1] + iz.grid_height / 2,
+                        )
                         forest_blocked = False
                         for px, py in line:
                             for dx in [-1, 0, 1]:
                                 for dy in [-1, 0, 1]:
                                     nx, ny = px + dx, py + dy
-                                    if 0 <= nx < self.world.grid_length_x and 0 <= ny < self.world.grid_length_y:
-                                        if getattr(self.world.buildings[nx][ny], "name", "") == "Tree":
+                                    if (
+                                        0 <= nx < self.world.grid_length_x
+                                        and 0 <= ny < self.world.grid_length_y
+                                    ):
+                                        if (
+                                            getattr(self.world.buildings[nx][ny], "name", "")
+                                            == "Tree"
+                                        ):
                                             forest_blocked = True
                                             break
                                 if forest_blocked:
@@ -814,7 +911,9 @@ class Game:
         # ============ Overall City Satisfaction ============
 
         if res_zones:
-            self.resource_manager.satisfaction = sum(z.local_satisfaction for z in res_zones) / len(res_zones)
+            self.resource_manager.satisfaction = sum(z.local_satisfaction for z in res_zones) / len(
+                res_zones
+            )
         else:
             self.resource_manager.satisfaction = 100  # No zones = perfect satisfaction
 
@@ -831,9 +930,15 @@ class Game:
         if growth_potential > 0:
             self.add_notification(f"City Population Growth: +{growth_potential}", (100, 255, 100))
             for _ in range(growth_potential):
-                eligible = [rz for rz in res_zones if rz.occupants < rz.capacity and rz.has_road_access and getattr(rz, 'is_powered', False)]
+                eligible = [
+                    rz
+                    for rz in res_zones
+                    if rz.occupants < rz.capacity
+                    and rz.has_road_access
+                    and getattr(rz, "is_powered", False)
+                ]
                 if eligible:
-                    weights = [1 + getattr(rz, 'tree_bonus', 0) for rz in eligible]
+                    weights = [1 + getattr(rz, "tree_bonus", 0) for rz in eligible]
                     target = random.choices(eligible, weights=weights, k=1)[0]
                     target.occupants += 1
                     self.resource_manager.edu_primary += 1
@@ -842,14 +947,14 @@ class Game:
 
         # --- Apply Population Decline ---
         elif growth_potential < 0:
-             self.add_notification(f"PEOPLE ARE LEAVING: {growth_potential}", (255, 100, 100))
-             for _ in range(abs(growth_potential)):
+            self.add_notification(f"PEOPLE ARE LEAVING: {growth_potential}", (255, 100, 100))
+            for _ in range(abs(growth_potential)):
                 eligible = [rz for rz in res_zones if rz.occupants > 0]
                 if eligible:
                     target = random.choice(eligible)
                     target.occupants -= 1
-             # Sync population after decline
-             self.resource_manager.population = sum(rz.occupants for rz in res_zones)
+            # Sync population after decline
+            self.resource_manager.population = sum(rz.occupants for rz in res_zones)
 
         # ============ Workplace Assignments ============
         # Reset occupants for all industrial and service zones
@@ -865,7 +970,7 @@ class Game:
         if ind_ser_zones and workforce > 0:
             total_capacity = sum(z.capacity for z in ind_ser_zones)
 
-            # 2. Calculate the global "Fill Ratio" (e.g., if we have 50 workers for 100 capacity, ratio is 0.5)
+            # 2. Calculate the global "Fill Ratio"
             # We use assignable_workers to ensure we don't exceed city capacity
             assignable_workers = min(workforce, total_capacity)
             fill_ratio = assignable_workers / total_capacity
@@ -904,8 +1009,16 @@ class Game:
                 pl.update_image()
 
         # ============ Education Assignments ============
-        schools = [e for e in self.entities if e.name == "School" and e.has_road_access and getattr(e, 'is_powered', False)]
-        unis = [e for e in self.entities if e.name == "University" and e.has_road_access and getattr(e, 'is_powered', False)]
+        schools = [
+            e
+            for e in self.entities
+            if e.name == "School" and e.has_road_access and getattr(e, "is_powered", False)
+        ]
+        unis = [
+            e
+            for e in self.entities
+            if e.name == "University" and e.has_road_access and getattr(e, "is_powered", False)
+        ]
 
         # Reset occupants
         for s in schools:
@@ -979,7 +1092,7 @@ class Game:
                 "SYSTEM PAUSED",
                 80,
                 WHITE,
-                (self.width // 2 - 200, self.height // 2 - 40)
+                (self.width // 2 - 200, self.height // 2 - 40),
             )
 
         # ============ Draw Notifications ============
@@ -1004,7 +1117,7 @@ class Game:
                         n["text"],
                         40,
                         tuple(color),
-                        (self.width // 2 - 200, 150 + (i * 45) + n["offset_y"])
+                        (self.width // 2 - 200, 150 + (i * 45) + n["offset_y"]),
                     )
 
         pg.display.flip()
@@ -1046,7 +1159,7 @@ class Game:
             "speed": self.current_speed,
             "map": [],
             "buildings": [],
-            "workers": []
+            "workers": [],
         }
 
         # Save map tiles
@@ -1113,7 +1226,9 @@ class Game:
         # ============ Restore Resources & Camera ============
         self.resource_manager.funds = data.get("funds", 20_800)
         self.resource_manager.population = data.get("population", 0)
-        self.resource_manager.edu_primary = data.get("edu_primary", self.resource_manager.population)
+        self.resource_manager.edu_primary = data.get(
+            "edu_primary", self.resource_manager.population
+        )
         self.resource_manager.edu_secondary = data.get("edu_secondary", 0)
         self.resource_manager.edu_tertiary = data.get("edu_tertiary", 0)
         self.resource_manager.satisfaction = data.get("satisfaction", 100)
@@ -1143,10 +1258,12 @@ class Game:
 
         # ============ Clear Current Data ============
         self.entities.clear()
-        self.world.buildings = [[None for _ in range(self.world.grid_length_y)] for _ in
-                                range(self.world.grid_length_x)]
-        self.world.workers = [[None for _ in range(self.world.grid_length_y)] for _ in
-                              range(self.world.grid_length_x)]
+        self.world.buildings = [
+            [None for _ in range(self.world.grid_length_y)] for _ in range(self.world.grid_length_x)
+        ]
+        self.world.workers = [
+            [None for _ in range(self.world.grid_length_y)] for _ in range(self.world.grid_length_x)
+        ]
 
         # ============ Restore Map Tiles ============
         self.world.grass_tiles.fill((0, 0, 0, 0))
@@ -1155,14 +1272,13 @@ class Game:
             for y in range(self.world.grid_length_y):
                 tile_type = data["map"][x][y]
                 self.world.world[x][y]["tile"] = tile_type
-                self.world.world[x][y]["collision"] = (tile_type != "")
+                self.world.world[x][y]["collision"] = tile_type != ""
                 self.world.collision_matrix[y][x] = 1 if tile_type == "" else 0
 
                 # Re-render grass tiles
                 render_pos = self.world.world[x][y]["render_pos"]
                 self.world.grass_tiles.blit(
-                    self.world.tiles["block"],
-                    (render_pos[0] + center_offset_x, render_pos[1])
+                    self.world.tiles["block"], (render_pos[0] + center_offset_x, render_pos[1])
                 )
 
         # ============ Restore Buildings ============
@@ -1177,7 +1293,7 @@ class Game:
 
             if building_class:
                 image = self.hud.images.get(name)
-                kwargs={}
+                kwargs = {}
                 if name == "Tree":
                     kwargs["is_old_tree"] = b_data.get("is_old_tree", True)
                     p_date_str = b_data.get("plant_date")
@@ -1265,7 +1381,7 @@ class Game:
         mouse_state = pg.mouse.get_pressed()
 
         # Independent debouncing for the menu
-        if not hasattr(self, 'menu_mouse_pressed'):
+        if not hasattr(self, "menu_mouse_pressed"):
             self.menu_mouse_pressed = False
 
         mouse_clicked = mouse_state[0] and not self.menu_mouse_pressed
@@ -1281,7 +1397,7 @@ class Game:
         # ============ Draw Save Slots ============
         for i, filename in enumerate(self.save_slots):
             slot_y = menu_y + 100 + (i * 80)
-            slot_rect = pg.Rect(menu_x + 40, slot_y, 450, 60) 
+            slot_rect = pg.Rect(menu_x + 40, slot_y, 450, 60)
             reset_rect = pg.Rect(menu_x + 510, slot_y, 100, 60)
 
             # Get save file info
@@ -1292,9 +1408,9 @@ class Game:
                         data = json.load(f)
                     if isinstance(data, dict):
                         # Extract saved date and population/funds
-                        date = data.get('date', 'Unknown')
-                        funds = int(data.get('funds', 0))
-                        pop = int(data.get('population', 0))
+                        date = data.get("date", "Unknown")
+                        funds = int(data.get("funds", 0))
+                        pop = int(data.get("population", 0))
                         info_text = f"{date} | ${funds:,} | Pop: {pop}"
                     else:
                         info_text = "Corrupt Save"
@@ -1307,14 +1423,21 @@ class Game:
             color = (80, 80, 100) if slot_rect.collidepoint(mouse_pos) else (60, 60, 80)
             pg.draw.rect(self.screen, color, slot_rect, border_radius=6)
             pg.draw.rect(self.screen, (255, 255, 255), slot_rect, 2, border_radius=6)
-            draw_text(self.screen, f"Slot {i + 1}: {info_text}", 24, (255, 255, 255),
-                      (slot_rect.x + 15, slot_rect.y + 20))
+            draw_text(
+                self.screen,
+                f"Slot {i + 1}: {info_text}",
+                24,
+                (255, 255, 255),
+                (slot_rect.x + 15, slot_rect.y + 20),
+            )
 
             # Draw reset button
             r_color = (200, 50, 50) if reset_rect.collidepoint(mouse_pos) else (150, 40, 40)
             pg.draw.rect(self.screen, r_color, reset_rect, border_radius=6)
             pg.draw.rect(self.screen, (255, 255, 255), reset_rect, 2, border_radius=6)
-            draw_text(self.screen, "RESET", 24, (255, 255, 255), (reset_rect.x + 18, reset_rect.y + 20))
+            draw_text(
+                self.screen, "RESET", 24, (255, 255, 255), (reset_rect.x + 18, reset_rect.y + 20)
+            )
 
             # ============ Handle Clicks ============
             if mouse_clicked:
@@ -1347,10 +1470,18 @@ class Game:
     def spawn_cars(self):
         """Spawns cars between Residential Zones and Workplaces based on population."""
         # 1. Gather eligible zones
-        res_zones = [e for e in self.entities if
-                     isinstance(e, ResZone) and getattr(e, "occupants", 0) > 0 and e.has_road_access]
-        work_zones = [e for e in self.entities if
-                      isinstance(e, (IndZone, SerZone)) and getattr(e, "occupants", 0) > 0 and e.has_road_access]
+        res_zones = [
+            e
+            for e in self.entities
+            if isinstance(e, ResZone) and getattr(e, "occupants", 0) > 0 and e.has_road_access
+        ]
+        work_zones = [
+            e
+            for e in self.entities
+            if isinstance(e, (IndZone, SerZone))
+            and getattr(e, "occupants", 0) > 0
+            and e.has_road_access
+        ]
 
         if not res_zones or not work_zones:
             return
@@ -1367,4 +1498,5 @@ class Game:
 
         # 4. Spawn the car
         from .workers import Car
+
         Car(start_zone, target_zone, self.world)

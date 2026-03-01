@@ -2,6 +2,7 @@ import pygame as pg
 
 _font_cache = {}
 
+
 def draw_text(screen, text, size, color, pos):
     if size not in _font_cache:
         _font_cache[size] = pg.font.SysFont(None, size)

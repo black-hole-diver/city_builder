@@ -8,6 +8,7 @@ class Tool:
     def use(self, grid_pos, world):
         pass
 
+
 class Axe(Tool):
     def __init__(self):
         super().__init__("Axe")
@@ -69,13 +70,17 @@ class Hammer(Tool):
                         "occupants": getattr(b, "occupants", 0),
                         "cost": 0,
                         "sat_penalty": 0,
-                        "leavers": 0
+                        "leavers": 0,
                     }
 
                     if is_occupied_zone:
                         if b.name == "ResZone":
                             # Check available housing in other zones
-                            other_res = [z for z in world.entities if getattr(z, "name", "") == "ResZone" and z != b]
+                            other_res = [
+                                z
+                                for z in world.entities
+                                if getattr(z, "name", "") == "ResZone" and z != b
+                            ]
                             available_beds = sum(z.capacity - z.occupants for z in other_res)
 
                             stats["leavers"] = max(0, b.occupants - available_beds)
@@ -99,14 +104,17 @@ class Hammer(Tool):
                 # Scenery is destroyed instantly
                 world.execute_demolition(grid_pos)
 
+
 class VIP(Tool):
     def __init__(self):
         super().__init__("VIP")
+
     def can_use(self, grid_pos, world):
         b = world.buildings[grid_pos[0]][grid_pos[1]]
         has_funds = world.resource_manager.is_affordable("VIP")
         is_valid_zone = b is not None and b.name in ["ResZone", "IndZone", "SerZone"]
         return is_valid_zone and not getattr(b, "is_vip", False) and has_funds
+
     def use(self, grid_pos, world):
         if self.can_use(grid_pos, world):
             b = world.buildings[grid_pos[0]][grid_pos[1]]

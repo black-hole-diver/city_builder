@@ -5,18 +5,18 @@ class ResourceManager:
         self.satisfaction = 100
 
         # Education tracking
-        #self.edu_primary = 0  # All start here
+        # self.edu_primary = 0  # All start here
         self.edu_secondary = 0
         self.edu_tertiary = 0
-        
+
         # Win/Loss tracking
         self.years_negative_budget = 0
         self.is_mayor_replaced = False
 
         # costs
         self.costs = {
-            "Axe":0,
-            "Hammer":0,
+            "Axe": 0,
+            "Hammer": 0,
             "Tree": 100,
             "IndZone": 50,
             "SerZone": 50,
@@ -29,7 +29,7 @@ class ResourceManager:
             "University": 5000,
             "PowerPlant": 10000,
             "PowerLine": 5,
-            "VIP": 2000
+            "VIP": 2000,
         }
 
         self.maintenance_fees = {
@@ -43,19 +43,18 @@ class ResourceManager:
             "PowerLine": 1,
             "ResZone": 5,
             "IndZone": 5,
-            "SerZone": 5
+            "SerZone": 5,
         }
 
         self.tax_per_citizen = 10
-        self.tax_rate_satisfaction_impact = 0 # 0 means normal taxes
+        self.tax_rate_satisfaction_impact = 0  # 0 means normal taxes
         self.eviction_penalty = 0
 
         # Loans
-        self.loans = [] # List of {amount, interest_rate}
+        self.loans = []  # List of {amount, interest_rate}
         self.total_loan_amount = 0
 
-        self.budget_history = [] # List of {year, income, expenses, balance}
-
+        self.budget_history = []  # List of {year, income, expenses, balance}
 
     @property
     def population(self):
@@ -78,7 +77,7 @@ class ResourceManager:
         pass
 
     def take_loan(self, amount, game=None):
-        interest_rate = 0.05 # 5% annual interest
+        interest_rate = 0.05  # 5% annual interest
         self.loans.append({"amount": amount, "interest": interest_rate})
         self.funds += amount
         self.total_loan_amount += amount
@@ -110,14 +109,17 @@ class ResourceManager:
     def log_transaction(self, game, category, income, expense):
         """Logs a transaction with a game-time timestamp."""
         timestamp = game.current_date.strftime("%Y-%m-%d %H:%M")
-        self.budget_history.insert(0, {
-            "time": timestamp,
-            "year": game.current_date.year,
-            "category": category,
-            "income": int(income),
-            "expenses": int(expense),
-            "balance": int(income - expense)
-        })
+        self.budget_history.insert(
+            0,
+            {
+                "time": timestamp,
+                "year": game.current_date.year,
+                "category": category,
+                "income": int(income),
+                "expenses": int(expense),
+                "balance": int(income - expense),
+            },
+        )
         # Keep only last 50 transactions to avoid bloat
         if len(self.budget_history) > 50:
             self.budget_history.pop()
@@ -125,22 +127,25 @@ class ResourceManager:
     def apply_daily_budget(self, world):
         # Calculate daily tax based on education levels
         # University = 2.0x value, School = 1.5x value, Primary = 1.0x value
-        effective_pop = (self.edu_primary * 1.0) + \
-                        (self.edu_secondary * 1.5) + \
-                        (self.edu_tertiary * 2.0)
+        effective_pop = (
+            (self.edu_primary * 1.0) + (self.edu_secondary * 1.5) + (self.edu_tertiary * 2.0)
+        )
 
         daily_tax_per_citizen = self.tax_per_citizen / 365.0
         tax_income = effective_pop * daily_tax_per_citizen
 
-        ind_ser_zones = [e for e in world.entities if getattr(e, "name", "") in ["IndZone", "SerZone"]]
-        total_workers = sum(getattr(z, 'occupants', 0) for z in ind_ser_zones)
+        ind_ser_zones = [
+            e for e in world.entities if getattr(e, "name", "") in ["IndZone", "SerZone"]
+        ]
+        total_workers = sum(getattr(z, "occupants", 0) for z in ind_ser_zones)
         unpowered_workers = sum(
-            getattr(z, 'occupants', 0) for z in ind_ser_zones if not getattr(z, 'is_powered', False))
+            getattr(z, "occupants", 0) for z in ind_ser_zones if not getattr(z, "is_powered", False)
+        )
 
         if total_workers > 0:
             penalty_ratio = unpowered_workers / total_workers
             # Reduce total daily tax proportionally (up to 50% loss if all workplaces lose power)
-            tax_income *= (1.0 - (penalty_ratio * 0.5))
+            tax_income *= 1.0 - (penalty_ratio * 0.5)
 
         maintenance_cost = (self.total_loan_amount * 0.05) / 365.0
 
@@ -151,16 +156,16 @@ class ResourceManager:
                 b = world.buildings[x][y]
                 if b and b not in processed_buildings:
                     if b.name == "Tree":
-                        if not getattr(b, 'is_old_tree', False) and getattr(b, 'plant_date', None):
+                        if not getattr(b, "is_old_tree", False) and getattr(b, "plant_date", None):
                             if (world.game.current_date - b.plant_date).days < 3650:
                                 maintenance_cost += 20 / 365.0
                     else:
-                        maintenance_cost += self.maintenance_fees.get(b.name, 0)/365.0
+                        maintenance_cost += self.maintenance_fees.get(b.name, 0) / 365.0
                     processed_buildings.add(b)
-        
+
         self.funds += tax_income
         self.funds -= maintenance_cost
-        
+
         # Log daily budget if it's significant (> 0.1) or once a month to avoid spam
         if (tax_income > 0.1 or maintenance_cost > 0.1) and world.game.current_date.day == 1:
             self.log_transaction(world.game, "DAILY BUDGET", tax_income, maintenance_cost)
@@ -174,5 +179,5 @@ class ResourceManager:
 
         if self.eviction_penalty > 0:
             self.eviction_penalty = max(0.0, self.eviction_penalty - 0.5)
-            
+
         return tax_income, maintenance_cost

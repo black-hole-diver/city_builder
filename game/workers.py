@@ -6,6 +6,7 @@ from pathfinding.core.grid import Grid
 from pathfinding.finder.a_star import AStarFinder
 from .setting import WORKER_SPEED, CAR_URL, WORKER_URL
 
+
 class Worker:
     def __init__(self, tile, world):
         self.path = None
@@ -17,10 +18,10 @@ class Worker:
         self.world.entities.append(self)
         image = pg.image.load("assets/graphics/worker.png").convert_alpha()
         self.name = "worker"
-        self.image = pg.transform.scale(image, (image.get_width()*2, image.get_height()*2))
+        self.image = pg.transform.scale(image, (image.get_width() * 2, image.get_height() * 2))
         self.tile = tile
 
-        #pathfinding
+        # pathfinding
         self.world.workers[tile["grid"][0]][tile["grid"][1]] = self
         self.move_timer = pg.time.get_ticks()
 
@@ -31,30 +32,30 @@ class Worker:
         attempts = 0
         while searching_for_path and attempts < 100:
             attempts += 1
-            x = random.randint(0, self.world.grid_length_x-1)
-            y = random.randint(0, self.world.grid_length_y-1)
+            x = random.randint(0, self.world.grid_length_x - 1)
+            y = random.randint(0, self.world.grid_length_y - 1)
             dest_tile = self.world.world[x][y]
             if not dest_tile["collision"]:
                 self.grid = Grid(matrix=self.world.collision_matrix)
                 self.start = self.grid.node(self.tile["grid"][0], self.tile["grid"][1])
-                self.end = self.grid.node(x,y)
+                self.end = self.grid.node(x, y)
                 finder = AStarFinder(diagonal_movement=DiagonalMovement.never)
                 self.path_index = 0
                 path, runs = finder.find_path(self.start, self.end, self.grid)
                 if path:
                     self.path = [(node.x, node.y) for node in path]
                     searching_for_path = False
-        
+
         if searching_for_path:
             self.path = None
-            self.move_timer = pg.time.get_ticks() + 2000 # wait 2 seconds before retrying
+            self.move_timer = pg.time.get_ticks() + 2000  # wait 2 seconds before retrying
 
     def change_tile(self, new_tile):
         self.world.workers[self.tile["grid"][0]][self.tile["grid"][1]] = None
         self.world.workers[new_tile[0]][new_tile[1]] = self
         self.tile = self.world.world[new_tile[0]][new_tile[1]]
 
-    def update(self, game_speed = 1):
+    def update(self, game_speed=1):
         now = pg.time.get_ticks()
         if not self.path:
             if now > self.move_timer:
@@ -131,7 +132,9 @@ class FireTruck:
         except (FileNotFoundError, pg.error):
             self.image = pg.image.load("assets/graphics/worker.png").convert_alpha()
 
-        self.image = pg.transform.scale(self.image, (self.image.get_width() * 2, self.image.get_height() * 2))
+        self.image = pg.transform.scale(
+            self.image, (self.image.get_width() * 2, self.image.get_height() * 2)
+        )
 
         self.tile = self.world.world[station.origin[0]][station.origin[1]]
         self.path = []
@@ -209,6 +212,7 @@ class FireTruck:
             self.path_index += 1
             self.move_timer = now
 
+
 class Car:
     def __init__(self, start_zone, target_zone, world):
         self.name = "Car"
@@ -221,7 +225,9 @@ class Car:
         except (FileNotFoundError, pg.error):
             self.image = pg.image.load(WORKER_URL).convert_alpha()
 
-        self.image = pg.transform.scale(self.image, (self.image.get_width() * 2, self.image.get_height() * 2))
+        self.image = pg.transform.scale(
+            self.image, (self.image.get_width() * 2, self.image.get_height() * 2)
+        )
 
         self.tile = self.world.world[start_zone.origin[0]][start_zone.origin[1]]
         self.path = []
@@ -237,7 +243,9 @@ class Car:
 
     def create_path(self, dest_origin):
         # Create a strict matrix: ONLY Roads are walkable (1)
-        matrix_copy = [[0 for _ in range(self.world.grid_length_x)] for _ in range(self.world.grid_length_y)]
+        matrix_copy = [
+            [0 for _ in range(self.world.grid_length_x)] for _ in range(self.world.grid_length_y)
+        ]
 
         for x in range(self.world.grid_length_x):
             for y in range(self.world.grid_length_y):
@@ -284,9 +292,9 @@ class Car:
 
             # It's valid if it's a Road, or if it's our start/target zones
             is_valid_terrain = next_building and (
-                    next_building.name == "Road" or
-                    next_building == self.start or
-                    next_building == self.target
+                next_building.name == "Road"
+                or next_building == self.start
+                or next_building == self.target
             )
 
             if not is_valid_terrain:
@@ -305,7 +313,7 @@ class Car:
                         break
 
             if occupied:
-                self.stuck_timer += (now - self.move_timer)
+                self.stuck_timer += now - self.move_timer
                 # If stuck for 3 seconds (head-to-head deadlock), despawn to clear traffic
                 if self.stuck_timer > 3000 / game_speed:
                     if self in self.world.entities:
