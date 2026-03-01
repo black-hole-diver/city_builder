@@ -1,6 +1,3 @@
-from .buildings import Zone, SerZone, IndZone, ResZone
-from .setting import *
-
 class Tool:
     def __init__(self, name):
         self.name = name

@@ -1,5 +1,5 @@
 import pygame as pg
-from .setting import *
+from .setting import ZONE_CAPACITY, RESZONE_URL2, RESZONE_URL3, RESZONE_URL4, INDZONE_URL2, INDZONE_URL3, INDZONE_URL4, SERZONE_URL2, SERZONE_URL3, SERZONE_URL4
 
 class Building:
     def __init__(self, pos, image, name, resource_manager, grid_pos, grid_width=1, grid_height=1):
@@ -66,7 +66,6 @@ class Zone(Building):
 
     def apply_vip(self):
         if not self.is_vip:
-            from .hud import Hud
             self.is_vip = True
             self.capacity *= 2
             self.update_image()

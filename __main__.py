@@ -1,5 +1,4 @@
 import pygame as pg
-from pygame.constants import FULLSCREEN
 from game.game import Game
 import sys
 import os

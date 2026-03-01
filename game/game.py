@@ -8,8 +8,8 @@ from .camera import Camera
 from .hud import Hud
 from .workers import Worker
 from .resource_manager import ResourceManager
-from .buildings import ResZone, IndZone, SerZone, Road, Tree
-from .setting import *
+from .buildings import ResZone, IndZone, SerZone, Road
+from .setting import SPEEDS, INITIAL_WORKER, MAP_WIDTH, MAP_HEIGHT, WHITE, POWER_PLANT_SUPPLY, POLICE_RADIUS, STADIUM_RADIUS, INDUSTRIAL_NEGATIVE_RADIUS, BACKGROUND_COLOR
 
 import json
 import os
@@ -506,14 +506,18 @@ class Game:
             while x != int(x2):
                 points.append((x, y))
                 err -= dy
-                if err < 0: y += sy; err += dx
+                if err < 0:
+                    y += sy
+                    err += dx
                 x += sx
         else:
             err = dy / 2.0
             while y != int(y2):
                 points.append((x, y))
                 err -= dx
-                if err < 0: x += sx; err += dy
+                if err < 0:
+                    x += sx
+                    err += dy
                 y += sy
         points.append((x, y))
         return points
@@ -636,10 +640,6 @@ class Game:
             """Get all road networks adjacent to this zone."""
             adj_roads = self.world.get_adjacent_roads(zone.origin[0], zone.origin[1], zone.grid_width, zone.grid_height)
             return {road_networks[r_pos] for r_pos in adj_roads if r_pos in road_networks}
-
-        res_zone_networks = {rz: get_touched_networks(rz) for rz in res_zones}
-        ind_zone_networks = {iz: get_touched_networks(iz) for iz in ind_zones}
-        ser_zone_networks = {sz: get_touched_networks(sz) for sz in ser_zones}
 
         # ============ Satisfaction Calculation ============
         total_sat = 100
@@ -793,7 +793,8 @@ class Game:
                         line = Game.get_line(cx, cy, tree.origin[0], tree.origin[1])
                         los = True
                         for px, py in line:
-                            if (px, py) == (cx, cy) or (px, py) == tree.origin: continue
+                            if (px, py) == (cx, cy) or (px, py) == tree.origin:
+                                continue
                             if self.world.buildings[px][py] is not None:
                                 los = False
                                 break
@@ -811,8 +812,7 @@ class Game:
             rz.local_satisfaction = max(0, min(100, rz.local_satisfaction))
 
         # ============ Overall City Satisfaction ============
-        # Only road-accessible zones with network connections contribute
-        road_res = [z for z in res_zones if z.has_road_access and get_touched_networks(z)]
+
         if res_zones:
             self.resource_manager.satisfaction = sum(z.local_satisfaction for z in res_zones) / len(res_zones)
         else:
@@ -854,8 +854,10 @@ class Game:
         # ============ Workplace Assignments ============
         # Reset occupants for all industrial and service zones
 
-        for iz in ind_zones: iz.occupants = 0
-        for sz in ser_zones: sz.occupants = 0
+        for iz in ind_zones:
+            iz.occupants = 0
+        for sz in ser_zones:
+            sz.occupants = 0
 
         workforce = sum(rz.occupants for rz in res_zones)
         ind_ser_zones = [z for z in (ind_zones + ser_zones) if z.has_road_access]
@@ -883,15 +885,19 @@ class Game:
                 # Shuffle so the same building doesn't always get the "extra" workers
                 random.shuffle(ind_ser_zones)
                 for zone in ind_ser_zones:
-                    if remainder <= 0: break
+                    if remainder <= 0:
+                        break
                     if zone.occupants < zone.capacity:
                         zone.occupants += 1
                         remainder -= 1
 
         # --- Update Zone Images ---
-        for iz in ind_zones: iz.update_image()
-        for sz in ser_zones: sz.update_image()
-        for rz in res_zones: rz.update_image()
+        for iz in ind_zones:
+            iz.update_image()
+        for sz in ser_zones:
+            sz.update_image()
+        for rz in res_zones:
+            rz.update_image()
 
         for pl in self.entities:
             if getattr(pl, "name", "") == "PowerLine" and hasattr(pl, "update_image"):
@@ -902,8 +908,10 @@ class Game:
         unis = [e for e in self.entities if e.name == "University" and e.has_road_access and getattr(e, 'is_powered', False)]
 
         # Reset occupants
-        for s in schools: s.occupants = 0
-        for u in unis: u.occupants = 0
+        for s in schools:
+            s.occupants = 0
+        for u in unis:
+            u.occupants = 0
 
         # Assign primary students to Schools
         if schools and self.resource_manager.edu_primary > 0:
@@ -919,7 +927,8 @@ class Game:
             if remainder > 0:
                 random.shuffle(schools)
                 for s in schools:
-                    if remainder <= 0: break
+                    if remainder <= 0:
+                        break
                     if s.occupants < s.capacity:
                         s.occupants += 1
                         remainder -= 1
@@ -938,7 +947,8 @@ class Game:
             if remainder > 0:
                 random.shuffle(unis)
                 for u in unis:
-                    if remainder <= 0: break
+                    if remainder <= 0:
+                        break
                     if u.occupants < u.capacity:
                         u.occupants += 1
                         remainder -= 1

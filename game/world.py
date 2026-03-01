@@ -1,9 +1,9 @@
 import pygame as pg
 import random
 import noise
-from .setting import *
+from .setting import TILE_SIZE, FIRE_SPREAD_TIME, FIRE_STATION_RADIUS, CHANCE, BUILDING_REFUND_PERCENT, ZONE_REFUND_PERCENT, BLOCK_URL, TREE_URL, ROCK_URL
 from .workers import Worker
-from .buildings import *
+from .buildings import Building, Tree, Zone, ResZone, IndZone, SerZone, Stadium, Police, FireStation, School, University, PowerPlant, Road, PowerLine
 from .tools import Axe, Hammer, VIP
 from typing import List, Optional
 
@@ -568,7 +568,6 @@ class World:
         connectivity between existing zones.
         """
         from collections import deque
-        from .buildings import Zone
 
         # 1. Identify all zones currently connected to the road network
         # We need to know which zones are currently connected to each other.
@@ -606,7 +605,8 @@ class World:
                         road_positions.append((rx, ry))
 
             for rx, ry in road_positions:
-                if (rx, ry) == exclude_pos: continue
+                if (rx, ry) == exclude_pos:
+                    continue
                 if (rx, ry) not in visited:
                     queue = deque([(rx, ry)])
                     visited.add((rx, ry))
@@ -615,7 +615,8 @@ class World:
                         networks[(cx, cy)] = net_id
                         for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
                             nx, ny = cx + dx, cy + dy
-                            if (nx, ny) == exclude_pos: continue
+                            if (nx, ny) == exclude_pos:
+                                continue
                             if 0 <= nx < self.grid_length_x and 0 <= ny < self.grid_length_y:
                                 nb = self.buildings[nx][ny]
                                 if nb and nb.name == "Road" and (nx, ny) not in visited:
@@ -684,7 +685,8 @@ class World:
 
                 # Try to fit them into other zones
                 for z in other_res:
-                    if displaced <= 0: break
+                    if displaced <= 0:
+                        break
                     space = z.capacity - z.occupants
                     if space > 0:
                         moved = min(displaced, space)

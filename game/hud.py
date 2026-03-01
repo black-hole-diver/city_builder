@@ -1,6 +1,5 @@
 import pygame as pg
-
-from .setting import *
+from .setting import HUD_COLOR, TREE_URL, BUILDING_SPECS, AXE_URL, HAMMER_URL, VIP_URL, ROAD_URL, POWERLINE_URL, RESZONE_URL1, INDZONE_URL1, SERZONE_URL1, POLICE_URL, STADIUM_URL, FIRE_STATION_URL, SCHOOL_URL, UNIVERSITY_URL, POWERPLANT_URL
 from .utils import draw_text
 
 class Hud:
@@ -262,20 +261,25 @@ class Hud:
                         self.game.calculate_satisfaction_and_growth()
             elif self.loan_btn_rect.collidepoint(mouse_pos):
                 self.resource_manager.take_loan(1000, self.game)
-                if self.game: self.game.add_notification("LOAN TAKEN: +$1,000", (100, 255, 100))
+                if self.game:
+                    self.game.add_notification("LOAN TAKEN: +$1,000", (100, 255, 100))
                 self.game.calculate_satisfaction_and_growth()
             elif self.repay_btn_rect.collidepoint(mouse_pos):
                 if self.resource_manager.repay_loan(1000, self.game):
-                    if self.game: self.game.add_notification("LOAN REPAID: -$1,000", (255, 215, 0))
+                    if self.game:
+                        self.game.add_notification("LOAN REPAID: -$1,000", (255, 215, 0))
                     self.game.calculate_satisfaction_and_growth()
                 else:
-                    if self.game: self.game.add_notification("NOT ENOUGH FUNDS OR NO LOAN", (255, 100, 100))
+                    if self.game:
+                        self.game.add_notification("NOT ENOUGH FUNDS OR NO LOAN", (255, 100, 100))
             elif self.help_btn_rect.collidepoint(mouse_pos):
                 self.show_help = not self.show_help
-                if self.show_help: self.show_budget = False
+                if self.show_help:
+                    self.show_budget = False
             elif self.budget_btn_rect.collidepoint(mouse_pos):
                 self.show_budget = not self.show_budget
-                if self.show_budget: self.show_help = False
+                if self.show_budget:
+                    self.show_help = False
             elif self.music_btn_rect.collidepoint(mouse_pos):
                 if self.game:
                     self.game.toggle_music()
@@ -299,7 +303,8 @@ class Hud:
                 if mouse_clicked and tile["affordable"]:
                     if self.selected_tile == tile:
                         self.selected_tile = None
-                    else: self.selected_tile = tile
+                    else:
+                        self.selected_tile = tile
                     break
 
     def draw_demolish_confirmation(self, screen):
@@ -937,8 +942,10 @@ class Hud:
         box_y = mouse_pos[1] - box_height - 15
 
         # Prevent the tooltip from going off the left/top edges of the screen
-        if box_x < 0: box_x = mouse_pos[0] + 20
-        if box_y < 0: box_y = mouse_pos[1] + 20
+        if box_x < 0:
+            box_x = mouse_pos[0] + 20
+        if box_y < 0:
+            box_y = mouse_pos[1] + 20
 
         # 6. Draw the background box and border
         tooltip_rect = pg.Rect(box_x, box_y, box_width, box_height)
