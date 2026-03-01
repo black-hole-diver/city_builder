@@ -4,7 +4,7 @@ import random
 from pathfinding.core.diagonal_movement import DiagonalMovement
 from pathfinding.core.grid import Grid
 from pathfinding.finder.a_star import AStarFinder
-from .setting import FIRE_STATION_RADIUS, WORKER_SPEED, CAR_URL, WORKER_URL
+from .setting import WORKER_SPEED, CAR_URL, WORKER_URL
 
 
 class Worker:
