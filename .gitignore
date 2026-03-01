@@ -20,5 +20,6 @@ save_slot_*.json
 .vscode/
 .build/
 .dist/
+.idea/
 "Power City Builder v1.0.1.spec"
 "Power City Builder.spec"
