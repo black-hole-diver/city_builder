@@ -18,7 +18,6 @@ save_slot_*.json
 
 # VS Code / IDE settings
 .vscode/
-.idea/
 .build/
 .dist/
 "Power City Builder v1.0.1.spec"
