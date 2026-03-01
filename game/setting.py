@@ -34,11 +34,7 @@ HUD_COLOR = (27, 27, 27, 175)
 # ==========================================
 # TIME & SPEED
 # ==========================================
-SPEEDS = {
-    1: 5_000,
-    2: 2_500,
-    3: 300
-}
+SPEEDS = {1: 5_000, 2: 2_500, 3: 300}
 
 # ==========================================
 # BUILDING DIMENSIONS (Width, Height)
@@ -50,18 +46,15 @@ BUILDING_SPECS = {
     "ResZone": (4, 4),
     "IndZone": (4, 4),
     "SerZone": (4, 4),
-
     # Basic Services
     "Police": (2, 2),
     "Stadium": (4, 4),
-
     # Advanced Services
     "FireStation": (2, 2),
     "School": (2, 2),
     "University": (4, 4),
     "PowerPlant": (4, 4),
-
-    "VIP": (1,1)
+    "VIP": (1, 1),
 }
 
 # ==========================================
@@ -122,4 +115,7 @@ CHANCE = 0.001
 # ==========================================
 # AI GENERATION PROMPTS
 # ==========================================
-PROMPT = "Modify these items I am giving you to match the isometric low-poly stylized 3D aesthetic of a mobile tycoon game in a stylized low-poly isometric game art style, 3D render, minimalist design, matte plastic texture, vibrant colors, soft ambient occlusion, toy-like aesthetic, white background, high-quality game asset, solar punk."
+PROMPT = "Modify these items I am giving you to match the isometric low-poly stylized 3D aesthetic \
+    of a mobile tycoon game in a stylized low-poly isometric game art style, 3D render, minimalist \
+        design, matte plastic texture, vibrant colors, soft ambient occlusion, toy-like aesthetic, \
+            white background, high-quality game asset, solar punk."
