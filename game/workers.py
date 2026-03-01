@@ -4,7 +4,7 @@ import random
 from pathfinding.core.diagonal_movement import DiagonalMovement
 from pathfinding.core.grid import Grid
 from pathfinding.finder.a_star import AStarFinder
-from .setting import WORKER_SPEED, CAR_URL, WORKER_URL
+from .setting import FIRE_STATION_RADIUS, WORKER_SPEED, CAR_URL, WORKER_URL
 
 
 class Worker:
@@ -196,10 +196,16 @@ class FireTruck:
         # Movement Logic
         if not self.path or self.path_index >= len(self.path):
             if self.state == "TO_FIRE":
-                self.state = "EXTINGUISHING"
-                self.extinguish_timer = now
+                dist_x = abs(self.tile["grid"][0] - self.target.origin[0])
+                dist_y = abs(self.tile["grid"][1] - self.target.origin[1])
+                if dist_x <= 5 and dist_y <= 5:
+                    self.state = "EXTINGUISHING"
+                    self.extinguish_timer = now
+                else:
+                    self.target.targeted_by_truck = False
+                    if self in self.world.entities:
+                        self.world.entities.remove(self)
             elif self.state == "TO_STATION":
-                # Despawn when arriving back at station
                 if self in self.world.entities:
                     self.world.entities.remove(self)
             return
@@ -238,8 +244,11 @@ class Car:
         self.create_path(self.target.origin)
 
         # Only add to the world if a valid road path was actually found
-        if self.path:
-            self.world.entities.append(self)
+        if not self.path:
+            if hasattr(self.target, 'targeted_by_truck'):
+                self.target.targeted_by_truck = False
+            if self in self.world.entities:
+                self.world.entities.remove(self)
 
     def create_path(self, dest_origin):
         # Create a strict matrix: ONLY Roads are walkable (1)
