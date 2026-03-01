@@ -190,14 +190,21 @@ class Game:
                     self.menu_state = "LOAD"
 
                 if event.key == pg.K_1:
+                    self.day_timer = (self.day_timer / SPEEDS[self.current_speed]) * SPEEDS[1]
                     self.current_speed = 1
                     self.add_notification("GAME SPEED: 1x", (200, 255, 200))
                 if event.key == pg.K_2:
+                    self.day_timer = (self.day_timer / SPEEDS[self.current_speed]) * SPEEDS[2]
                     self.current_speed = 2
                     self.add_notification("GAME SPEED: 2x", (255, 255, 150))
                 if event.key == pg.K_3:
+                    self.day_timer = (self.day_timer / SPEEDS[self.current_speed]) * SPEEDS[3]
                     self.current_speed = 3
                     self.add_notification("GAME SPEED: 3x", (255, 150, 150))
+                if event.key == pg.K_4:
+                    self.day_timer = (self.day_timer / SPEEDS[self.current_speed]) * SPEEDS[4]
+                    self.current_speed = 4
+                    self.add_notification("GAME SPEED: 4x", (255, 100, 100))
 
     def add_notification(self, text, color=WHITE):
         """Add a notification message that floats up and fades out."""
