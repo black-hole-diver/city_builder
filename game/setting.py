@@ -114,7 +114,7 @@ VIP_URL = "assets/graphics/vip.png"
 FIRE_URL = "assets/graphics/Fire.png"
 FIRE_SPREAD_TIME = 30000  # 30 seconds in milliseconds
 FIRE_STATION_RADIUS = 20  # Tiles
-CHANCE = 0.01
+CHANCE = 0.001
 
 # ==========================================
 # AI GENERATION PROMPTS

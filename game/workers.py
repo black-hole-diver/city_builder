@@ -202,7 +202,7 @@ class FireTruck:
             return
 
         # Truck moves faster than workers (15ms delay vs 25ms)
-        adjusted_delay = 60 / game_speed
+        adjusted_delay = 300 / game_speed
         if now - self.move_timer > adjusted_delay:
             new_pos = self.path[self.path_index]
             self.tile = self.world.world[new_pos[0]][new_pos[1]]
