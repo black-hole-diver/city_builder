@@ -421,19 +421,17 @@ class Game:
         # Schools graduate Primary -> Secondary
         for s in schools:
             # Each school can handle a specific number of students per year
-            potential = 20
+            potential = min(20, getattr(s, 'occupants', 0))
             graduates = min(potential, self.resource_manager.edu_primary, max(0, sec_cap - self.resource_manager.edu_secondary))
             self.resource_manager.edu_primary -= graduates
             self.resource_manager.edu_secondary += graduates
-            s.occupants = graduates
 
         # Universities graduate Secondary -> Tertiary
         for u in unis:
-            potential = 10
+            potential = min(10, getattr(u, 'occupants', 0))
             graduates = min(potential, self.resource_manager.edu_secondary, max(0, tert_cap - self.resource_manager.edu_tertiary))
             self.resource_manager.edu_secondary -= graduates
             self.resource_manager.edu_tertiary += graduates
-            u.occupants = graduates
 
         if len(schools) > 0 or len(unis) > 0:
             self.add_notification("ACADEMIC YEAR COMPLETE", (100, 200, 255))
@@ -899,6 +897,52 @@ class Game:
             if getattr(pl, "name", "") == "PowerLine" and hasattr(pl, "update_image"):
                 pl.update_image()
 
+        # ============ Education Assignments ============
+        schools = [e for e in self.entities if e.name == "School" and e.has_road_access and getattr(e, 'is_powered', False)]
+        unis = [e for e in self.entities if e.name == "University" and e.has_road_access and getattr(e, 'is_powered', False)]
+
+        # Reset occupants
+        for s in schools: s.occupants = 0
+        for u in unis: u.occupants = 0
+
+        # Assign primary students to Schools
+        if schools and self.resource_manager.edu_primary > 0:
+            total_school_cap = sum(s.capacity for s in schools)
+            assignable = min(self.resource_manager.edu_primary, total_school_cap)
+            fill_ratio = assignable / total_school_cap if total_school_cap > 0 else 0
+
+            for s in schools:
+                s.occupants = int(s.capacity * fill_ratio)
+
+            # Distribute rounding remainders
+            remainder = assignable - sum(s.occupants for s in schools)
+            if remainder > 0:
+                random.shuffle(schools)
+                for s in schools:
+                    if remainder <= 0: break
+                    if s.occupants < s.capacity:
+                        s.occupants += 1
+                        remainder -= 1
+
+        # Assign secondary students to Universities
+        if unis and self.resource_manager.edu_secondary > 0:
+            total_uni_cap = sum(u.capacity for u in unis)
+            assignable = min(self.resource_manager.edu_secondary, total_uni_cap)
+            fill_ratio = assignable / total_uni_cap if total_uni_cap > 0 else 0
+
+            for u in unis:
+                u.occupants = int(u.capacity * fill_ratio)
+
+            # Distribute rounding remainders
+            remainder = assignable - sum(u.occupants for u in unis)
+            if remainder > 0:
+                random.shuffle(unis)
+                for u in unis:
+                    if remainder <= 0: break
+                    if u.occupants < u.capacity:
+                        u.occupants += 1
+                        remainder -= 1
+
     def draw(self):
         self.screen.fill(BACKGROUND_COLOR)
 
@@ -927,14 +971,6 @@ class Game:
                 WHITE,
                 (self.width // 2 - 200, self.height // 2 - 40)
             )
-        # # Display FPS counter
-        # draw_text(
-        #     self.screen,
-        #     f"FPS: {int(self.clock.get_fps())}",
-        #     25,
-        #     (255, 255, 255),
-        #     (10, 10)
-        # )
 
         # ============ Draw Notifications ============
         if self.notifications:
