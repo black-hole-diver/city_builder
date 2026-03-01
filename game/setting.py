@@ -17,6 +17,9 @@ POLICE_RADIUS = 10
 STADIUM_RADIUS = 15
 INDUSTRIAL_NEGATIVE_RADIUS = 8
 
+# Power Plant Supply
+POWER_PLANT_SUPPLY = 5000
+
 # ==========================================
 # CAMERA & DISPLAY
 # ==========================================
@@ -114,7 +117,7 @@ VIP_URL = "assets/graphics/vip.png"
 FIRE_URL = "assets/graphics/Fire.png"
 FIRE_SPREAD_TIME = 30000  # 30 seconds in milliseconds
 FIRE_STATION_RADIUS = 20  # Tiles
-CHANCE = 0.01
+CHANCE = 0.001
 
 # ==========================================
 # AI GENERATION PROMPTS
