@@ -17,6 +17,9 @@ POLICE_RADIUS = 10
 STADIUM_RADIUS = 15
 INDUSTRIAL_NEGATIVE_RADIUS = 8
 
+# Power Plant Supply
+POWER_PLANT_SUPPLY = 5000
+
 # ==========================================
 # CAMERA & DISPLAY
 # ==========================================

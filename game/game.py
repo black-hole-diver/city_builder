@@ -590,7 +590,7 @@ class Game:
         # 3. Calculate Supply vs Demand per grid
         for network in power_networks:
             power_plants = [b for b in network if b.name == "PowerPlant"]
-            total_supply = len(power_plants) * 1000
+            total_supply = len(power_plants) * POWER_PLANT_SUPPLY
 
             demand_list = []
             total_demand = 0
