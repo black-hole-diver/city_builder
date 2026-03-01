@@ -4,7 +4,7 @@ import random
 from pathfinding.core.diagonal_movement import DiagonalMovement
 from pathfinding.core.grid import Grid
 from pathfinding.finder.a_star import AStarFinder
-from .setting import *
+from .setting import WORKER_SPEED, CAR_URL, WORKER_URL
 
 class Worker:
     def __init__(self, tile, world):
@@ -85,7 +85,7 @@ class Dinosaur(Worker):
 
         try:
             self.image = pg.image.load("assets/graphics/Dinosaur.png").convert_alpha()
-        except:
+        except (FileNotFoundError, pg.error):
             self.image = pg.image.load("assets/graphics/worker.png").convert_alpha()
 
         self.name = "dinosaur"
@@ -128,7 +128,7 @@ class FireTruck:
 
         try:
             self.image = pg.image.load("assets/graphics/FireTruck.png").convert_alpha()
-        except:
+        except (FileNotFoundError, pg.error):
             self.image = pg.image.load("assets/graphics/worker.png").convert_alpha()
 
         self.image = pg.transform.scale(self.image, (self.image.get_width() * 2, self.image.get_height() * 2))

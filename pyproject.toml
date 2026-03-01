@@ -1,0 +1,16 @@
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+# The exact rules we want Ruff to enforce:
+# E: Syntax errors and glaring bad practices
+# F: Pyflakes (Finds actual logical bugs like unused variables/imports)
+# B: Bugbear (Finds common Python gotchas that cause crashes)
+select = ["E", "F", "B"]
+
+ignore = [
+    "E501", # Line too long
+    # "F403", # 'from module import *' used (Prevents it from yelling about setting.py)
+    # "F405", # Variable may be undefined from star imports
+    # "B023", # Function definition does not bind loop variable
+]
