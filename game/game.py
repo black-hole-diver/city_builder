@@ -102,7 +102,7 @@ class Game:
         }
 
         # Load and play background music
-        self.music_on = True
+        self.sound_on = True
         try:
             pg.mixer.music.load("assets/sounds/fly_me_to_the_moon.ogg")
             pg.mixer.music.set_volume(0.1)  # Set volume to 10% (0.0 to 1.0)
@@ -111,16 +111,16 @@ class Game:
             print(f"Error loading music: {e}")
 
     def toggle_music(self):
-        self.music_on = not self.music_on
-        if self.music_on:
+        self.sound_on = not self.sound_on
+        if self.sound_on:
             pg.mixer.music.unpause()
-            self.add_notification("MUSIC: ON", (100, 255, 100))
+            self.add_notification("SOUND: ON", (100, 255, 100))
         else:
             pg.mixer.music.pause()
-            self.add_notification("MUSIC: OFF", (255, 100, 100))
+            self.add_notification("SOUND: OFF", (255, 100, 100))
 
     def play_sound(self, sound_name):
-        if sound_name in self.sounds:
+        if self.sound_on and sound_name in self.sounds:
             self.sounds[sound_name].play()
 
     def create_starry_background(self):
@@ -368,7 +368,8 @@ class Game:
         try:
             pg.mixer.music.load("assets/sounds/dino_song_epic.ogg")
             pg.mixer.music.set_volume(0.4)
-            pg.mixer.music.play()  # Play once
+            if self.sound_on:
+                pg.mixer.music.play()  # Play once
         except Exception as e:
             print(f"Error loading dino music: {e}")
 
@@ -414,7 +415,7 @@ class Game:
         # 3. Restore Main Soundtrack
         pg.mixer.music.load("assets/sounds/fly_me_to_the_moon.ogg")
         pg.mixer.music.set_volume(0.1)
-        if self.music_on:
+        if self.sound_on:
             pg.mixer.music.play(-1)
 
     def apply_annual_logic(self):
@@ -1159,7 +1160,7 @@ class Game:
             "tax_per_citizen": self.resource_manager.tax_per_citizen,
             "total_loan_amount": self.resource_manager.total_loan_amount,
             "budget_history": self.resource_manager.budget_history,
-            "music_on": self.music_on,
+            "sound_on": self.sound_on,
             "eviction_penalty": getattr(self.resource_manager, "eviction_penalty", 0),
             "camera": {"x": self.camera.scroll.x, "y": self.camera.scroll.y},
             "date": self.current_date.strftime("%Y-%m-%d"),
@@ -1247,8 +1248,8 @@ class Game:
         self.resource_manager.eviction_penalty = data.get("eviction_penalty", 0)
 
         # Restore music state
-        self.music_on = data.get("music_on", True)
-        if self.music_on:
+        self.sound_on = data.get("sound_on", data.get("music_on", True))
+        if self.sound_on:
             pg.mixer.music.unpause()
         else:
             pg.mixer.music.pause()
