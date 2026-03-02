@@ -788,9 +788,9 @@ class Hud:
         draw_styled_button(self.budget_btn_rect, "BUDGET", budget_color, budget_hover)
 
         # Music Button
-        music_text = "MUSIC: ON" if (self.game and self.game.music_on) else "MUSIC: OFF"
-        music_color = (60, 90, 60) if (self.game and self.game.music_on) else (130, 60, 60)
-        music_hover = (80, 110, 80) if (self.game and self.game.music_on) else (150, 80, 80)
+        music_text = "SOUND: ON" if (self.game and self.game.sound_on) else "SOUND: OFF"
+        music_color = (60, 90, 60) if (self.game and self.game.sound_on) else (130, 60, 60)
+        music_hover = (80, 110, 80) if (self.game and self.game.sound_on) else (150, 80, 80)
         draw_styled_button(self.music_btn_rect, music_text, music_color, music_hover)
 
         if self.show_help:
@@ -1010,9 +1010,9 @@ class Hud:
         draw_styled_button(self.main_load_btn_rect, "LOAD LAST SAVE", (50, 70, 90), (70, 90, 110))
 
         # Music Button in Main Menu
-        music_text = "MUSIC: ON" if (self.game and self.game.music_on) else "MUSIC: OFF"
-        music_color = (60, 90, 60) if (self.game and self.game.music_on) else (130, 60, 60)
-        music_hover = (80, 110, 80) if (self.game and self.game.music_on) else (150, 80, 80)
+        music_text = "SOUND: ON" if (self.game and self.game.sound_on) else "SOUND: OFF"
+        music_color = (60, 90, 60) if (self.game and self.game.sound_on) else (130, 60, 60)
+        music_hover = (80, 110, 80) if (self.game and self.game.sound_on) else (150, 80, 80)
 
         # Position music button below the load button
         music_btn_menu_rect = self.music_btn_rect.copy()
