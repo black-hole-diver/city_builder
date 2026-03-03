@@ -77,7 +77,6 @@ class Worker:
 
 class Dinosaur(Worker):
     def __init__(self, tile, world):
-        super().__init__(tile, world)
         self.path = None
         self.path_index = None
         self.end = None
@@ -246,12 +245,11 @@ class Car:
         self.create_path(self.target.origin)
 
         # Only add to the world if a valid road path was actually found
-        if not self.path:
+        if self.path:
+            self.world.entities.append(self)
+        else:
             if hasattr(self.target, 'targeted_by_truck'):
                 self.target.targeted_by_truck = False
-            if self in self.world.entities:
-                self.world.entities.remove(self)
-
     def create_path(self, dest_origin):
         # Create a strict matrix: ONLY Roads are walkable (1)
         matrix_copy = [
