@@ -1134,7 +1134,11 @@ class Game:
             e.is_powered = False
         power_networks = Game.get_power_networks(power_cable)
         for network in power_networks:
-            power_plants = [b for b in network if b.name == "PowerPlant"]
+            power_plants = [
+                b
+                for b in network
+                if b.name == "PowerPlant" and getattr(b, "has_road_access", False)
+            ]
             total_supply = len(power_plants) * POWER_PLANT_SUPPLY
             demand_list = []
             for b in network:
@@ -1152,6 +1156,17 @@ class Game:
                         demand = 100
                 if demand > 0:
                     demand_list.append((b, demand))
+            total_network_demand = sum(dem for _, dem in demand_list)
+            all_power_plants_in_network = [b for b in network if b.name == "PowerPlant"]
+            for pp in all_power_plants_in_network:
+                if getattr(pp, "has_road_access", False):
+                    pp.network_supply = total_supply
+                    pp.network_demand = total_network_demand
+                    pp.is_powered = True
+                else:
+                    pp.network_supply = 0
+                    pp.network_demand = 0
+                    pp.is_powered = False
             demand_list.sort(
                 key=lambda x: 0 if x[0].name in ["ResZone", "IndZone", "SerZone"] else 1,
                 reverse=True,
