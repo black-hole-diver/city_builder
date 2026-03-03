@@ -274,7 +274,9 @@ class World:
                             if hasattr(ent, "update_image"):
                                 ent.update_image()
                                 if building_name == "ResZone":
-                                    EventBus.publish("notify", "RESIDENT AREA BUILT", (100, 200, 255))
+                                    EventBus.publish("notify", "RESIDENT AREA BUILT", (
+                                        100, 200, 255)
+                                    )
                                     EventBus.publish("recalculate_satisfaction")
                                 elif building_name in ["IndZone", "SerZone"]:
                                     EventBus.publish("notify", "NEW WORKPLACE BUILT", (255, 165, 0))
