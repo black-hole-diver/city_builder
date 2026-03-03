@@ -569,15 +569,26 @@ class Game:
         loan_penalty = self._calculate_loan_penalty()
         tax_impact = self._calculate_tax_impact()
         imbalance_penalty = self._calculate_industrial_service_imbalance_penalty(
-            total_ind_jobs, total_ser_jobs)
+            total_ind_jobs, total_ser_jobs
+        )
 
-        total_sat = 100 - (imbalance_penalty + loan_penalty
-                + lingering_eviction_penalty) + tax_impact
+        total_sat = (
+            100 - (imbalance_penalty + loan_penalty + lingering_eviction_penalty) + tax_impact
+        )
 
         # -- Calculate Individual Zone Satisfaction and Bonuses ---
-        self._calculate_individual_zone_satisfaction(all_zones, total_sat, road_networks,
-                                                total_jobs_available, workforce, loan_penalty,
-                                                tax_impact, imbalance_penalty, services, ind_zones)
+        self._calculate_individual_zone_satisfaction(
+            all_zones,
+            total_sat,
+            road_networks,
+            total_jobs_available,
+            workforce,
+            loan_penalty,
+            tax_impact,
+            imbalance_penalty,
+            services,
+            ind_zones,
+        )
         self._calculate_overall_city_satisfaction(res_zones)
         self._calculate_population_growth(res_zones, ind_zones, ser_zones)
 
@@ -1088,7 +1099,8 @@ class Game:
         power_cable = [
             e
             for e in self.entities
-            if e.name in [
+            if e.name
+            in [
                 "PowerPlant",
                 "PowerLine",
                 "ResZone",
@@ -1136,11 +1148,11 @@ class Game:
                     b.is_powered = False
 
     def _get_touched_networks(self, zone, road_networks):
-            """Get all road networks adjacent to this zone."""
-            adj_roads = self.world.get_adjacent_roads(
-                zone.origin[0], zone.origin[1], zone.grid_width, zone.grid_height
-            )
-            return {road_networks[r_pos] for r_pos in adj_roads if r_pos in road_networks}
+        """Get all road networks adjacent to this zone."""
+        adj_roads = self.world.get_adjacent_roads(
+            zone.origin[0], zone.origin[1], zone.grid_width, zone.grid_height
+        )
+        return {road_networks[r_pos] for r_pos in adj_roads if r_pos in road_networks}
 
     def _calculate_lingering_eviction_penalty(self):
         """Calculate a lingering satisfaction penalty for recent evictions.
@@ -1210,9 +1222,19 @@ class Game:
                 rz.local_satisfaction += 15
                 rz.bonuses.append("Stadium Bonus (+15)")
 
-    def _calculate_individual_zone_satisfaction(self, all_zones, total_sat, road_networks,
-                                                total_jobs_available, workforce, loan_penalty,
-                                                tax_impact, imbalance_penalty, services, ind_zones):
+    def _calculate_individual_zone_satisfaction(
+        self,
+        all_zones,
+        total_sat,
+        road_networks,
+        total_jobs_available,
+        workforce,
+        loan_penalty,
+        tax_impact,
+        imbalance_penalty,
+        services,
+        ind_zones,
+    ):
         """Calculate satisfaction for a single residential zone based on various factors.
         No satisfaction if no road access or disconnected from road network.
         Penalties for lack of electricity.
@@ -1324,10 +1346,7 @@ class Game:
                                 0 <= nx < self.world.grid_length_x
                                 and 0 <= ny < self.world.grid_length_y
                             ):
-                                if (
-                                    getattr(self.world.buildings[nx][ny], "name", "")
-                                    == "Tree"
-                                ):
+                                if getattr(self.world.buildings[nx][ny], "name", "") == "Tree":
                                     forest_blocked = True
                                     break
                         if forest_blocked:
@@ -1419,7 +1438,7 @@ class Game:
             remainder = assignable_workers - current_assigned
 
             if remainder > 0:
-                random.shuffle(ind_ser_zones) # Shuffle for random distribution of leftover workers
+                random.shuffle(ind_ser_zones)  # Shuffle for random distribution of leftover workers
                 for zone in ind_ser_zones:
                     if remainder <= 0:
                         break

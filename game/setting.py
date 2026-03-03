@@ -97,16 +97,13 @@ ITEM_DESCRIPTIONS = {
     "Tree": "Forest tree. Increases nearby resident satisfaction.",
     "Rock": "Blocks construction. Remove with Hammer.",
     "VIP": "Upgrades a zone to VIP: doubles capacity and adds luxury style.",
-
     # Infrastructure
     "Road": "Required for commuting and zone development.",
     "PowerLine": "Transfers electricity between separate areas.",
-
     # Zones
     "ResZone": "Residential area. Homes build automatically if road-connected.",
     "IndZone": "Industrial area. Provides jobs, lowers nearby residential satisfaction.",
     "SerZone": "Service area. Provides jobs and balances industry.",
-
     # Services
     "Police": "Ensures public safety within its radius.",
     "Stadium": "Large satisfaction boost nearby.",

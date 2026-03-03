@@ -191,7 +191,9 @@ class FireStation(Building):
             pos, image, "FireStation", resource_manager, grid_pos, grid_width=2, grid_height=2
         )
 
+
 # ENERGY
+
 
 class PowerPlant(Building):
     def __init__(self, pos, image, resource_manager, grid_pos):
@@ -247,5 +249,3 @@ class University(Building):
         )
         self.capacity = 200
         self.occupants = 0
-
-

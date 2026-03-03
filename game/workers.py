@@ -248,8 +248,9 @@ class Car:
         if self.path:
             self.world.entities.append(self)
         else:
-            if hasattr(self.target, 'targeted_by_truck'):
+            if hasattr(self.target, "targeted_by_truck"):
                 self.target.targeted_by_truck = False
+
     def create_path(self, dest_origin):
         # Create a strict matrix: ONLY Roads are walkable (1)
         matrix_copy = [

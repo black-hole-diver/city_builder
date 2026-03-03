@@ -280,8 +280,8 @@ class World:
                             if hasattr(ent, "update_image"):
                                 ent.update_image()
                                 if building_name == "ResZone":
-                                    EventBus.publish("notify", "RESIDENT AREA BUILT", (
-                                        100, 200, 255)
+                                    EventBus.publish(
+                                        "notify", "RESIDENT AREA BUILT", (100, 200, 255)
                                     )
                                     EventBus.publish("recalculate_satisfaction")
                                 elif building_name in ["IndZone", "SerZone"]:
@@ -298,8 +298,9 @@ class World:
                                 "University",
                                 "PowerPlant",
                             ]:
-                                EventBus.publish("notify", f"NEW {building_name.upper()} BUILT!",
-                                                 (255, 255, 100))
+                                EventBus.publish(
+                                    "notify", f"NEW {building_name.upper()} BUILT!", (255, 255, 100)
+                                )
                                 # Recalculate satisfaction immediately to apply new bonuses
                                 EventBus.publish("recalculate_satisfaction")
 
@@ -626,7 +627,9 @@ class World:
         if hasattr(self.hud, "dino_btn_rect"):
             hud_rects.append(self.hud.dino_btn_rect)
 
-        if getattr(self.game, "menu_state", None) == "CONFIRM_DEMOLISH" and hasattr(self.hud, "demo_box_rect"):
+        if getattr(self.game, "menu_state", None) == "CONFIRM_DEMOLISH" and hasattr(
+            self.hud, "demo_box_rect"
+        ):
             hud_rects.append(self.hud.demo_box_rect)
 
         if any(rect.collidepoint(mouse_pos) for rect in hud_rects):
@@ -818,8 +821,8 @@ class World:
                             res.edu_secondary -= 1
                         elif res.edu_tertiary > 0:
                             res.edu_tertiary -= 1
-                    EventBus.publish("notify",
-                        f"{displaced} CITIZENS LEFT THE CITY!", (255, 50, 50)
+                    EventBus.publish(
+                        "notify", f"{displaced} CITIZENS LEFT THE CITY!", (255, 50, 50)
                     )
                 else:
                     EventBus.publish("notify", "ALL DISPLACED CITIZENS REHOUSED", (100, 255, 100))

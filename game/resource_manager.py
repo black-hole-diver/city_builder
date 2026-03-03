@@ -1,4 +1,6 @@
 from .setting import COSTS, MAINTENANCE_FEES
+
+
 class ResourceManager:
     def __init__(self):
         self.funds = 20_800

@@ -262,16 +262,18 @@ class Hud:
             elif self.tax_plus_rect.collidepoint(mouse_pos):
                 self.resource_manager.tax_per_citizen += 1
                 EventBus.publish(
-                    "notify", f"TAX INCREASED: ${self.resource_manager.tax_per_citizen}", (
-                        255, 255, 100)
+                    "notify",
+                    f"TAX INCREASED: ${self.resource_manager.tax_per_citizen}",
+                    (255, 255, 100),
                 )
                 EventBus.publish("recalculate_satisfaction")
             elif self.tax_minus_rect.collidepoint(mouse_pos):
                 if self.resource_manager.tax_per_citizen > 0:
                     self.resource_manager.tax_per_citizen -= 1
                     EventBus.publish(
-                        "notify", f"TAX DECREASED: ${self.resource_manager.tax_per_citizen}", (
-                            100, 255, 255)
+                        "notify",
+                        f"TAX DECREASED: ${self.resource_manager.tax_per_citizen}",
+                        (100, 255, 255),
                     )
                     EventBus.publish("recalculate_satisfaction")
             elif self.loan_btn_rect.collidepoint(mouse_pos):
