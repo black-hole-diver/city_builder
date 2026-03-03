@@ -251,11 +251,19 @@ class World:
 
                             # NEW: Update road access for ALL buildings if we just placed a road
                             if building_name == "Road":
+                                newly_connected = False
                                 for e in self.entities:
                                     if hasattr(e, "has_road_access"):
+                                        was_connected = e.has_road_access
                                         e.has_road_access = self.has_road_access(
                                             e.origin[0], e.origin[1], e.grid_width, e.grid_height
                                         )
+                                        if (
+                                            not was_connected
+                                            and e.has_road_access
+                                            and getattr(e, "name", "") != "Road"
+                                        ):
+                                            newly_connected = True
                                 # Recalculate satisfaction immediately for better responsiveness
                                 EventBus.publish("recalculate_satisfaction")
 
@@ -289,7 +297,8 @@ class World:
                                     EventBus.publish("recalculate_satisfaction")
 
                             if building_name == "Road":
-                                EventBus.publish("notify", "ROAD CONNECTED", (200, 200, 200))
+                                if newly_connected:
+                                    EventBus.publish("notify", "ROAD CONNECTED", (200, 200, 200))
                             elif building_name in [
                                 "Police",
                                 "Stadium",

@@ -98,7 +98,10 @@ class Game:
 
         EventBus.subscribe("play_sound", self.play_sound)
         EventBus.subscribe("notify", self.add_notification)
-        EventBus.subscribe("recalculate_satisfaction", self.calculate_satisfaction_and_growth)
+        EventBus.subscribe(
+            "recalculate_satisfaction",
+            lambda: self.calculate_satisfaction_and_growth(skip_growth=True),
+        )
         EventBus.subscribe("toggle_music", self.toggle_music)
         EventBus.subscribe("start_rampage", self.start_rampage)
 
@@ -318,7 +321,7 @@ class Game:
 
                         # Recalculate satisfaction and workplace assignments
                         self.calculate_satisfaction_and_growth()
-
+                self.calculate_satisfaction_and_growth(skip_growth=True)
             # --- Annual Logic Trigger ---
             if self.current_date.year > old_year:
                 self.apply_annual_logic()
@@ -552,7 +555,7 @@ class Game:
 
         return power_networks
 
-    def calculate_satisfaction_and_growth(self):
+    def calculate_satisfaction_and_growth(self, skip_growth=True):
         """Calculate satisfaction levels, population growth, and workplace assignments."""
         res_zones, ind_zones, ser_zones, services, roads = self._zone_distribution()
         self._update_road_access()
@@ -592,7 +595,8 @@ class Game:
             ind_zones,
         )
         self._calculate_overall_city_satisfaction(res_zones)
-        self._calculate_population_growth(res_zones, ind_zones, ser_zones)
+        if not skip_growth:
+            self._calculate_population_growth(res_zones, ind_zones, ser_zones)
 
         # -- Education and Workplace Assignments ---
         self._workplace_assignment(ind_zones, ser_zones, res_zones)
