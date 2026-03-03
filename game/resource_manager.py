@@ -1,56 +1,23 @@
+from .setting import COSTS, MAINTENANCE_FEES
 class ResourceManager:
     def __init__(self):
         self.funds = 20_800
         self._population = 0
         self.satisfaction = 100
 
-        # Education tracking
-        # self.edu_primary = 0  # All start here
         self.edu_secondary = 0
         self.edu_tertiary = 0
 
-        # Win/Loss tracking
         self.years_negative_budget = 0
         self.is_mayor_replaced = False
 
-        # costs
-        self.costs = {
-            "Axe": 0,
-            "Hammer": 0,
-            "Tree": 100,
-            "IndZone": 50,
-            "SerZone": 50,
-            "ResZone": 50,
-            "Stadium": 5000,
-            "Police": 500,
-            "Road": 10,
-            "FireStation": 500,
-            "School": 1000,
-            "University": 5000,
-            "PowerPlant": 10000,
-            "PowerLine": 5,
-            "VIP": 2000,
-        }
-
-        self.maintenance_fees = {
-            "Road": 1,
-            "Police": 50,
-            "Stadium": 200,
-            "FireStation": 50,
-            "School": 100,
-            "University": 500,
-            "PowerPlant": 1000,
-            "PowerLine": 1,
-            "ResZone": 5,
-            "IndZone": 5,
-            "SerZone": 5,
-        }
+        self.costs = COSTS
+        self.maintenance_fees = MAINTENANCE_FEES
 
         self.tax_per_citizen = 10
         self.tax_rate_satisfaction_impact = 0  # 0 means normal taxes
         self.eviction_penalty = 0
 
-        # Loans
         self.loans = []  # List of {amount, interest_rate}
         self.total_loan_amount = 0
 
@@ -88,7 +55,7 @@ class ResourceManager:
         if self.funds >= amount and self.total_loan_amount >= amount:
             self.funds -= amount
             self.total_loan_amount -= amount
-            # Simplify repayment: reduce from total, and eventually clear list if 0
+            # Repayment: reduce from total, and eventually clear list if 0
             if self.total_loan_amount == 0:
                 self.loans = []
             if game:

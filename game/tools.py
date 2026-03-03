@@ -1,3 +1,6 @@
+from game.event_bus import EventBus
+
+
 class Tool:
     def __init__(self, name):
         self.name = name
@@ -32,9 +35,9 @@ class Axe(Tool):
             if b in world.entities:
                 world.entities.remove(b)
 
-            world.game.play_sound("wood_chop")
-            world.game.add_notification("TIMBERRR! TREE CUT DOWN", (100, 255, 100))
-            world.game.calculate_satisfaction_and_growth()
+            EventBus.publish("play_sound", "wood_chop")
+            EventBus.publish("notify", "TIMBERRR! TREE CUT DOWN", (100, 255, 100))
+            EventBus.publish("recalculate_satisfaction")
 
 
 class Hammer(Tool):
@@ -120,7 +123,7 @@ class VIP(Tool):
             b = world.buildings[grid_pos[0]][grid_pos[1]]
             if hasattr(b, "apply_vip") and b.apply_vip():
                 world.resource_manager.apply_cost_to_resource("VIP", world.game)
-                world.game.play_sound("creation")
+                EventBus.publish("play_sound", "creation")
 
                 # Deselect examine tile so the HUD updates immediately
                 if world.examine_tile == b.origin:
@@ -128,4 +131,4 @@ class VIP(Tool):
                     world.hud.examined_tile = None
                     world.examine_mask_points = None
 
-                world.game.calculate_satisfaction_and_growth()
+                EventBus.publish("recalculate_satisfaction")

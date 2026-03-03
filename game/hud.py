@@ -17,8 +17,10 @@ from .setting import (
     SCHOOL_URL,
     UNIVERSITY_URL,
     POWERPLANT_URL,
+    ITEM_DESCRIPTIONS,
 )
 from .utils import draw_text
+from .event_bus import EventBus
 
 
 class Hud:
@@ -70,42 +72,7 @@ class Hud:
             "PowerLine": "Power Line",
         }
 
-        self.item_descriptions = {
-            # Tools & Nature
-            "Axe": "Chops down trees to clear land for development.",
-            "Hammer": "Demolishes buildings, roads, and rocks.\n\
-                Refunds part of the construction cost.",
-            "Tree": "A natural forest tree.\n\
-                Improves the satisfaction of nearby residents.",
-            "Rock": "A solid rock formation.\nMust be cleared with a Hammer to build here.",
-            "VIP": "Upgrades a zone to VIP status. \
-                Doubles capacity and provides a unique luxury appearance.",
-            # Infrastructure
-            "Road": "Public Road.\nEssential for citizens to \
-                commute to work and for zones to develop.",
-            "PowerLine": "High-Voltage Transmission Line.\n\
-                Transmits electricity between non-contiguous areas.",
-            # Zones
-            "ResZone": "Residential Zone.\n\
-                Citizens will automatically build homes here if connected to a road.",
-            "IndZone": "Industrial Zone.\n\
-                Provides jobs, but lowers the satisfaction of nearby residential areas.",
-            "SerZone": "Service Zone.\n\
-                Provides jobs and helps balance out industrial production.",
-            # Basic Service Buildings
-            "Police": "Police Station.\nGuarantees public safety for fields within its radius.",
-            "Stadium": "Stadium.\n\
-                Provides a massive satisfaction bonus to citizens living or working nearby.",
-            # Advanced Service Buildings (Optional Features)
-            "FireStation": "Fire Station.\n\
-                Reduces fire risk in its radius and dispatches fire trucks to emergencies.",
-            "School": "School.\nProvides secondary education, \
-                increasing citizen income and tax revenue.",
-            "University": "University.\nProvides tertiary education \
-                for maximum citizen income and tax revenue.",
-            "PowerPlant": "Power Plant.\nGenerates electricity. \
-                Must be adjacent to zones or connected via power lines.",
-        }
+        self.item_descriptions = ITEM_DESCRIPTIONS
 
         # --- NEW: Improved Button Layout ---
         # 1. System Controls (Top Left)
@@ -282,6 +249,7 @@ class Hud:
 
             if hasattr(self, "dino_btn_rect") and self.dino_btn_rect.collidepoint(mouse_pos):
                 self.dino_action = True
+                EventBus.publish("start_rampage")
 
             if self.save_btn_rect.collidepoint(mouse_pos):
                 self.menu_action = "SAVE"
@@ -293,33 +261,29 @@ class Hud:
             # Budget interactions
             elif self.tax_plus_rect.collidepoint(mouse_pos):
                 self.resource_manager.tax_per_citizen += 1
-                if self.game:
-                    self.game.add_notification(
-                        f"TAX INCREASED: ${self.resource_manager.tax_per_citizen}", (255, 255, 100)
-                    )
-                    self.game.calculate_satisfaction_and_growth()
+                EventBus.publish(
+                    "notify", f"TAX INCREASED: ${self.resource_manager.tax_per_citizen}", (
+                        255, 255, 100)
+                )
+                EventBus.publish("recalculate_satisfaction")
             elif self.tax_minus_rect.collidepoint(mouse_pos):
                 if self.resource_manager.tax_per_citizen > 0:
                     self.resource_manager.tax_per_citizen -= 1
-                    if self.game:
-                        self.game.add_notification(
-                            f"TAX DECREASED: ${self.resource_manager.tax_per_citizen}",
-                            (100, 255, 255),
-                        )
-                        self.game.calculate_satisfaction_and_growth()
+                    EventBus.publish(
+                        "notify", f"TAX DECREASED: ${self.resource_manager.tax_per_citizen}", (
+                            100, 255, 255)
+                    )
+                    EventBus.publish("recalculate_satisfaction")
             elif self.loan_btn_rect.collidepoint(mouse_pos):
                 self.resource_manager.take_loan(1000, self.game)
-                if self.game:
-                    self.game.add_notification("LOAN TAKEN: +$1,000", (100, 255, 100))
-                self.game.calculate_satisfaction_and_growth()
+                EventBus.publish("notify", "LOAN TAKEN: +$1,000", (100, 255, 100))
+                EventBus.publish("recalculate_satisfaction_and_growth")
             elif self.repay_btn_rect.collidepoint(mouse_pos):
                 if self.resource_manager.repay_loan(1000, self.game):
-                    if self.game:
-                        self.game.add_notification("LOAN REPAID: -$1,000", (255, 215, 0))
-                    self.game.calculate_satisfaction_and_growth()
+                    EventBus.publish("notify", "LOAN REPAID: -$1,000", (255, 215, 0))
+                    EventBus.publish("recalculate_satisfaction_and_growth")
                 else:
-                    if self.game:
-                        self.game.add_notification("NOT ENOUGH FUNDS OR NO LOAN", (255, 100, 100))
+                    EventBus.publish("notify", "NOT ENOUGH FUNDS OR NO LOAN", (255, 100, 100))
             elif self.help_btn_rect.collidepoint(mouse_pos):
                 self.show_help = not self.show_help
                 if self.show_help:
@@ -329,8 +293,7 @@ class Hud:
                 if self.show_budget:
                     self.show_help = False
             elif self.music_btn_rect.collidepoint(mouse_pos):
-                if self.game:
-                    self.game.toggle_music()
+                EventBus.publish("toggle_music")
 
             # Game Over Interactions
             if self.resource_manager.is_mayor_replaced:

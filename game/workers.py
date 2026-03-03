@@ -4,6 +4,8 @@ import random
 from pathfinding.core.diagonal_movement import DiagonalMovement
 from pathfinding.core.grid import Grid
 from pathfinding.finder.a_star import AStarFinder
+
+from game.event_bus import EventBus
 from .setting import WORKER_SPEED, CAR_URL, WORKER_URL
 
 
@@ -75,7 +77,6 @@ class Worker:
 
 class Dinosaur(Worker):
     def __init__(self, tile, world):
-        super().__init__(tile, world)
         self.path = None
         self.path_index = None
         self.end = None
@@ -188,7 +189,7 @@ class FireTruck:
                 self.target.on_fire = False
                 self.target.targeted_by_truck = False
                 self.target.fire_start_time = 0
-                self.world.game.add_notification("FIRE EXTINGUISHED!", (100, 200, 255))
+                EventBus.publish("notify", "FIRE EXTINGUISHED!", (100, 200, 255))
                 self.state = "TO_STATION"
                 self.create_path(self.station.origin)
             return
@@ -244,12 +245,11 @@ class Car:
         self.create_path(self.target.origin)
 
         # Only add to the world if a valid road path was actually found
-        if not self.path:
+        if self.path:
+            self.world.entities.append(self)
+        else:
             if hasattr(self.target, 'targeted_by_truck'):
                 self.target.targeted_by_truck = False
-            if self in self.world.entities:
-                self.world.entities.remove(self)
-
     def create_path(self, dest_origin):
         # Create a strict matrix: ONLY Roads are walkable (1)
         matrix_copy = [
