@@ -629,6 +629,7 @@ class Game:
         # ============ Draw Notifications ============
         if self.notifications:
             now = pg.time.get_ticks()
+            font = pg.font.SysFont("Trebuchet MS", 26, bold=True)
             for i, n in enumerate(self.notifications):
                 elapsed = now - n["timer"]
                 if elapsed < 2500:
@@ -637,20 +638,20 @@ class Game:
                     if elapsed > 1500:
                         alpha = int(255 * (1 - (elapsed - 1500) / 1000))
 
-                    # Apply alpha by dimming color
-                    color = list(n["color"])
-                    if alpha < 255:
-                        color = [int(c * (alpha / 255)) for c in color]
+                    text_surf = font.render(n["text"], True, n["color"])
+                    tw, th = text_surf.get_size()
 
-                    # Draw notification with float-up animation
-                    draw_text(
-                        self.screen,
-                        n["text"],
-                        40,
-                        tuple(color),
-                        (self.width // 2 - 200, 150 + (i * 45) + n["offset_y"]),
-                    )
-
+                    padding_x, padding_y = 40, 20
+                    box_w, box_h = tw + padding_x, th + padding_y
+                    toast_surf = pg.Surface((box_w, box_h), pg.SRCALPHA)
+                    pg.draw.rect(toast_surf, (30, 30, 35, 220), (0, 0, box_w, box_h), border_radius=10)
+                    pg.draw.rect(toast_surf, n["color"], (0, 0, 8, box_h), border_top_left_radius=10, border_bottom_left_radius=10)
+                    pg.draw.rect(toast_surf, (100, 100, 110, 150), (0, 0, box_w, box_h), 2, border_radius=10)
+                    toast_surf.blit(text_surf, (padding_x // 2 + 5, padding_y // 2))
+                    toast_surf.set_alpha(alpha)
+                    pos_x = (self.width - box_w) // 2
+                    pos_y = 120 + (i * (box_h + 10)) + n["offset_y"]
+                    self.screen.blit(toast_surf, (pos_x, pos_y))
         pg.display.flip()
 
     def quit_game(self):
