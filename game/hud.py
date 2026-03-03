@@ -327,6 +327,7 @@ class Hud:
         # Size and position the box
         box_w, box_h = 550, 340
         box_rect = pg.Rect((self.width - box_w) // 2, (self.height - box_h) // 2, box_w, box_h)
+        self.demo_box_rect = box_rect
 
         # Draw background and border
         pg.draw.rect(screen, (40, 45, 55), box_rect, border_radius=12)  # Dark slate grey
@@ -454,10 +455,12 @@ class Hud:
                         pos, pay_compensation=stats["cost"], apply_penalty=stats["sat_penalty"]
                     )
                     self.game.menu_state = None
+                    self.game.world.ignore_clicks_until_release = True
 
                 elif self.demo_no_rect.collidepoint(mouse_pos):
                     # Cancel demolition
                     self.game.menu_state = None
+                    self.game.world.ignore_clicks_until_release = True
         else:
             self.demo_click_handled = False  # Reset debounce when mouse is released
 

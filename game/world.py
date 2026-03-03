@@ -149,6 +149,12 @@ class World:
         mouse_pos = pg.mouse.get_pos()
         mouse_action = pg.mouse.get_pressed()
 
+        if getattr(self, "ignore_clicks_until_release", False):
+            if not mouse_action[0]:
+                self.ignore_clicks_until_release = False
+            else:
+                mouse_action = (False, mouse_action[1], mouse_action[2])
+
         # Right click to deselect
         if mouse_action[2]:
             self.examine_tile = None
@@ -619,6 +625,9 @@ class World:
 
         if hasattr(self.hud, "dino_btn_rect"):
             hud_rects.append(self.hud.dino_btn_rect)
+
+        if getattr(self.game, "menu_state", None) == "CONFIRM_DEMOLISH" and hasattr(self.hud, "demo_box_rect"):
+            hud_rects.append(self.hud.demo_box_rect)
 
         if any(rect.collidepoint(mouse_pos) for rect in hud_rects):
             return False
