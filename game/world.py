@@ -810,6 +810,22 @@ class World:
 
                 # Citizens who couldn't find a home leave the city forever
                 if displaced > 0:
+                    # Distribute evictions proportionally across education levels
+                    if self.resource_manager.population > 0:
+                        sec_ratio = (
+                            self.resource_manager.edu_secondary / self.resource_manager.population
+                        )
+                        tert_ratio = (
+                            self.resource_manager.edu_tertiary / self.resource_manager.population
+                        )
+                        sec_left = int(displaced * sec_ratio)
+                        tert_left = int(displaced * tert_ratio)
+                        self.resource_manager.edu_secondary = max(
+                            0, self.resource_manager.edu_secondary - sec_left
+                        )
+                        self.resource_manager.edu_tertiary = max(
+                            0, self.resource_manager.edu_tertiary - tert_left
+                        )
                     self.resource_manager.population = max(
                         0, self.resource_manager.population - displaced
                     )

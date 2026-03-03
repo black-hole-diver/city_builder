@@ -366,16 +366,15 @@ class Game:
             print(f"Error loading dino music: {e}")
 
     def end_rampage(self):
-        """Concludes the Dinosaur Rampage event and calculates casualties."""
+        """Concludes the Dinosaur Rampage event and calculates casualties.
+        Remove the dinosaur, calculate casualties (.05-.20), and restore normal conditions."""
         self.rampage_active = False
         self.add_notification("THE DINOSAUR LEFT...", (200, 200, 200))
 
-        # 1. Remove Dinosaur Entity
         if self.dinosaur_entity in self.entities:
             self.entities.remove(self.dinosaur_entity)
         self.dinosaur_entity = None
 
-        # 2. Calculate Casualties (5% to 20% of total population)
         kill_pct = random.uniform(0.05, 0.20)
         total_killed = int(self.resource_manager.population * kill_pct)
 
@@ -397,14 +396,17 @@ class Game:
                 if target.occupants <= 0:
                     res_zones.remove(target)
 
-            # Resync total population
+            actual_killed = total_killed - killed_remaining
+            if self.resource_manager.population > 0:
+                sec_ratio = self.resource_manager.edu_secondary / self.resource_manager.population
+                tert_ratio = self.resource_manager.edu_tertiary / self.resource_manager.population
+                self.resource_manager.edu_secondary -= int(actual_killed * sec_ratio)
+                self.resource_manager.edu_tertiary -= int(actual_killed * tert_ratio)
+                self.resource_manager.edu_secondary = max(0, self.resource_manager.edu_secondary)
+                self.resource_manager.edu_tertiary = max(0, self.resource_manager.edu_tertiary)
             all_res_zones = [e for e in self.entities if isinstance(e, ResZone)]
             self.resource_manager.population = sum(rz.occupants for rz in all_res_zones)
-
-            # Instantly recalculate satisfaction to reflect empty houses/lost taxes
             self.calculate_satisfaction_and_growth()
-
-        # 3. Restore Main Soundtrack
         pg.mixer.music.load("assets/sounds/fly_me_to_the_moon.ogg")
         pg.mixer.music.set_volume(0.1)
         if self.sound_on:
@@ -1412,12 +1414,24 @@ class Game:
         # --- Apply Population Decline ---
         elif growth_potential < 0:
             self.add_notification(f"PEOPLE ARE LEAVING: {growth_potential}", (255, 100, 100))
+            actual_left = 0
             for _ in range(abs(growth_potential)):
                 eligible = [rz for rz in res_zones if rz.occupants > 0]
                 if eligible:
                     target = random.choice(eligible)
                     target.occupants -= 1
-            # Sync population after decline
+                    actual_left += 1
+            if actual_left > 0:
+                sec_ratio = self.resource_manager.edu_secondary / self.resource_manager.population
+                tert_ratio = self.resource_manager.edu_tertiary / self.resource_manager.population
+                sec_left = int(actual_left * sec_ratio)
+                tert_left = int(actual_left * tert_ratio)
+                self.resource_manager.edu_secondary = max(
+                    0, self.resource_manager.edu_secondary - sec_left
+                )
+                self.resource_manager.edu_tertiary = max(
+                    0, self.resource_manager.edu_tertiary - tert_left
+                )
             self.resource_manager.population = sum(rz.occupants for rz in res_zones)
 
     def _workplace_assignment(self, ind_zones, ser_zones, res_zones):
