@@ -643,7 +643,16 @@ class Hud:
                     )
                     current_y += 20
                 else:
-                    draw_text(screen, "Safety: FIRE RISK", 22, (255, 150, 100), (desc_x, current_y))
+                    if b.name in ["IndZone", "PowerPlant"]:
+                        draw_text(
+                            screen,
+                            "Safety: HIGH FIRE RISK",
+                            22,
+                            (255, 50, 50),
+                            (desc_x, current_y),
+                        )
+                    else:
+                        draw_text(screen, "Safety: FIRE RISK", 22, (255, 150, 100), (desc_x, current_y))
                     current_y += 20
         for tile in self.tiles:
             # 1. Draw the slot background (Dark grey with rounded corners)
@@ -1010,7 +1019,7 @@ class Hud:
         music_hover = (80, 110, 80) if (self.game and self.game.sound_on) else (150, 80, 80)
 
         # Position music button below the load button
-        music_btn_menu_rect = self.music_btn_rect.copy()
+        music_btn_menu_rect = pg.Rect(0, 0, 160, 40)
         music_btn_menu_rect.centerx = self.width // 2
         music_btn_menu_rect.top = self.main_load_btn_rect.bottom + 20
         draw_styled_button(music_btn_menu_rect, music_text, music_color, music_hover)
