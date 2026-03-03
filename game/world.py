@@ -900,7 +900,11 @@ class World:
 
     def process_fires(self):
         now = pg.time.get_ticks()
-        stations = [b for b in self.entities if getattr(b, "name", "") == "FireStation"]
+        stations = [
+            b
+            for b in self.entities
+            if getattr(b, "name", "") == "FireStation" and getattr(b, "is_powered", False)
+        ]
 
         for b in self.entities.copy():
             if not hasattr(b, "on_fire") or b.name in ["Road", "Tree", "FireStation"]:

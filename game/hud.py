@@ -618,6 +618,33 @@ class Hud:
                         )
                     current_y += 20
             # ==========================================
+            # ==========================================
+            # NEW: Fire Protection Status
+            # ==========================================
+            if b.name not in ["Tree", "Rock", "Road", "Axe", "Hammer", "FireStation"]:
+                # Check for nearby powered Fire Stations
+                from .setting import FIRE_STATION_RADIUS
+
+                is_fire_protected = False
+                if self.game:
+                    for ent in self.game.entities:
+                        if getattr(ent, "name", "") == "FireStation" and getattr(
+                            ent, "is_powered", False
+                        ):
+                            dist = abs(b.origin[0] - ent.origin[0]) + abs(
+                                b.origin[1] - ent.origin[1]
+                            )
+                            if dist <= FIRE_STATION_RADIUS:
+                                is_fire_protected = True
+                                break
+                if is_fire_protected:
+                    draw_text(
+                        screen, "Safety: FIRE PROOFED", 22, (100, 255, 255), (desc_x, current_y)
+                    )
+                    current_y += 20
+                else:
+                    draw_text(screen, "Safety: FIRE RISK", 22, (255, 150, 100), (desc_x, current_y))
+                    current_y += 20
         for tile in self.tiles:
             # 1. Draw the slot background (Dark grey with rounded corners)
             pg.draw.rect(screen, (40, 40, 45, 200), tile["cell_rect"], border_radius=8)
