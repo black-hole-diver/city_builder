@@ -652,7 +652,9 @@ class Hud:
                             (desc_x, current_y),
                         )
                     else:
-                        draw_text(screen, "Safety: FIRE RISK", 22, (255, 150, 100), (desc_x, current_y))
+                        draw_text(
+                            screen, "Safety: FIRE RISK", 22, (255, 150, 100), (desc_x, current_y)
+                        )
                     current_y += 20
         for tile in self.tiles:
             # 1. Draw the slot background (Dark grey with rounded corners)
