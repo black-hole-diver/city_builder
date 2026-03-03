@@ -19,8 +19,7 @@ class Building:
         self.name = name
         self.rect = self.image.get_rect(topleft=pos)
         self.resource_manager = resource_manager
-        # Added reference to game via world
-        self.game = None  # Will be set by World after creation
+        self.game = None
 
         self.origin = grid_pos
         self.grid_width = grid_width
@@ -74,7 +73,6 @@ class Zone(Building):
         self.local_satisfaction = 100
         self.bonuses = []
 
-        # Images for different levels of saturation
         self.base_image = image
         self.lvl1_image = None
         self.lvl2_image = None
@@ -111,8 +109,6 @@ class Zone(Building):
 
         # Notification for upgrade
         if self.game and old_image != self.image and self.occupants > 0:
-            # Only notify when moving to a higher level (saturation increasing)
-            # URL1 -> URL2 or URL2 -> URL3
             if old_image == self.base_image and self.image == self.lvl1_image:
                 self.game.add_notification(f"{self.name} UPGRADED (LVL 1)!", (100, 255, 255))
             elif (
@@ -193,6 +189,15 @@ class FireStation(Building):
             pos, image, "FireStation", resource_manager, grid_pos, grid_width=2, grid_height=2
         )
 
+# ENERGY
+
+class PowerPlant(Building):
+    def __init__(self, pos, image, resource_manager, grid_pos):
+        # Power Plants occupy a 4x4 area
+        super().__init__(
+            pos, image, "PowerPlant", resource_manager, grid_pos, grid_width=4, grid_height=4
+        )
+
 
 # CONNECTIONS
 class Road(Building):
@@ -221,12 +226,11 @@ class PowerLine(Building):
             self.image = self.base_image
 
 
-# ADVANCED ENTITIES
+# EDUCATION
 
 
 class School(Building):
     def __init__(self, pos, image, resource_manager, grid_pos):
-        # Schools occupy a 2x2 area
         super().__init__(
             pos, image, "School", resource_manager, grid_pos, grid_width=2, grid_height=2
         )
@@ -236,7 +240,6 @@ class School(Building):
 
 class University(Building):
     def __init__(self, pos, image, resource_manager, grid_pos):
-        # Universities occupy a 4x4 area
         super().__init__(
             pos, image, "University", resource_manager, grid_pos, grid_width=4, grid_height=4
         )
@@ -244,9 +247,3 @@ class University(Building):
         self.occupants = 0
 
 
-class PowerPlant(Building):
-    def __init__(self, pos, image, resource_manager, grid_pos):
-        # Power Plants occupy a 4x4 area
-        super().__init__(
-            pos, image, "PowerPlant", resource_manager, grid_pos, grid_width=4, grid_height=4
-        )

@@ -17,6 +17,7 @@ from .setting import (
     SCHOOL_URL,
     UNIVERSITY_URL,
     POWERPLANT_URL,
+    ITEM_DESCRIPTIONS,
 )
 from .utils import draw_text
 
@@ -70,42 +71,7 @@ class Hud:
             "PowerLine": "Power Line",
         }
 
-        self.item_descriptions = {
-            # Tools & Nature
-            "Axe": "Chops down trees to clear land for development.",
-            "Hammer": "Demolishes buildings, roads, and rocks.\n\
-                Refunds part of the construction cost.",
-            "Tree": "A natural forest tree.\n\
-                Improves the satisfaction of nearby residents.",
-            "Rock": "A solid rock formation.\nMust be cleared with a Hammer to build here.",
-            "VIP": "Upgrades a zone to VIP status. \
-                Doubles capacity and provides a unique luxury appearance.",
-            # Infrastructure
-            "Road": "Public Road.\nEssential for citizens to \
-                commute to work and for zones to develop.",
-            "PowerLine": "High-Voltage Transmission Line.\n\
-                Transmits electricity between non-contiguous areas.",
-            # Zones
-            "ResZone": "Residential Zone.\n\
-                Citizens will automatically build homes here if connected to a road.",
-            "IndZone": "Industrial Zone.\n\
-                Provides jobs, but lowers the satisfaction of nearby residential areas.",
-            "SerZone": "Service Zone.\n\
-                Provides jobs and helps balance out industrial production.",
-            # Basic Service Buildings
-            "Police": "Police Station.\nGuarantees public safety for fields within its radius.",
-            "Stadium": "Stadium.\n\
-                Provides a massive satisfaction bonus to citizens living or working nearby.",
-            # Advanced Service Buildings (Optional Features)
-            "FireStation": "Fire Station.\n\
-                Reduces fire risk in its radius and dispatches fire trucks to emergencies.",
-            "School": "School.\nProvides secondary education, \
-                increasing citizen income and tax revenue.",
-            "University": "University.\nProvides tertiary education \
-                for maximum citizen income and tax revenue.",
-            "PowerPlant": "Power Plant.\nGenerates electricity. \
-                Must be adjacent to zones or connected via power lines.",
-        }
+        self.item_descriptions = ITEM_DESCRIPTIONS
 
         # --- NEW: Improved Button Layout ---
         # 1. System Controls (Top Left)

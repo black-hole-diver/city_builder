@@ -58,6 +58,66 @@ BUILDING_SPECS = {
 }
 
 # ==========================================
+# COSTS OF BUILDINGS & ZONES
+# ==========================================
+COSTS = {
+    "Axe": 0,
+    "Hammer": 0,
+    "Tree": 100,
+    "IndZone": 50,
+    "SerZone": 50,
+    "ResZone": 50,
+    "Stadium": 5000,
+    "Police": 500,
+    "Road": 10,
+    "FireStation": 500,
+    "School": 1000,
+    "University": 5000,
+    "PowerPlant": 10000,
+    "PowerLine": 5,
+    "VIP": 2000,
+}
+MAINTENANCE_FEES = {
+    "Road": 1,
+    "Police": 50,
+    "Stadium": 200,
+    "FireStation": 50,
+    "School": 100,
+    "University": 500,
+    "PowerPlant": 1000,
+    "PowerLine": 1,
+    "ResZone": 5,
+    "IndZone": 5,
+    "SerZone": 5,
+}
+ITEM_DESCRIPTIONS = {
+    # Tools & Nature
+    "Axe": "Clears trees for development.",
+    "Hammer": "Demolishes structures and rocks. Refunds part of the cost.",
+    "Tree": "Forest tree. Increases nearby resident satisfaction.",
+    "Rock": "Blocks construction. Remove with Hammer.",
+    "VIP": "Upgrades a zone to VIP: doubles capacity and adds luxury style.",
+
+    # Infrastructure
+    "Road": "Required for commuting and zone development.",
+    "PowerLine": "Transfers electricity between separate areas.",
+
+    # Zones
+    "ResZone": "Residential area. Homes build automatically if road-connected.",
+    "IndZone": "Industrial area. Provides jobs, lowers nearby residential satisfaction.",
+    "SerZone": "Service area. Provides jobs and balances industry.",
+
+    # Services
+    "Police": "Ensures public safety within its radius.",
+    "Stadium": "Large satisfaction boost nearby.",
+    "FireStation": "Reduces fire risk and responds to emergencies.",
+    "School": "Secondary education. Increases income and taxes.",
+    "University": "Tertiary education. Maximizes income and taxes.",
+    "PowerPlant": "Generates electricity. Must connect to zones or power lines.",
+}
+
+
+# ==========================================
 # ASSET URLs
 # ==========================================
 
@@ -106,7 +166,7 @@ INDZONE_URL4 = "assets/graphics/IndZone4.png"
 SERZONE_URL4 = "assets/graphics/SerZone4.png"
 VIP_URL = "assets/graphics/vip.png"
 
-# FIRE
+# FIRE VARIABLES
 FIRE_URL = "assets/graphics/Fire.png"
 FIRE_SPREAD_TIME = 30000  # 30 seconds in milliseconds
 FIRE_STATION_RADIUS = 20  # Tiles
