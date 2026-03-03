@@ -644,9 +644,19 @@ class Game:
                     padding_x, padding_y = 40, 20
                     box_w, box_h = tw + padding_x, th + padding_y
                     toast_surf = pg.Surface((box_w, box_h), pg.SRCALPHA)
-                    pg.draw.rect(toast_surf, (30, 30, 35, 220), (0, 0, box_w, box_h), border_radius=10)
-                    pg.draw.rect(toast_surf, n["color"], (0, 0, 8, box_h), border_top_left_radius=10, border_bottom_left_radius=10)
-                    pg.draw.rect(toast_surf, (100, 100, 110, 150), (0, 0, box_w, box_h), 2, border_radius=10)
+                    pg.draw.rect(
+                        toast_surf, (30, 30, 35, 220), (0, 0, box_w, box_h), border_radius=10
+                    )
+                    pg.draw.rect(
+                        toast_surf,
+                        n["color"],
+                        (0, 0, 8, box_h),
+                        border_top_left_radius=10,
+                        border_bottom_left_radius=10,
+                    )
+                    pg.draw.rect(
+                        toast_surf, (100, 100, 110, 150), (0, 0, box_w, box_h), 2, border_radius=10
+                    )
                     toast_surf.blit(text_surf, (padding_x // 2 + 5, padding_y // 2))
                     toast_surf.set_alpha(alpha)
                     pos_x = (self.width - box_w) // 2
