@@ -1,3 +1,6 @@
+from game.event_bus import EventBus
+
+
 class Tool:
     def __init__(self, name):
         self.name = name
@@ -32,9 +35,9 @@ class Axe(Tool):
             if b in world.entities:
                 world.entities.remove(b)
 
-            world.game.play_sound("wood_chop")
-            world.game.add_notification("TIMBERRR! TREE CUT DOWN", (100, 255, 100))
-            world.game.calculate_satisfaction_and_growth()
+            EventBus.publish("play_sound", "wood_chop")
+            EventBus.publish("notify", "TIMBERRR! TREE CUT DOWN", (100, 255, 100))
+            EventBus.publish("recalculate_satisfaction")
 
 
 class Hammer(Tool):

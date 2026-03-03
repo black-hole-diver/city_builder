@@ -1,6 +1,8 @@
 import pygame as pg
 import random
 import noise
+
+from game.event_bus import EventBus
 from .setting import (
     TILE_SIZE,
     FIRE_SPREAD_TIME,
@@ -893,9 +895,8 @@ class World:
                     b.on_fire = True
                     b.fire_start_time = now
                     b.targeted_by_truck = False
-                    self.game.add_notification("IT'S FUCKING BURNING!!!!", (255, 50, 50))
+                    EventBus.publish("notify", "IT'S FUCKING BURNING!!!!", (255, 50, 50))
 
-            # --- SPREAD LOGIC ---
             # --- SPREAD LOGIC ---
             elif b.on_fire:
                 if now - b.fire_start_time > FIRE_SPREAD_TIME:

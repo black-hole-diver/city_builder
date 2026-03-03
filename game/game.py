@@ -9,6 +9,7 @@ from .hud import Hud
 from .workers import Worker
 from .resource_manager import ResourceManager
 from .buildings import ResZone, IndZone, SerZone, Road
+from .event_bus import EventBus
 from .setting import (
     SPEEDS,
     INITIAL_WORKER,
@@ -94,6 +95,11 @@ class Game:
             pg.mixer.music.play(-1)  # Loop indefinitely
         except Exception as e:
             print(f"Error loading music: {e}")
+
+        EventBus.subscribe("play_sound", self.play_sound)
+        EventBus.subscribe("notify", self.add_notification)
+        EventBus.subscribe("recalculate_satisfaction", self.calculate_satisfaction_and_growth)
+        EventBus.subscribe("dinosaur_rampage", self.start_rampage)
 
     def toggle_music(self):
         self.sound_on = not self.sound_on
