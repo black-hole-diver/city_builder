@@ -123,7 +123,7 @@ class VIP(Tool):
             b = world.buildings[grid_pos[0]][grid_pos[1]]
             if hasattr(b, "apply_vip") and b.apply_vip():
                 world.resource_manager.apply_cost_to_resource("VIP", world.game)
-                world.game.play_sound("creation")
+                EventBus.publish("play_sound", "creation")
 
                 # Deselect examine tile so the HUD updates immediately
                 if world.examine_tile == b.origin:
@@ -131,4 +131,4 @@ class VIP(Tool):
                     world.hud.examined_tile = None
                     world.examine_mask_points = None
 
-                world.game.calculate_satisfaction_and_growth()
+                EventBus.publish("recalculate_satisfaction")

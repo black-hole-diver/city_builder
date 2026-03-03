@@ -99,7 +99,8 @@ class Game:
         EventBus.subscribe("play_sound", self.play_sound)
         EventBus.subscribe("notify", self.add_notification)
         EventBus.subscribe("recalculate_satisfaction", self.calculate_satisfaction_and_growth)
-        EventBus.subscribe("dinosaur_rampage", self.start_rampage)
+        EventBus.subscribe("toggle_music", self.toggle_music)
+        EventBus.subscribe("start_rampage", self.start_rampage)
 
     def toggle_music(self):
         self.sound_on = not self.sound_on

@@ -20,6 +20,7 @@ from .setting import (
     ITEM_DESCRIPTIONS,
 )
 from .utils import draw_text
+from .event_bus import EventBus
 
 
 class Hud:
@@ -248,6 +249,7 @@ class Hud:
 
             if hasattr(self, "dino_btn_rect") and self.dino_btn_rect.collidepoint(mouse_pos):
                 self.dino_action = True
+                EventBus.publish("start_rampage")
 
             if self.save_btn_rect.collidepoint(mouse_pos):
                 self.menu_action = "SAVE"
@@ -259,33 +261,27 @@ class Hud:
             # Budget interactions
             elif self.tax_plus_rect.collidepoint(mouse_pos):
                 self.resource_manager.tax_per_citizen += 1
-                if self.game:
-                    self.game.add_notification(
-                        f"TAX INCREASED: ${self.resource_manager.tax_per_citizen}", (255, 255, 100)
-                    )
-                    self.game.calculate_satisfaction_and_growth()
+                EventBus.publish(
+                    "notify", f"TAX INCREASED: ${self.resource_manager.tax_per_citizen}", (255, 255, 100)
+                )
+                EventBus.publish("recalculate_satisfaction")
             elif self.tax_minus_rect.collidepoint(mouse_pos):
                 if self.resource_manager.tax_per_citizen > 0:
                     self.resource_manager.tax_per_citizen -= 1
-                    if self.game:
-                        self.game.add_notification(
-                            f"TAX DECREASED: ${self.resource_manager.tax_per_citizen}",
-                            (100, 255, 255),
-                        )
-                        self.game.calculate_satisfaction_and_growth()
+                    EventBus.publish(
+                        "notify", f"TAX DECREASED: ${self.resource_manager.tax_per_citizen}", (100, 255, 255)
+                    )
+                    EventBus.publish("recalculate_satisfaction")
             elif self.loan_btn_rect.collidepoint(mouse_pos):
                 self.resource_manager.take_loan(1000, self.game)
-                if self.game:
-                    self.game.add_notification("LOAN TAKEN: +$1,000", (100, 255, 100))
-                self.game.calculate_satisfaction_and_growth()
+                EventBus.publish("notify", "LOAN TAKEN: +$1,000", (100, 255, 100))
+                EventBus.publish("recalculate_satisfaction_and_growth")
             elif self.repay_btn_rect.collidepoint(mouse_pos):
                 if self.resource_manager.repay_loan(1000, self.game):
-                    if self.game:
-                        self.game.add_notification("LOAN REPAID: -$1,000", (255, 215, 0))
-                    self.game.calculate_satisfaction_and_growth()
+                    EventBus.publish("notify", "LOAN REPAID: -$1,000", (255, 215, 0))
+                    EventBus.publish("recalculate_satisfaction_and_growth")
                 else:
-                    if self.game:
-                        self.game.add_notification("NOT ENOUGH FUNDS OR NO LOAN", (255, 100, 100))
+                    EventBus.publish("notify", "NOT ENOUGH FUNDS OR NO LOAN", (255, 100, 100))
             elif self.help_btn_rect.collidepoint(mouse_pos):
                 self.show_help = not self.show_help
                 if self.show_help:
@@ -295,8 +291,7 @@ class Hud:
                 if self.show_budget:
                     self.show_help = False
             elif self.music_btn_rect.collidepoint(mouse_pos):
-                if self.game:
-                    self.game.toggle_music()
+                EventBus.publish("toggle_music")
 
             # Game Over Interactions
             if self.resource_manager.is_mayor_replaced:

@@ -1,4 +1,6 @@
 import pygame as pg
+
+from game.event_bus import EventBus
 from .setting import (
     ZONE_CAPACITY,
     RESZONE_URL2,
@@ -91,7 +93,7 @@ class Zone(Building):
             old_image = self.image
             self.image = self.lvl3_image
             if self.game and old_image != self.image:
-                self.game.add_notification(f"{self.name} UPGRADED TO VIP!", (255, 215, 0))
+                EventBus.publish("notify", f"{self.name} UPGRADED TO VIP!", (255, 215, 0))
             return
         saturation = self.occupants / self.capacity if self.capacity > 0 else 0
         old_image = self.image
@@ -110,11 +112,11 @@ class Zone(Building):
         # Notification for upgrade
         if self.game and old_image != self.image and self.occupants > 0:
             if old_image == self.base_image and self.image == self.lvl1_image:
-                self.game.add_notification(f"{self.name} UPGRADED (LVL 1)!", (100, 255, 255))
+                EventBus.publish("notify", f"{self.name} UPGRADED (LVL 1)!", (100, 255, 255))
             elif (
                 old_image == self.lvl1_image or old_image == self.base_image
             ) and self.image == self.lvl2_image:
-                self.game.add_notification(f"{self.name} UPGRADED (LVL 2)!", (255, 255, 100))
+                EventBus.publish("notify", f"{self.name} UPGRADED (LVL 2)!", (255, 255, 100))
 
     @property
     def saturation(self):

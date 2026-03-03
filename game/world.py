@@ -229,7 +229,7 @@ class World:
                             )
                             ent.game = self.game  # Set game reference
                             self.resource_manager.apply_cost_to_resource(building_name, self.game)
-                            self.game.play_sound("creation")
+                            EventBus.publish("play_sound", "creation")
 
                             # Update initial road access
                             ent.has_road_access = self.has_road_access(
@@ -251,7 +251,7 @@ class World:
                                             e.origin[0], e.origin[1], e.grid_width, e.grid_height
                                         )
                                 # Recalculate satisfaction immediately for better responsiveness
-                                self.game.calculate_satisfaction_and_growth()
+                                EventBus.publish("recalculate_satisfaction")
 
                             # NEW: Instant Power Recalculation Trigger
                             power_conductors = [
@@ -268,22 +268,20 @@ class World:
                             ]
 
                             if building_name in power_conductors:
-                                self.game.calculate_satisfaction_and_growth()
+                                EventBus.publish("recalculate_satisfaction")
 
                             # Initial image update for zones
                             if hasattr(ent, "update_image"):
                                 ent.update_image()
                                 if building_name == "ResZone":
-                                    self.game.add_notification(
-                                        "RESIDENT AREA BUILT", (100, 200, 255)
-                                    )
-                                    self.game.calculate_satisfaction_and_growth()
+                                    EventBus.publish("notify", "RESIDENT AREA BUILT", (100, 200, 255))
+                                    EventBus.publish("recalculate_satisfaction")
                                 elif building_name in ["IndZone", "SerZone"]:
-                                    self.game.add_notification("NEW WORKPLACE BUILT", (255, 165, 0))
-                                    self.game.calculate_satisfaction_and_growth()
+                                    EventBus.publish("notify", "NEW WORKPLACE BUILT", (255, 165, 0))
+                                    EventBus.publish("recalculate_satisfaction")
 
                             if building_name == "Road":
-                                self.game.add_notification("ROAD CONNECTED", (200, 200, 200))
+                                EventBus.publish("notify", "ROAD CONNECTED", (200, 200, 200))
                             elif building_name in [
                                 "Police",
                                 "Stadium",
@@ -292,11 +290,10 @@ class World:
                                 "University",
                                 "PowerPlant",
                             ]:
-                                self.game.add_notification(
-                                    f"NEW {building_name.upper()} BUILT!", (255, 255, 100)
-                                )
+                                EventBus.publish("notify", f"NEW {building_name.upper()} BUILT!",
+                                                 (255, 255, 100))
                                 # Recalculate satisfaction immediately to apply new bonuses
-                                self.game.calculate_satisfaction_and_growth()
+                                EventBus.publish("recalculate_satisfaction")
 
                         # Do not deselect if it's a Road or PowerLine for continuous construction
                         if building_name not in ["Road", "PowerLine", "Tree"]:
@@ -317,22 +314,15 @@ class World:
                 # Select building to examine
                 if mouse_action[0]:
                     if building is not None:
-                        # --- THE FIX: Use the building's origin, not the clicked tile! ---
                         self.examine_tile = building.origin
-
                         self.hud.examined_tile = building
-                        # Calculate the mask outline exactly ONCE upon clicking
                         self.examine_mask_points = pg.mask.from_surface(building.image).outline()
                     elif world_tile in ["tree", "rock"]:
-                        # Examine Nature
                         self.examine_tile = (grid_pos[0], grid_pos[1])
-
-                        # Use our new Scenery class!
                         feature = Scenery(world_tile, self.tiles[world_tile])
                         self.hud.examined_tile = feature
                         self.examine_mask_points = pg.mask.from_surface(feature.image).outline()
                     else:
-                        # Clicked on empty grass - clear examine
                         self.examine_tile = None
                         self.hud.examined_tile = None
                         self.examine_mask_points = None
@@ -352,8 +342,24 @@ class World:
 
         render_queue = []
 
-        for x in range(self.grid_length_x):
-            for y in range(self.grid_length_y):
+        # --- CAMERA CULLING ---
+
+        tl_x, tl_y = self.mouse_to_grid(0, 0, camera.scroll)
+        tr_x, tr_y = self.mouse_to_grid(self.width, 0, camera.scroll)
+        bl_x, bl_y = self.mouse_to_grid(0, self.height, camera.scroll)
+        br_x, br_y = self.mouse_to_grid(self.width, self.height, camera.scroll)
+        min_x = int(min(tl_x, tr_x, bl_x, br_x))
+        max_x = int(max(tl_x, tr_x, bl_x, br_x))
+        min_y = int(min(tl_y, tr_y, bl_y, br_y))
+        max_y = int(max(tl_y, tr_y, bl_y, br_y))
+        PADDING = 6
+        start_x = max(0, min_x - PADDING)
+        end_x = min(self.grid_length_x, max_x + PADDING)
+        start_y = max(0, min_y - PADDING)
+        end_y = min(self.grid_length_y, max_y + PADDING)
+
+        for x in range(start_x, end_x):
+            for y in range(start_y, end_y):
                 render_pos = self.world[x][y]["render_pos"]
                 screen_x = render_pos[0] + offset_x
 
@@ -751,7 +757,7 @@ class World:
         if has_building:
             b = self.buildings[grid_pos[0]][grid_pos[1]]
 
-            self.game.play_sound("destruction")
+            EventBus.publish("play_sound", "destruction")
 
             # 1. Apply financial and satisfaction consequences
             if pay_compensation > 0:
@@ -759,14 +765,14 @@ class World:
                 self.resource_manager.log_transaction(
                     self.game, "EVICTION PAYOUT", 0, pay_compensation
                 )
-                self.game.add_notification(
-                    f"PAID COMPENSATION: -${pay_compensation:,}", (255, 100, 100)
+                EventBus.publish(
+                    "notify", f"PAID COMPENSATION: -${pay_compensation:,}", (255, 100, 100)
                 )
 
             if apply_penalty > 0:
                 self.resource_manager.eviction_penalty += apply_penalty
-                self.game.add_notification(
-                    f"CITIZENS ANGERED! (-{apply_penalty}% Sat)", (255, 50, 50)
+                EventBus.publish(
+                    "notify", f"CITIZENS ANGERED! (-{apply_penalty}% Sat)", (255, 50, 50)
                 )
 
             # 2. Rehousing Logic for ResZones
@@ -801,11 +807,11 @@ class World:
                             res.edu_secondary -= 1
                         elif res.edu_tertiary > 0:
                             res.edu_tertiary -= 1
-                    self.game.add_notification(
+                    EventBus.publish("notify",
                         f"{displaced} CITIZENS LEFT THE CITY!", (255, 50, 50)
                     )
                 else:
-                    self.game.add_notification("ALL DISPLACED CITIZENS REHOUSED", (100, 255, 100))
+                    EventBus.publish("notify", "ALL DISPLACED CITIZENS REHOUSED", (100, 255, 100))
 
             # 3. Process Salvage Refund
             if refund:
@@ -848,7 +854,7 @@ class World:
                 self.hud.examined_tile = None
                 self.examine_mask_points = None
 
-            self.game.calculate_satisfaction_and_growth()
+            EventBus.publish("recalculate_satisfaction")
 
         elif is_rock:
             if self.examine_tile == (grid_pos[0], grid_pos[1]):
@@ -859,8 +865,8 @@ class World:
             self.world[grid_pos[0]][grid_pos[1]]["tile"] = ""
             self.world[grid_pos[0]][grid_pos[1]]["collision"] = False
             self.collision_matrix[grid_pos[1]][grid_pos[0]] = 1
-            self.game.play_sound("destruction")
-            self.game.add_notification("ROCK SMASHED!", (200, 200, 200))
+            EventBus.publish("play_sound", "destruction")
+            EventBus.publish("notify", "ROCK SMASHED!", (200, 200, 200))
 
     def process_fires(self):
         now = pg.time.get_ticks()
@@ -918,9 +924,9 @@ class World:
                                         neighbor.on_fire = True
                                         neighbor.fire_start_time = now
                                         neighbor.targeted_by_truck = False
-                                        self.game.add_notification("FIRE SPREAD!", (255, 100, 50))
+                                        EventBus.publish("notify", "FIRE SPREAD!", (255, 100, 50))
 
-                    self.game.add_notification(f"{b.name.upper()} BURNED DOWN!", (255, 50, 50))
+                    EventBus.publish("notify", f"{b.name.upper()} BURNED DOWN!", (255, 50, 50))
                     self.execute_demolition(b.origin, apply_penalty=10, refund=False)
                     continue
 

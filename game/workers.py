@@ -4,6 +4,8 @@ import random
 from pathfinding.core.diagonal_movement import DiagonalMovement
 from pathfinding.core.grid import Grid
 from pathfinding.finder.a_star import AStarFinder
+
+from game.event_bus import EventBus
 from .setting import WORKER_SPEED, CAR_URL, WORKER_URL
 
 
@@ -188,7 +190,7 @@ class FireTruck:
                 self.target.on_fire = False
                 self.target.targeted_by_truck = False
                 self.target.fire_start_time = 0
-                self.world.game.add_notification("FIRE EXTINGUISHED!", (100, 200, 255))
+                EventBus.publish("notify", "FIRE EXTINGUISHED!", (100, 200, 255))
                 self.state = "TO_STATION"
                 self.create_path(self.station.origin)
             return
