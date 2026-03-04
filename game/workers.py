@@ -130,7 +130,7 @@ class FireTruck:
 
         # Contain within 64 px
         try:
-            original_image = pg.image.load("assets/graphics/FireTruck.png").convert_alpha()
+            original_image = pg.image.load(FIRETRUCK_URL).convert_alpha()
         except (FileNotFoundError, pg.error):
             original_image = pg.image.load("assets/graphics/worker.png").convert_alpha()
 
