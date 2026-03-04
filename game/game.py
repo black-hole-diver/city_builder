@@ -168,6 +168,22 @@ class Game:
                 # Regenerate background to match new size
                 self.background = self.create_starry_background()
             if event.type == pg.KEYDOWN:
+                # Rename building
+                if getattr(self, "menu_state", None) == "RENAME":
+                    if event.key == pg.K_RETURN:
+                        if self.rename_target:
+                            clean_name = self.rename_input_text.strip()
+                            self.rename_target.custom_name = clean_name if clean_name else None
+                        self.menu_state = None
+                    elif event.key == pg.K_ESCAPE:
+                        self.menu_state = None
+                    elif event.key == pg.K_BACKSPACE:
+                        self.rename_input_text = self.rename_input_text[:-1]
+                    else:
+                        if len(self.rename_input_text) < 18:
+                            self.rename_input_text += event.unicode
+                            logger.info(f"Renaming building: {self.rename_input_text}")
+                    continue
                 if event.key == pg.K_ESCAPE:
                     if self.hud.show_help:
                         self.hud.show_help = False
@@ -726,6 +742,8 @@ class Game:
                     building_save_data = {"name": b.name, "x": x, "y": y}
                     if getattr(b, "is_vip", False):
                         building_save_data["is_vip"] = True
+                    if getattr(b, "custom_name", None):
+                        building_save_data["custom_name"] = b.custom_name
                     if hasattr(b, "occupants"):
                         building_save_data["occupants"] = b.occupants
                     if hasattr(b, "is_powered"):
@@ -856,6 +874,9 @@ class Game:
                 if b_data.get("is_vip", False):
                     if hasattr(ent, "apply_vip"):
                         ent.apply_vip()
+
+                if b_data.get("custom_name"):
+                    ent.custom_name = b_data["custom_name"]
 
                 if b_data.get("on_fire", False):
                     ent.on_fire = True
