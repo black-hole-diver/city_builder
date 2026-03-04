@@ -1,4 +1,18 @@
+import sys
+
 import pygame as pg
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="[%(levelname)s] %(asctime)s - %(message)s",
+    datefmt="%H:%M:%S",
+    handlers=[
+        logging.FileHandler("citybuilder.log", mode="w"),  # 1. Writes to the file
+        logging.StreamHandler(sys.stdout),  # 2. Writes to the Terminal
+    ],
+)
+logger = logging.getLogger("CityBuilder")
 
 _font_cache = {}
 
