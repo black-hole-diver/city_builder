@@ -524,7 +524,7 @@ class Hud:
                 current_y = self.select_rect.y + 55
 
             # Rename Button
-            if raw_name not in ["Tree", "Rock", "Axe", "Hammer"]:
+            if raw_name not in ["Tree", "Rock", "Axe", "Hammer", "Road", "PowerLine"]:
                 self.rename_btn_rect = pg.Rect(
                     self.select_rect.right - 90, self.select_rect.y + 12, 75, 25
                 )
