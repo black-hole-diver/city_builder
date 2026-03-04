@@ -1,7 +1,18 @@
 import random
 from game.event_bus import EventBus
 from game.buildings import ResZone, IndZone, SerZone, Road
-from game.setting import INDUSTRIAL_NEGATIVE_RADIUS, POLICE_RADIUS, STADIUM_RADIUS
+from game.setting import (
+    INDUSTRIAL_NEGATIVE_RADIUS,
+    POLICE_RADIUS,
+    STADIUM_RADIUS,
+    GROWTH_SATISFACTION_THRESHOLD,
+    DECLINE_SATISFACTION_THRESHOLD,
+    BASE_GROWTH_RATE,
+    STARTER_CITY_BOOST,
+    STARTER_POPULATION_LIMIT,
+    GROWTH_SCALER,
+    BASE_DECLINE_RATE,
+)
 from game.utils import get_line, logger
 
 
@@ -349,12 +360,19 @@ class PopulationSystem:
             f"Calculating population growth. Satisfaction: {self.resource_manager.satisfaction:.2f}"
         )
         growth_potential = 0
-        if self.resource_manager.satisfaction > 50:
+        if self.resource_manager.satisfaction > GROWTH_SATISFACTION_THRESHOLD:
             # Starter city boost: higher base growth if population < 20
-            base_growth = 5 if self.resource_manager.population < 20 else 2
-            growth_potential = int((self.resource_manager.satisfaction - 50) / 5) + base_growth
-        elif self.resource_manager.satisfaction < 30:
-            growth_potential = -3
+            base_growth = (
+                STARTER_CITY_BOOST
+                if self.resource_manager.population < STARTER_POPULATION_LIMIT
+                else BASE_GROWTH_RATE
+            )
+            bonus_growth = int(
+                (self.resource_manager.satisfaction - GROWTH_SATISFACTION_THRESHOLD) / GROWTH_SCALER
+            )
+            growth_potential = bonus_growth + base_growth
+        elif self.resource_manager.satisfaction < DECLINE_SATISFACTION_THRESHOLD:
+            growth_potential = BASE_DECLINE_RATE
 
         if growth_potential > 0:
             self.game.add_notification(

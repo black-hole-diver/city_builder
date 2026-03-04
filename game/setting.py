@@ -6,10 +6,23 @@ WORKER_SPEED = 180
 INITIAL_WORKER = 10
 
 # ==========================================
+# POPULATION & GROWTH SETTINGS
+# ==========================================
+GROWTH_SATISFACTION_THRESHOLD = 50      # Satisfaction needed to gain citizens
+DECLINE_SATISFACTION_THRESHOLD = 30     # Satisfaction level where people start leaving
+
+BASE_GROWTH_RATE = 10                   # Standard number of people moving in
+STARTER_CITY_BOOST = 5                  # Bonus people moving in when city is small
+STARTER_POPULATION_LIMIT = 20           # Population size where starter boost ends
+GROWTH_SCALER = 1                       # Lower = faster growth
+
+BASE_DECLINE_RATE = -3  # Number of people who leave per day when unhappy
+
+# ==========================================
 # ZONE SETTINGS
 # ==========================================
-ZONE_CAPACITY = 100  # Max people per zone tile
-ZONE_REFUND_PERCENT = 0.5  # 50% refund if empty
+ZONE_CAPACITY = 100                     # Max people per zone tile
+ZONE_REFUND_PERCENT = 0.5               # 50% refund if empty
 BUILDING_REFUND_PERCENT = 0.5
 
 # Satisfaction influence radiuses
