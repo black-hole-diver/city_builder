@@ -226,6 +226,20 @@ class Hud:
         self.menu_action = None
 
         if mouse_clicked:
+            if (
+                hasattr(self, "rename_btn_rect")
+                and self.rename_btn_rect
+                and self.rename_btn_rect.collidepoint(mouse_pos)
+            ):
+                if self.game and self.examined_tile:
+                    self.game.menu_state = "RENAME"
+                    self.game.rename_target = self.examined_tile
+                    # Pre-fill input with existing custom name or leave blank
+                    self.game.rename_input_text = (
+                        getattr(self.examined_tile, "custom_name", "") or ""
+                    )
+                self.mouse_pressed = True
+                return
             if self.game and self.game.menu_state == "CONFIRM_DEMOLISH":
                 if hasattr(self, "demo_yes_rect") and self.demo_yes_rect.collidepoint(mouse_pos):
                     pos = self.game.demolish_target_pos
@@ -474,32 +488,75 @@ class Hud:
         # Select HUD
         if self.examined_tile is not None:
             screen.blit(self.select_surface, self.select_rect.topleft)
-
-            # 1. Draw Title (Gold color)
             raw_name = self.examined_tile.name
+            default_text = self.display_names.get(raw_name, raw_name)
+            is_renaming = self.game and self.game.menu_state == "RENAME"
+            has_custom_name = bool(getattr(self.examined_tile, "custom_name", None))
 
-            # Translate raw name to friendly name (defaults to raw name if not in dict)
-            title_text = self.display_names.get(raw_name, raw_name)
+            if self.game and self.game.menu_state == "RENAME":
+                # Blinking cursor effect
+                cursor = "_" if (pg.time.get_ticks() // 500) % 2 == 0 else " "
+                title_text = f"{self.game.rename_input_text}{cursor}"
+                title_color = (255, 255, 255)  # White while typing
+            else:
+                title_text = getattr(self.examined_tile, "custom_name", None) or default_text
+                title_color = (255, 215, 0)  # Gold normally
 
             draw_text(
                 screen,
                 title_text,
                 35,
-                (255, 215, 0),
+                title_color,
                 (self.select_rect.x + 15, self.select_rect.y + 10),
             )
+            current_y = self.select_rect.y + 40
+            if has_custom_name or is_renaming:
+                subtext = (
+                    f"Type: {default_text}" if not is_renaming else f"Renaming: {default_text}"
+                )
+                draw_text(
+                    screen,
+                    subtext,
+                    18,
+                    (150, 150, 150),
+                    (self.select_rect.x + 15, self.select_rect.y + 35),
+                )
+                current_y = self.select_rect.y + 55
+
+            # Rename Button
+            if raw_name not in ["Tree", "Rock", "Axe", "Hammer", "Road", "PowerLine"]:
+                self.rename_btn_rect = pg.Rect(
+                    self.select_rect.right - 90, self.select_rect.y + 12, 75, 25
+                )
+                mouse_pos = pg.mouse.get_pos()
+                btn_color = (
+                    (100, 100, 120)
+                    if self.rename_btn_rect.collidepoint(mouse_pos)
+                    else (60, 60, 80)
+                )
+                pg.draw.rect(screen, btn_color, self.rename_btn_rect, border_radius=4)
+                pg.draw.rect(screen, (200, 200, 200), self.rename_btn_rect, 1, border_radius=4)
+                draw_text(
+                    screen,
+                    "RENAME",
+                    16,
+                    (255, 255, 255),
+                    (self.rename_btn_rect.x + 12, self.rename_btn_rect.y + 6),
+                )
+            else:
+                self.rename_btn_rect = None
 
             # 2. Draw a clean dividing line
             pg.draw.line(
                 screen,
                 (255, 255, 255),
-                (self.select_rect.x + 15, self.select_rect.y + 40),
-                (self.select_rect.right - 15, self.select_rect.y + 40),
+                (self.select_rect.x + 15, current_y),
+                (self.select_rect.right - 15, current_y),
             )
 
             # 3. Blit the building/nature image
             img_x = self.select_rect.x + 15
-            img_y = self.select_rect.y + 50
+            img_y = current_y + 10
             screen.blit(self.examined_tile_scaled_img, (img_x, img_y))
 
             # 4. Draw the Description Text (Use raw_name to look up the description!)

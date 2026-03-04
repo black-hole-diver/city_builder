@@ -32,6 +32,8 @@ class Building:
         self.fire_start_time = 0
         self.targeted_by_truck = False
 
+        self.custom_name = None
+
     def update(self, game_speed=1):
         pass
 

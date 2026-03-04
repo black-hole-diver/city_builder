@@ -24,3 +24,4 @@ save_slot_*.json
 "Power City Builder v1.0.1.spec"
 "Power City Builder.spec"
 .ruff_cache/
+merge_log_graph.txt
