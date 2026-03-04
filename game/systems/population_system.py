@@ -78,10 +78,8 @@ class PopulationSystem:
 
     def _zone_distribution(self):
         """Distributing the zone in to lits"""
-        from game.buildings import(
-            Police,
-            Stadium
-        )
+        from game.buildings import Police, Stadium
+
         res_zones = []
         ind_zones = []
         ser_zones = []
@@ -193,10 +191,8 @@ class PopulationSystem:
 
     def _calculate_individual_zone_service_bonuses(self, rz, services, road_networks):
         """Calculate bonuses for a residential zone based on proximity to services."""
-        from game.buildings import(
-            Police,
-            Stadium
-        )
+        from game.buildings import Police, Stadium
+
         for s in services:
             if not s.has_road_access or not getattr(s, "is_powered", False):
                 continue
@@ -287,9 +283,8 @@ class PopulationSystem:
             rz.local_satisfaction = max(0, min(100, rz.local_satisfaction))
 
     def _calculate_tree_bonus(self, rz):
-        from game.buildings import (
-            Tree
-        )
+        from game.buildings import Tree
+
         """Calculate a satisfaction bonus for residential zones from nearby trees in line of sight.
         Trees provide bonus if they are within 3 squares
         and have a clear line of sight to ResZone."""
@@ -325,6 +320,7 @@ class PopulationSystem:
         """Calculate pollution penalty for a residential zone from proximity to industrial zones.
         Trees can mitigate pollution if they are between the residential and industrial zones."""
         from game.buildings import Tree
+
         for iz in ind_zones:
             dist = (
                 (rz.origin[0] + rz.grid_width / 2 - (iz.origin[0] + iz.grid_width / 2)) ** 2
@@ -376,7 +372,7 @@ class PopulationSystem:
             f"Calculating population growth. Satisfaction: {self.resource_manager.satisfaction:.2f}"
         )
         growth_potential = 0
-        fluctuation = random.uniform(.6, 1.3)
+        fluctuation = random.uniform(0.6, 1.3)
         if self.resource_manager.satisfaction > GROWTH_SATISFACTION_THRESHOLD:
             base_growth = (
                 STARTER_CITY_BOOST
@@ -479,6 +475,7 @@ class PopulationSystem:
 
     def _update_zone_images(self, ind_zones, ser_zones, res_zones):
         from game.buildings import PowerLine
+
         """Update the image of each zone based on its current satisfaction and occupancy."""
         for iz in ind_zones:
             iz.update_image()
@@ -526,10 +523,8 @@ class PopulationSystem:
         3. Proportionally allocate students based on the fill ratio of demand vs capacity.
         4. Handle any rounding remainders by distributing leftover students
         one-by-one to random schools/universities with available capacity."""
-        from game.buildings import(
-            School,
-            University
-        )
+        from game.buildings import School, University
+
         schools = [
             e
             for e in self.game.entities

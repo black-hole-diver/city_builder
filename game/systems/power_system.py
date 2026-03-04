@@ -6,7 +6,7 @@ class PowerSystem:
         self.world = world
 
     def update_connectivity(self):
-        from game.buildings import(
+        from game.buildings import (
             PowerPlant,
             PowerLine,
             Zone,
@@ -14,24 +14,15 @@ class PowerSystem:
             Stadium,
             FireStation,
             School,
-            University
+            University,
         )
+
         """Moved from Game._calculate_power_connectivity"""
         power_cable = [
             e
             for e in self.world.entities
             if isinstance(
-                e,
-                (
-                    PowerPlant,
-                    PowerLine,
-                    Zone,
-                    Police,
-                    Stadium,
-                    FireStation,
-                    School,
-                    University
-                )
+                e, (PowerPlant, PowerLine, Zone, Police, Stadium, FireStation, School, University)
             )
         ]
         for e in power_cable:
