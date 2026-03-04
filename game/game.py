@@ -3,7 +3,7 @@ import sys
 import random
 
 from .world import World
-from .utils import draw_text, get_line
+from .utils import draw_text, get_line, logger
 from .camera import Camera
 from .hud import Hud
 from .workers import Worker
@@ -94,7 +94,7 @@ class Game:
             pg.mixer.music.set_volume(0.1)  # Set volume to 10% (0.0 to 1.0)
             pg.mixer.music.play(-1)  # Loop indefinitely
         except Exception as e:
-            print(f"Error loading music: {e}")
+            logger.error(f"Error loading music: {e}")
 
         EventBus.subscribe("play_sound", self.play_sound)
         EventBus.subscribe("notify", self.add_notification)
@@ -366,7 +366,7 @@ class Game:
             if self.sound_on:
                 pg.mixer.music.play()  # Play once
         except Exception as e:
-            print(f"Error loading dino music: {e}")
+            logger.error(f"Error loading dino music: {e}")
 
     def end_rampage(self):
         """Concludes the Dinosaur Rampage event and calculates casualties.
@@ -672,6 +672,7 @@ class Game:
 
     def quit_game(self):
         """Handle clean game exit."""
+        logger.info("Quitting game...")
         self.playing = False
         pg.quit()
         sys.exit()
@@ -687,7 +688,7 @@ class Game:
         """Save current game state to a JSON file."""
         if filename is None:
             filename = self.save_slots[0]
-        print(f"Saving game to {filename}...")
+        logger.info(f"Saving game to {filename}...")
         data = {
             "funds": self.resource_manager.funds,
             "population": self.resource_manager.population,
@@ -753,7 +754,7 @@ class Game:
         # Write to JSON file
         with open(filename, "w") as f:
             json.dump(data, f)
-        print("Game saved successfully!")
+        logger.info("Game saved successfully!")
         self.notification_text = "Game Saved!"
         self.notification_timer = pg.time.get_ticks()
 
@@ -763,11 +764,11 @@ class Game:
             filename = self.save_slots[0]
 
         if not os.path.exists(filename):
-            print(f"No save file found at {filename}!")
+            logger.warning(f"No save file found at {filename}!")
             self.add_notification("No save file found!", (255, 100, 100))
             return
 
-        print(f"Loading game from {filename}...")
+        logger.info(f"Loading game from {filename}...")
         with open(filename, "r") as f:
             data = json.load(f)
 
@@ -898,7 +899,7 @@ class Game:
 
         self.notification_text = "Game Loaded!"
         self.notification_timer = pg.time.get_ticks()
-        print("Game loaded successfully!")
+        logger.info("Game loaded successfully!")
 
     def delete_save(self, filename):
         """Delete a save file."""
@@ -1404,6 +1405,9 @@ class Game:
 
     def _calculate_population_growth(self, res_zones, ind_zones, ser_zones):
         """Calculate population growth/decline based on overall satisfaction and other factors."""
+        logger.info(
+            f"Calculating population growth. Satisfaction: {self.resource_manager.satisfaction:.2f}"
+        )
         growth_potential = 0
         if self.resource_manager.satisfaction > 50:
             # Starter city boost: higher base growth if population < 20

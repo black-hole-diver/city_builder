@@ -2,6 +2,7 @@ import pygame as pg
 import random
 import noise
 
+from .utils import logger
 from game.event_bus import EventBus
 from .setting import (
     TILE_SIZE,
@@ -83,7 +84,7 @@ class World:
                 img = pg.transform.smoothscale(img, (target_width, target_height))
                 self.fire_images.append(img)
         except Exception as e:
-            print(f"Warning: Could not load fire animation image: {e}")
+            logger.warning(f"Warning: Could not load fire animation image: {e}")
 
         self.buildings: List[List[Optional["Building"]]] = [
             [None for _ in range(self.grid_length_y)] for _ in range(self.grid_length_x)
