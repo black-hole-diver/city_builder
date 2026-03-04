@@ -1,5 +1,5 @@
 from game.event_bus import EventBus
-
+from .buildings import Tree, Road, ResZone, Zone
 
 class Tool:
     def __init__(self, name):
@@ -18,7 +18,7 @@ class Axe(Tool):
 
     def can_use(self, grid_pos, world):
         b = world.buildings[grid_pos[0]][grid_pos[1]]
-        return b is not None and b.name == "Tree"
+        return b is not None and isinstance(b, Tree)
 
     def use(self, grid_pos, world):
         if self.can_use(grid_pos, world):
@@ -61,7 +61,7 @@ class Hammer(Tool):
 
                 # Check if it's a road and if its removal breaks connectivity
                 is_critical_road = False
-                if b.name == "Road":
+                if isinstance(b, Road):
                     if not world.is_road_safe_to_demolish(grid_pos[0], grid_pos[1]):
                         is_critical_road = True
 
@@ -77,12 +77,12 @@ class Hammer(Tool):
                     }
 
                     if is_occupied_zone:
-                        if b.name == "ResZone":
+                        if isinstance(b, ResZone):
                             # Check available housing in other zones
                             other_res = [
                                 z
                                 for z in world.entities
-                                if getattr(z, "name", "") == "ResZone" and z != b
+                                if isinstance(z, ResZone) and z != b
                             ]
                             available_beds = sum(z.capacity - z.occupants for z in other_res)
 
@@ -115,7 +115,7 @@ class VIP(Tool):
     def can_use(self, grid_pos, world):
         b = world.buildings[grid_pos[0]][grid_pos[1]]
         has_funds = world.resource_manager.is_affordable("VIP")
-        is_valid_zone = b is not None and b.name in ["ResZone", "IndZone", "SerZone"]
+        is_valid_zone = b is not None and isinstance(b, Zone)
         return is_valid_zone and not getattr(b, "is_vip", False) and has_funds
 
     def use(self, grid_pos, world):

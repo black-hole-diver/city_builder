@@ -251,7 +251,7 @@ class World:
                                     self.collision_matrix[y][x] = 0
 
                             # NEW: Update road access for ALL buildings if we just placed a road
-                            if building_name == "Road":
+                            if isinstance(ent, Road):
                                 newly_connected = False
                                 for e in self.entities:
                                     if hasattr(e, "has_road_access"):
@@ -262,52 +262,46 @@ class World:
                                         if (
                                             not was_connected
                                             and e.has_road_access
-                                            and getattr(e, "name", "") != "Road"
+                                            and not isinstance(e, Road)
                                         ):
                                             newly_connected = True
                                 # Recalculate satisfaction immediately for better responsiveness
                                 EventBus.publish("recalculate_satisfaction")
 
-                            # NEW: Instant Power Recalculation Trigger
-                            power_conductors = [
-                                "ResZone",
-                                "IndZone",
-                                "SerZone",
-                                "PowerPlant",
-                                "PowerLine",
-                                "Police",
-                                "FireStation",
-                                "Stadium",
-                                "School",
-                                "University",
-                            ]
-
-                            if building_name in power_conductors:
+                            # Instant Power Recalculation Trigger
+                            if isinstance(
+                                ent,
+                                (
+                                    Zone,
+                                    PowerPlant,
+                                    PowerLine,
+                                    Police,
+                                    FireStation,
+                                    Stadium,
+                                    School,
+                                    University,
+                                ),
+                            ):
                                 EventBus.publish("recalculate_satisfaction")
 
                             # Initial image update for zones
                             if hasattr(ent, "update_image"):
                                 ent.update_image()
-                                if building_name == "ResZone":
+                                if isinstance(ent, ResZone):
                                     EventBus.publish(
                                         "notify", "RESIDENT AREA BUILT", (100, 200, 255)
                                     )
                                     EventBus.publish("recalculate_satisfaction")
-                                elif building_name in ["IndZone", "SerZone"]:
+                                elif isinstance(ent, (IndZone, SerZone)):
                                     EventBus.publish("notify", "NEW WORKPLACE BUILT", (255, 165, 0))
                                     EventBus.publish("recalculate_satisfaction")
 
-                            if building_name == "Road":
+                            if isinstance(ent, Road):
                                 if newly_connected:
                                     EventBus.publish("notify", "ROAD CONNECTED", (200, 200, 200))
-                            elif building_name in [
-                                "Police",
-                                "Stadium",
-                                "FireStation",
-                                "School",
-                                "University",
-                                "PowerPlant",
-                            ]:
+                            elif isinstance(
+                                ent, (Police, Stadium, FireStation, School, University, PowerPlant)
+                            ):
                                 EventBus.publish(
                                     "notify", f"NEW {building_name.upper()} BUILT!", (255, 255, 100)
                                 )
@@ -315,7 +309,7 @@ class World:
                                 EventBus.publish("recalculate_satisfaction")
 
                         # Do not deselect if it's a Road or PowerLine for continuous construction
-                        if building_name not in ["Road", "PowerLine", "Tree"]:
+                        if not isinstance(ent, (Road, PowerLine, Tree)):
                             self.hud.selected_tile = None
                         else:
                             # Re-check affordability for continuous placement
@@ -483,8 +477,10 @@ class World:
                 }
             )
 
+        from .workers import Car, FireTruck
+
         for ent in self.entities:
-            if getattr(ent, "name", "") in ["FireTruck", "Car"]:
+            if isinstance(ent, (Car, FireTruck)):
                 ft_render_pos = ent.tile["render_pos"]
                 ft_screen_x = ft_render_pos[0] + offset_x
                 ft_screen_y = ft_render_pos[1] - (ent.image.get_height() - TILE_SIZE) + offset_y
@@ -670,7 +666,7 @@ class World:
                     continue
                 if 0 <= i < self.grid_length_x and 0 <= j < self.grid_length_y:
                     b = self.buildings[i][j]
-                    if b and b.name == "Road":
+                    if isinstance(b, Road):
                         return True
         return False
 
@@ -683,7 +679,7 @@ class World:
                     continue
                 if 0 <= i < self.grid_length_x and 0 <= j < self.grid_length_y:
                     b = self.buildings[i][j]
-                    if b and b.name == "Road":
+                    if isinstance(b, Road):
                         roads.append((i, j))
         return roads
 
@@ -714,7 +710,7 @@ class World:
             for rx in range(self.grid_length_x):
                 for ry in range(self.grid_length_y):
                     b = self.buildings[rx][ry]
-                    if b and b.name == "Road":
+                    if isinstance(b, Road):
                         road_positions.append((rx, ry))
 
             for rx, ry in road_positions:
@@ -732,7 +728,7 @@ class World:
                                 continue
                             if 0 <= nx < self.grid_length_x and 0 <= ny < self.grid_length_y:
                                 nb = self.buildings[nx][ny]
-                                if nb and nb.name == "Road" and (nx, ny) not in visited:
+                                if isinstance(nb, Road) and (nx, ny) not in visited:
                                     visited.add((nx, ny))
                                     queue.append((nx, ny))
                     net_id += 1
@@ -800,11 +796,9 @@ class World:
                 )
 
             # 2. Rehousing Logic for ResZones
-            if b.name == "ResZone" and getattr(b, "occupants", 0) > 0:
+            if isinstance(b, ResZone) and getattr(b, "occupants", 0) > 0:
                 displaced = b.occupants
-                other_res = [
-                    z for z in self.entities if getattr(z, "name", "") == "ResZone" and z != b
-                ]
+                other_res = [z for z in self.entities if isinstance(z, ResZone) and z != b]
 
                 # Try to fit them into other zones
                 for z in other_res:
@@ -881,7 +875,7 @@ class World:
                     self.collision_matrix[y][x] = 1
 
             # 5. Handle Connectivity Updates
-            if b.name == "Road":
+            if isinstance(b, Road):
                 for e in self.entities:
                     if hasattr(e, "has_road_access"):
                         e.has_road_access = self.has_road_access(
@@ -913,17 +907,17 @@ class World:
         stations = [
             b
             for b in self.entities
-            if getattr(b, "name", "") == "FireStation" and getattr(b, "is_powered", False)
+            if isinstance(b, FireStation) and getattr(b, "is_powered", False)
         ]
 
         for b in self.entities.copy():
-            if not hasattr(b, "on_fire") or b.name in ["Road", "Tree", "FireStation"]:
+            if not hasattr(b, "on_fire") or isinstance(b, (Road, Tree, FireStation)):
                 continue
 
             # --- START LOGIC ---
             if not b.on_fire:
                 chance = CHANCE * 0.01
-                if b.name in ["PowerPlant", "IndZone"]:
+                if isinstance(b, (PowerPlant, IndZone)):
                     chance = CHANCE * 0.1  # Higher risk
 
                 # Check station radius
@@ -963,7 +957,7 @@ class World:
                                         and neighbor != b
                                         and hasattr(neighbor, "on_fire")
                                         and not neighbor.on_fire
-                                        and neighbor.name not in ["Road", "Tree", "FireStation"]
+                                        and not isinstance(neighbor, (Road, Tree, FireStation))
                                     ):
                                         neighbor.on_fire = True
                                         neighbor.fire_start_time = now
