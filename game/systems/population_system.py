@@ -69,7 +69,7 @@ class PopulationSystem:
         )
         self._calculate_overall_city_satisfaction(res_zones)
         if not skip_growth:
-            self._calculate_population_growth(res_zones, ind_zones, ser_zones)
+            self._calculate_population_growth(res_zones)
 
         # -- Education and Workplace Assignments ---
         self._workplace_assignment(ind_zones, ser_zones, res_zones)
@@ -370,14 +370,14 @@ class PopulationSystem:
         else:
             self.resource_manager.satisfaction = 100  # No zones = perfect satisfaction
 
-    def _calculate_population_growth(self, res_zones, ind_zones, ser_zones):
+    def _calculate_population_growth(self, res_zones):
         """Calculate population growth/decline based on overall satisfaction and other factors."""
         logger.info(
             f"Calculating population growth. Satisfaction: {self.resource_manager.satisfaction:.2f}"
         )
         growth_potential = 0
+        fluctuation = random.uniform(.6, 1.3)
         if self.resource_manager.satisfaction > GROWTH_SATISFACTION_THRESHOLD:
-            # Starter city boost: higher base growth if population < 20
             base_growth = (
                 STARTER_CITY_BOOST
                 if self.resource_manager.population < STARTER_POPULATION_LIMIT
@@ -386,9 +386,10 @@ class PopulationSystem:
             bonus_growth = int(
                 (self.resource_manager.satisfaction - GROWTH_SATISFACTION_THRESHOLD) / GROWTH_SCALER
             )
-            growth_potential = bonus_growth + base_growth
+            raw_growth = bonus_growth + base_growth
+            growth_potential = int(raw_growth * fluctuation)
         elif self.resource_manager.satisfaction < DECLINE_SATISFACTION_THRESHOLD:
-            growth_potential = BASE_DECLINE_RATE
+            growth_potential = int(BASE_DECLINE_RATE * fluctuation)
 
         if growth_potential > 0:
             eligible = [
