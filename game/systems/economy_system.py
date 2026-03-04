@@ -51,10 +51,8 @@ class EconomySystem:
         )
 
     def _check_retirement_and_graduation(self):
-        from game.buildings import (
-            School,
-            University
-        )
+        from game.buildings import School, University
+
         attrition_rate = 0.10
         retired_sec = int(self.resource_manager.edu_secondary * attrition_rate)
         retired_tert = int(self.resource_manager.edu_tertiary * attrition_rate)

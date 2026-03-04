@@ -131,12 +131,12 @@ class Zone(Building):
 class ResZone(Zone):
     def __init__(self, pos, image, resource_manager, grid_pos):
         super().__init__(pos, image, "ResZone", resource_manager, grid_pos)
-        from .hud import Hud
+        from .utils import format_isometric_asset
 
-        self.lvl1_image = Hud.format_isometric_asset(
+        self.lvl1_image = format_isometric_asset(
             pg.image.load(RESZONE_URL2).convert_alpha(), is_flat=True, grid_w=4, grid_h=4
         )
-        self.lvl2_image = Hud.format_isometric_asset(
+        self.lvl2_image = format_isometric_asset(
             pg.image.load(RESZONE_URL3).convert_alpha(), is_flat=True, grid_w=4, grid_h=4
         )
         self.lvl3_image = pg.image.load(RESZONE_URL4).convert_alpha()
@@ -145,12 +145,12 @@ class ResZone(Zone):
 class IndZone(Zone):
     def __init__(self, pos, image, resource_manager, grid_pos):
         super().__init__(pos, image, "IndZone", resource_manager, grid_pos)
-        from .hud import Hud
+        from .utils import format_isometric_asset
 
-        self.lvl1_image = Hud.format_isometric_asset(
+        self.lvl1_image = format_isometric_asset(
             pg.image.load(INDZONE_URL2).convert_alpha(), is_flat=True, grid_w=4, grid_h=4
         )
-        self.lvl2_image = Hud.format_isometric_asset(
+        self.lvl2_image = format_isometric_asset(
             pg.image.load(INDZONE_URL3).convert_alpha(), is_flat=True, grid_w=4, grid_h=4
         )
         self.lvl3_image = pg.image.load(INDZONE_URL4).convert_alpha()
@@ -159,12 +159,12 @@ class IndZone(Zone):
 class SerZone(Zone):
     def __init__(self, pos, image, resource_manager, grid_pos):
         super().__init__(pos, image, "SerZone", resource_manager, grid_pos)
-        from .hud import Hud
+        from .utils import format_isometric_asset
 
-        self.lvl1_image = Hud.format_isometric_asset(
+        self.lvl1_image = format_isometric_asset(
             pg.image.load(SERZONE_URL2).convert_alpha(), is_flat=True, grid_w=4, grid_h=4
         )
-        self.lvl2_image = Hud.format_isometric_asset(
+        self.lvl2_image = format_isometric_asset(
             pg.image.load(SERZONE_URL3).convert_alpha(), is_flat=True, grid_w=4, grid_h=4
         )
         self.lvl3_image = pg.image.load(SERZONE_URL4).convert_alpha()

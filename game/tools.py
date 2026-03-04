@@ -1,6 +1,7 @@
 from game.event_bus import EventBus
 from .buildings import Tree, Road, ResZone, Zone
 
+
 class Tool:
     def __init__(self, name):
         self.name = name
@@ -80,9 +81,7 @@ class Hammer(Tool):
                         if isinstance(b, ResZone):
                             # Check available housing in other zones
                             other_res = [
-                                z
-                                for z in world.entities
-                                if isinstance(z, ResZone) and z != b
+                                z for z in world.entities if isinstance(z, ResZone) and z != b
                             ]
                             available_beds = sum(z.capacity - z.occupants for z in other_res)
 
