@@ -308,37 +308,7 @@ class Game:
                 # --- Population Growth System ---
                 # Starter city boost: higher chance if population < 10
                 # Regular growth: requires high satisfaction if population >= 10
-                threshold_chance = 0.5 if self.resource_manager.population < 10 else 0.05
-                satisfaction_bonus = self.resource_manager.satisfaction > 70
-
-                if random.random() < threshold_chance and (
-                    self.resource_manager.population < 10 or satisfaction_bonus
-                ):
-                    # Find all eligible residential zones with capacity
-                    res_zones = [
-                        b
-                        for b in self.entities
-                        if isinstance(b, ResZone) and b.has_road_access and b.occupants < b.capacity
-                    ]
-
-                    if res_zones:
-                        target = random.choice(res_zones)
-                        target.occupants += 1
-                        target.update_image()
-
-                        # Sync population count to prevent drift
-                        all_res_zones = [b for b in self.entities if isinstance(b, ResZone)]
-                        self.resource_manager.population = sum(rz.occupants for rz in all_res_zones)
-
-                        # Display appropriate notification
-                        if self.resource_manager.population <= 10:
-                            self.add_notification("New citizen moved in!", (50, 255, 50))
-                        else:
-                            self.add_notification("City is growing!", (150, 255, 150))
-
-                        # Recalculate satisfaction and workplace assignments
-                        EventBus.publish("recalculate_satisfaction")
-                EventBus.publish("recalculate_satisfaction")
+                EventBus.publish("recalculate_satisfaction_and_growth")
             # --- Annual Logic Trigger ---
             if self.current_date.year > old_year:
                 self.economy_system.apply_annual_logic()

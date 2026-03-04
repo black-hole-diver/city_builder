@@ -25,6 +25,10 @@ class PopulationSystem:
             "recalculate_satisfaction",
             lambda: self.calculate_satisfaction_and_growth(skip_growth=True),
         )
+        EventBus.subscribe(
+            "recalculate_satisfaction_and_growth",
+            lambda: self.calculate_satisfaction_and_growth(skip_growth=False),
+        )
 
     def calculate_satisfaction_and_growth(self, skip_growth=True):
         """Calculate satisfaction levels, population growth, and workplace assignments."""
@@ -387,23 +391,29 @@ class PopulationSystem:
             growth_potential = BASE_DECLINE_RATE
 
         if growth_potential > 0:
-            self.game.add_notification(
-                f"City Population Growth: +{growth_potential}", (100, 255, 100)
-            )
-            for _ in range(growth_potential):
-                eligible = [
-                    rz
-                    for rz in res_zones
-                    if rz.occupants < rz.capacity
-                    and rz.has_road_access
-                    and getattr(rz, "is_powered", False)
-                ]
-                if eligible:
+            eligible = [
+                rz
+                for rz in res_zones
+                if rz.occupants < rz.capacity
+                and rz.has_road_access
+                and getattr(rz, "is_powered", False)
+            ]
+            if eligible:
+                actual_growth = 0
+                for _ in range(growth_potential):
                     weights = [1 + getattr(rz, "tree_bonus", 0) for rz in eligible]
                     target = random.choices(eligible, weights=weights, k=1)[0]
                     target.occupants += 1
                     self.resource_manager.edu_primary += 1
-            # Sync population after growth
+                    actual_growth += 1
+                    if target.occupants >= target.capacity:
+                        eligible.remove(target)
+                        if not eligible:
+                            break
+                if actual_growth > 0:
+                    self.game.add_notification(
+                        f"City Population Growth: +{actual_growth}", (100, 255, 100)
+                    )
             self.resource_manager.population = sum(rz.occupants for rz in res_zones)
 
         # --- Apply Population Decline ---
