@@ -4,6 +4,7 @@ from game.buildings import ResZone, IndZone, SerZone, Road
 from game.setting import INDUSTRIAL_NEGATIVE_RADIUS, POLICE_RADIUS, STADIUM_RADIUS
 from game.utils import get_line, logger
 
+
 class PopulationSystem:
     def __init__(self, world, resource_manager, game_context):
         self.world = world
@@ -356,7 +357,9 @@ class PopulationSystem:
             growth_potential = -3
 
         if growth_potential > 0:
-            self.game.add_notification(f"City Population Growth: +{growth_potential}", (100, 255, 100))
+            self.game.add_notification(
+                f"City Population Growth: +{growth_potential}", (100, 255, 100)
+            )
             for _ in range(growth_potential):
                 eligible = [
                     rz

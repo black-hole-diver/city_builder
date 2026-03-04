@@ -12,7 +12,7 @@ from .camera import Camera
 from .hud import Hud
 from .workers import Worker
 from .resource_manager import ResourceManager
-from .buildings import ResZone, IndZone, SerZone, Road
+from .buildings import ResZone, IndZone, SerZone
 from .event_bus import EventBus
 from .setting import (
     SPEEDS,
