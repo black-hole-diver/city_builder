@@ -74,6 +74,10 @@ class PopulationSystem:
 
     def _zone_distribution(self):
         """Distributing the zone in to lits"""
+        from game.buildings import(
+            Police,
+            Stadium
+        )
         res_zones = []
         ind_zones = []
         ser_zones = []
@@ -88,7 +92,7 @@ class PopulationSystem:
                 ser_zones.append(entity)
             elif isinstance(entity, Road):
                 roads.append(entity)
-            elif hasattr(entity, "name") and entity.name in ["Police", "Stadium"]:
+            elif isinstance(entity, (Police, Stadium)):
                 services.append(entity)
         return res_zones, ind_zones, ser_zones, services, roads
 
@@ -185,6 +189,10 @@ class PopulationSystem:
 
     def _calculate_individual_zone_service_bonuses(self, rz, services, road_networks):
         """Calculate bonuses for a residential zone based on proximity to services."""
+        from game.buildings import(
+            Police,
+            Stadium
+        )
         for s in services:
             if not s.has_road_access or not getattr(s, "is_powered", False):
                 continue
@@ -199,10 +207,10 @@ class PopulationSystem:
                 + (rz.origin[1] + rz.grid_height / 2 - (s.origin[1] + s.grid_height / 2)) ** 2
             ) ** 0.5
 
-            if s.name == "Police" and dist < POLICE_RADIUS:
+            if isinstance(s, Police) and dist < POLICE_RADIUS:
                 rz.local_satisfaction += 10
                 rz.bonuses.append("Safety Bonus (+10)")
-            if s.name == "Stadium" and dist < STADIUM_RADIUS:
+            if isinstance(s, Stadium) and dist < STADIUM_RADIUS:
                 rz.local_satisfaction += 15
                 rz.bonuses.append("Stadium Bonus (+15)")
 
@@ -275,11 +283,14 @@ class PopulationSystem:
             rz.local_satisfaction = max(0, min(100, rz.local_satisfaction))
 
     def _calculate_tree_bonus(self, rz):
+        from game.buildings import (
+            Tree
+        )
         """Calculate a satisfaction bonus for residential zones from nearby trees in line of sight.
         Trees provide bonus if they are within 3 squares
         and have a clear line of sight to ResZone."""
         rz.tree_bonus = 0
-        all_trees = [e for e in self.game.entities if getattr(e, "name", "") == "Tree"]
+        all_trees = [e for e in self.game.entities if isinstance(e, Tree)]
         for tree in all_trees:
             # Get closest point on the ResZone to the tree
             cx = max(rz.origin[0], min(tree.origin[0], rz.origin[0] + rz.grid_width - 1))
@@ -309,6 +320,7 @@ class PopulationSystem:
     def _calculate_industrial_pollution_penalty(self, rz, ind_zones):
         """Calculate pollution penalty for a residential zone from proximity to industrial zones.
         Trees can mitigate pollution if they are between the residential and industrial zones."""
+        from game.buildings import Tree
         for iz in ind_zones:
             dist = (
                 (rz.origin[0] + rz.grid_width / 2 - (iz.origin[0] + iz.grid_width / 2)) ** 2
@@ -330,7 +342,7 @@ class PopulationSystem:
                                 0 <= nx < self.world.grid_length_x
                                 and 0 <= ny < self.world.grid_length_y
                             ):
-                                if getattr(self.world.buildings[nx][ny], "name", "") == "Tree":
+                                if isinstance(self.world.buildings[nx][ny], Tree):
                                     forest_blocked = True
                                     break
                         if forest_blocked:
@@ -455,6 +467,7 @@ class PopulationSystem:
                         remainder -= 1
 
     def _update_zone_images(self, ind_zones, ser_zones, res_zones):
+        from game.buildings import PowerLine
         """Update the image of each zone based on its current satisfaction and occupancy."""
         for iz in ind_zones:
             iz.update_image()
@@ -463,7 +476,7 @@ class PopulationSystem:
         for rz in res_zones:
             rz.update_image()
         for pl in self.game.entities:
-            if getattr(pl, "name", "") == "PowerLine" and hasattr(pl, "update_image"):
+            if isinstance(pl, PowerLine) and hasattr(pl, "update_image"):
                 pl.update_image()
 
     def _allocate_students(self, entities, demand):
@@ -502,15 +515,19 @@ class PopulationSystem:
         3. Proportionally allocate students based on the fill ratio of demand vs capacity.
         4. Handle any rounding remainders by distributing leftover students
         one-by-one to random schools/universities with available capacity."""
+        from game.buildings import(
+            School,
+            University
+        )
         schools = [
             e
             for e in self.game.entities
-            if e.name == "School" and e.has_road_access and getattr(e, "is_powered", False)
+            if isinstance(e, School) and e.has_road_access and getattr(e, "is_powered", False)
         ]
         unis = [
             e
             for e in self.game.entities
-            if e.name == "University" and e.has_road_access and getattr(e, "is_powered", False)
+            if isinstance(e, University) and e.has_road_access and getattr(e, "is_powered", False)
         ]
         for s in schools:
             s.occupants = 0

@@ -6,23 +6,33 @@ class PowerSystem:
         self.world = world
 
     def update_connectivity(self):
+        from game.buildings import(
+            PowerPlant,
+            PowerLine,
+            Zone,
+            Police,
+            Stadium,
+            FireStation,
+            School,
+            University
+        )
         """Moved from Game._calculate_power_connectivity"""
         power_cable = [
             e
             for e in self.world.entities
-            if e.name
-            in [
-                "PowerPlant",
-                "PowerLine",
-                "ResZone",
-                "IndZone",
-                "SerZone",
-                "Police",
-                "Stadium",
-                "FireStation",
-                "School",
-                "University",
-            ]
+            if isinstance(
+                e,
+                (
+                    PowerPlant,
+                    PowerLine,
+                    Zone,
+                    Police,
+                    Stadium,
+                    FireStation,
+                    School,
+                    University
+                )
+            )
         ]
         for e in power_cable:
             e.is_powered = False
@@ -31,27 +41,27 @@ class PowerSystem:
             power_plants = [
                 b
                 for b in network
-                if b.name == "PowerPlant" and getattr(b, "has_road_access", False)
+                if isinstance(b, PowerPlant) and getattr(b, "has_road_access", False)
             ]
             total_supply = len(power_plants) * POWER_PLANT_SUPPLY
             demand_list = []
             for b in network:
-                if b.name in ["PowerPlant", "PowerLine"]:
+                if isinstance(b, (PowerLine, PowerPlant)):
                     b.is_powered = total_supply > 0
                     continue
                 demand = 0
-                if b.name in ["ResZone", "IndZone", "SerZone"]:
+                if isinstance(b, Zone):
                     demand = 5 + getattr(b, "occupants", 0) * 2
                 else:
                     demand = 50
-                    if b.name == "Stadium":
+                    if isinstance(b, Stadium):
                         demand = 200
-                    elif b.name == "University":
+                    elif isinstance(b, University):
                         demand = 100
                 if demand > 0:
                     demand_list.append((b, demand))
             total_network_demand = sum(dem for _, dem in demand_list)
-            all_power_plants_in_network = [b for b in network if b.name == "PowerPlant"]
+            all_power_plants_in_network = [b for b in network if isinstance(b, PowerPlant)]
             for pp in all_power_plants_in_network:
                 if getattr(pp, "has_road_access", False):
                     pp.network_supply = total_supply
@@ -62,7 +72,7 @@ class PowerSystem:
                     pp.network_demand = 0
                     pp.is_powered = False
             demand_list.sort(
-                key=lambda x: 0 if x[0].name in ["ResZone", "IndZone", "SerZone"] else 1,
+                key=lambda x: 0 if isinstance(x[0], Zone) else 1,
                 reverse=True,
             )
             current_supply = total_supply

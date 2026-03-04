@@ -51,6 +51,10 @@ class EconomySystem:
         )
 
     def _check_retirement_and_graduation(self):
+        from game.buildings import (
+            School,
+            University
+        )
         attrition_rate = 0.10
         retired_sec = int(self.resource_manager.edu_secondary * attrition_rate)
         retired_tert = int(self.resource_manager.edu_tertiary * attrition_rate)
@@ -66,12 +70,12 @@ class EconomySystem:
         schools = [
             e
             for e in self.game.entities
-            if e.name == "School" and e.has_road_access and getattr(e, "is_powered", False)
+            if isinstance(e, School) and e.has_road_access and getattr(e, "is_powered", False)
         ]
         unis = [
             e
             for e in self.game.entities
-            if e.name == "University" and e.has_road_access and getattr(e, "is_powered", False)
+            if isinstance(e, University) and e.has_road_access and getattr(e, "is_powered", False)
         ]
 
         # Schools graduate Primary -> Secondary
