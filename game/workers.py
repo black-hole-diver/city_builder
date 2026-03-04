@@ -6,7 +6,7 @@ from pathfinding.core.grid import Grid
 from pathfinding.finder.a_star import AStarFinder
 
 from game.event_bus import EventBus
-from .setting import WORKER_SPEED, CAR_URL, WORKER_URL
+from .setting import FIRETRUCK_URL, WORKER_SPEED, CAR_URL, WORKER_URL
 
 
 class Worker:
@@ -128,10 +128,17 @@ class FireTruck:
         self.state = "TO_FIRE"  # States: TO_FIRE, EXTINGUISHING, TO_STATION
         self.extinguish_timer = 0
 
+        # Contain within 64 px
         try:
-            self.image = pg.image.load("assets/graphics/FireTruck.png").convert_alpha()
+            original_image = pg.image.load("assets/graphics/FireTruck.png").convert_alpha()
         except (FileNotFoundError, pg.error):
-            self.image = pg.image.load("assets/graphics/worker.png").convert_alpha()
+            original_image = pg.image.load("assets/graphics/worker.png").convert_alpha()
+
+        orig_w, orig_h = original_image.get_size()
+        target_w = 64
+        target_h = int(orig_h * (target_w / orig_w))
+
+        self.image = pg.transform.smoothscale(original_image, (target_w, target_h))
 
         self.image = pg.transform.scale(
             self.image, (self.image.get_width() * 2, self.image.get_height() * 2)
