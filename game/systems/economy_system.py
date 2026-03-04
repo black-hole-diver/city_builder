@@ -1,5 +1,6 @@
 from game.event_bus import EventBus
 
+
 class EconomySystem:
     def __init__(self, world, resource_manager, game_context):
         self.world = world
