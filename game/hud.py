@@ -21,6 +21,18 @@ from .setting import (
 )
 from .utils import draw_text
 from .event_bus import EventBus
+from .buildings import (
+    Building,
+    IndZone,
+    PowerLine,
+    PowerPlant,
+    FireStation,
+    Road,
+    Tree,
+    SerZone,
+    School,
+    University,
+)
 
 
 class Hud:
@@ -524,7 +536,9 @@ class Hud:
                 current_y = self.select_rect.y + 55
 
             # Rename Button
-            if raw_name not in ["Tree", "Rock", "Axe", "Hammer", "Road", "PowerLine"]:
+            if isinstance(self.examined_tile, Building) and not isinstance(
+                self.examined_tile, (Tree, PowerLine, Road)
+            ):
                 self.rename_btn_rect = pg.Rect(
                     self.select_rect.right - 90, self.select_rect.y + 12, 75, 25
                 )
@@ -605,10 +619,10 @@ class Hud:
                 percent = int((occ / cap) * 100) if cap > 0 else 0
 
                 # Determine labels based on zone type
-                is_working_zone = self.examined_tile.name in ["IndZone", "SerZone"]
+                is_working_zone = isinstance(self.examined_tile, (IndZone, SerZone))
                 if is_working_zone:
                     pop_label = "Employees"
-                elif self.examined_tile.name in ["School", "University"]:
+                elif isinstance(self.examined_tile, (School, University)):
                     pop_label = "Students"
                 else:
                     pop_label = "Local Pop"
@@ -648,10 +662,12 @@ class Hud:
             # ==========================================
             b = self.examined_tile
             # We don't show power status for nature, tools, or basic infrastructure
-            if b.name not in ["Tree", "Rock", "Road", "Axe", "Hammer"]:
-                current_y += 5  # Add a tiny bit of padding
+            from .tools import Tool
 
-                if b.name == "PowerPlant":
+            if not isinstance(b, (Tree, Road, Tool)):
+                current_y += 5
+
+                if isinstance(b, PowerPlant):
                     supply = getattr(b, "network_supply", 0)
                     demand = getattr(b, "network_demand", 0)
                     # Green if we have enough power, Red if overloaded
@@ -678,15 +694,17 @@ class Hud:
             # ==========================================
             # NEW: Fire Protection Status
             # ==========================================
-            if b.name not in ["Tree", "Rock", "Road", "Axe", "Hammer", "FireStation"]:
+            if isinstance(b, Building) and not isinstance(b, (Tree, Road, FireStation)):
                 # Check for nearby powered Fire Stations
                 from .setting import FIRE_STATION_RADIUS
 
                 is_fire_protected = False
                 if self.game:
                     for ent in self.game.entities:
-                        if getattr(ent, "name", "") == "FireStation" and getattr(
-                            ent, "is_powered", False
+                        if (
+                            isinstance(ent, FireStation)
+                            and getattr(ent, "is_powered", False)
+                            and getattr(ent, "has_road_access", False)
                         ):
                             dist = abs(b.origin[0] - ent.origin[0]) + abs(
                                 b.origin[1] - ent.origin[1]
@@ -700,7 +718,7 @@ class Hud:
                     )
                     current_y += 20
                 else:
-                    if b.name in ["IndZone", "PowerPlant"]:
+                    if isinstance(b, (PowerPlant, IndZone)):
                         draw_text(
                             screen,
                             "Safety: HIGH FIRE RISK",
