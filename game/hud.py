@@ -1,9 +1,5 @@
 import pygame as pg
-from .setting import (
-    HUD_COLOR,
-    BUILDING_SPECS,
-    ITEM_DESCRIPTIONS,
-)
+from .setting import HUD_COLOR, BUILDING_SPECS, ITEM_DESCRIPTIONS, EntityType, GameEvent
 from .utils import draw_text, load_images
 from .event_bus import EventBus
 from .buildings import (
@@ -61,12 +57,12 @@ class Hud:
         self.mouse_pressed = False
 
         self.display_names = {
-            "ResZone": "Residential Zone",
-            "IndZone": "Industrial Zone",
-            "SerZone": "Service Zone",
-            "FireStation": "Fire Station",
-            "PowerPlant": "Power Plant",
-            "PowerLine": "Power Line",
+            EntityType.RES_ZONE: "Residential Zone",
+            EntityType.IND_ZONE: "Industrial Zone",
+            EntityType.SER_ZONE: "Service Zone",
+            EntityType.FIRE_STATION: "Fire Station",
+            EntityType.POWER_PLANT: "Power Plant",
+            EntityType.POWERLINE: "Power Line",
         }
 
         self.item_descriptions = ITEM_DESCRIPTIONS
@@ -190,7 +186,7 @@ class Hud:
             rect = image_scale.get_rect(topleft=(cell_x + offset_x, cell_y + offset_y))
             cell_rect = pg.Rect(cell_x, cell_y, cell_w, cell_h)
 
-            item_type = "Tool" if image_name in ["Axe", "Hammer"] else "Building"
+            item_type = "Tool" if image_name in [EntityType.AXE, EntityType.HAMMER] else "Building"
             w, h = BUILDING_SPECS.get(image_name, (1, 1))
 
             tiles.append(
@@ -260,7 +256,7 @@ class Hud:
 
             if hasattr(self, "dino_btn_rect") and self.dino_btn_rect.collidepoint(mouse_pos):
                 self.dino_action = True
-                EventBus.publish("start_rampage")
+                EventBus.publish(GameEvent.START_RAMPAGE)
 
             if self.save_btn_rect.collidepoint(mouse_pos):
                 self.menu_action = "SAVE"
@@ -273,30 +269,32 @@ class Hud:
             elif self.tax_plus_rect.collidepoint(mouse_pos):
                 self.resource_manager.tax_per_citizen += 1
                 EventBus.publish(
-                    "notify",
+                    GameEvent.NOTIFY,
                     f"TAX INCREASED: ${self.resource_manager.tax_per_citizen}",
                     (255, 255, 100),
                 )
-                EventBus.publish("recalculate_satisfaction")
+                EventBus.publish(GameEvent.RECALC_SATISFACTION)
             elif self.tax_minus_rect.collidepoint(mouse_pos):
                 if self.resource_manager.tax_per_citizen > 0:
                     self.resource_manager.tax_per_citizen -= 1
                     EventBus.publish(
-                        "notify",
+                        GameEvent.NOTIFY,
                         f"TAX DECREASED: ${self.resource_manager.tax_per_citizen}",
                         (100, 255, 255),
                     )
-                    EventBus.publish("recalculate_satisfaction")
+                    EventBus.publish(GameEvent.RECALC_SATISFACTION)
             elif self.loan_btn_rect.collidepoint(mouse_pos):
                 self.resource_manager.take_loan(1000, self.game)
-                EventBus.publish("notify", "LOAN TAKEN: +$1,000", (100, 255, 100))
-                EventBus.publish("recalculate_satisfaction_and_growth")
+                EventBus.publish(GameEvent.NOTIFY, "LOAN TAKEN: +$1,000", (100, 255, 100))
+                EventBus.publish(GameEvent.RECALC_SAT_AND_GROWTH)
             elif self.repay_btn_rect.collidepoint(mouse_pos):
                 if self.resource_manager.repay_loan(1000, self.game):
-                    EventBus.publish("notify", "LOAN REPAID: -$1,000", (255, 215, 0))
-                    EventBus.publish("recalculate_satisfaction_and_growth")
+                    EventBus.publish(GameEvent.NOTIFY, "LOAN REPAID: -$1,000", (255, 215, 0))
+                    EventBus.publish(GameEvent.RECALC_SAT_AND_GROWTH)
                 else:
-                    EventBus.publish("notify", "NOT ENOUGH FUNDS OR NO LOAN", (255, 100, 100))
+                    EventBus.publish(
+                        GameEvent.NOTIFY, "NOT ENOUGH FUNDS OR NO LOAN", (255, 100, 100)
+                    )
             elif self.help_btn_rect.collidepoint(mouse_pos):
                 self.show_help = not self.show_help
                 if self.show_help:

@@ -124,7 +124,9 @@ class ResourceManager:
             for y in range(world.grid_length_y):
                 b = world.buildings[x][y]
                 if b and b not in processed_buildings:
-                    if b.name == "Tree":
+                    from .buildings import Tree
+
+                    if isinstance(b, Tree):
                         if not getattr(b, "is_old_tree", False) and getattr(b, "plant_date", None):
                             if (world.game.current_date - b.plant_date).days < 3650:
                                 maintenance_cost += 20 / 365.0

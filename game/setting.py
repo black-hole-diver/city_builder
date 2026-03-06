@@ -1,4 +1,28 @@
 # ==========================================
+# GRID DATA CONSTANTS
+# ==========================================
+class GridKey:
+    TILE = "tile"
+    COLLISION = "collision"
+    RENDER_POS = "render_pos"
+    GRID = "grid"
+    CART_RECT = "cart_rect"
+    ISO_POLY = "iso_poly"
+
+
+# ==========================================
+# EVENT CONSTANTS
+# ==========================================
+class GameEvent:
+    RECALC_SATISFACTION = "recalculate_satisfaction"
+    RECALC_SAT_AND_GROWTH = "recalculate_satisfaction_and_growth"
+    PLAY_SOUND = "play_sound"
+    NOTIFY = "notify"
+    START_RAMPAGE = "start_rampage"
+    TOGGLE_MUSIC = "toggle_music"
+
+
+# ==========================================
 # CORE GAME SETTINGS
 # ==========================================
 TILE_SIZE = 64
@@ -47,83 +71,100 @@ HUD_COLOR = (27, 27, 27, 175)
 # ==========================================
 SPEEDS = {1: 5_000, 2: 2_500, 3: 400, 4: 100}
 
+
+# ==========================================
+# ENTITY CONSTANTS
+# ==========================================
+
+
+class EntityType:
+    ROAD = "Road"
+    POWERLINE = "PowerLine"
+    RES_ZONE = "ResZone"
+    IND_ZONE = "IndZone"
+    SER_ZONE = "SerZone"
+    POLICE = "Police"
+    STADIUM = "Stadium"
+    FIRE_STATION = "FireStation"
+    SCHOOL = "School"
+    UNIVERSITY = "University"
+    POWER_PLANT = "PowerPlant"
+    VIP = "VIP"
+    AXE = "Axe"
+    HAMMER = "Hammer"
+    TREE = "Tree"
+    ROCK = "Rock"
+    BLOCK = ""
+
+
 # ==========================================
 # BUILDING DIMENSIONS (Width, Height)
 # ==========================================
 BUILDING_SPECS = {
-    # Infrastructure & Zones (1x1)
-    "Road": (1, 1),
-    "PowerLine": (1, 1),
-    "ResZone": (4, 4),
-    "IndZone": (4, 4),
-    "SerZone": (4, 4),
-    # Basic Services
-    "Police": (2, 2),
-    "Stadium": (4, 4),
-    # Advanced Services
-    "FireStation": (2, 2),
-    "School": (2, 2),
-    "University": (4, 4),
-    "PowerPlant": (4, 4),
-    "VIP": (1, 1),
+    EntityType.ROAD: (1, 1),
+    EntityType.POWERLINE: (1, 1),
+    EntityType.RES_ZONE: (4, 4),
+    EntityType.IND_ZONE: (4, 4),
+    EntityType.SER_ZONE: (4, 4),
+    EntityType.POLICE: (2, 2),
+    EntityType.STADIUM: (4, 4),
+    EntityType.FIRE_STATION: (2, 2),
+    EntityType.SCHOOL: (2, 2),
+    EntityType.UNIVERSITY: (4, 4),
+    EntityType.POWER_PLANT: (4, 4),
+    EntityType.VIP: (1, 1),
 }
-
 # ==========================================
 # COSTS OF BUILDINGS & ZONES
 # ==========================================
 COSTS = {
-    "Axe": 0,
-    "Hammer": 0,
-    "Tree": 100,
-    "IndZone": 50,
-    "SerZone": 50,
-    "ResZone": 50,
-    "Stadium": 5000,
-    "Police": 500,
-    "Road": 10,
-    "FireStation": 500,
-    "School": 1000,
-    "University": 5000,
-    "PowerPlant": 10000,
-    "PowerLine": 5,
-    "VIP": 2000,
+    EntityType.AXE: 0,
+    EntityType.HAMMER: 0,
+    EntityType.TREE: 100,
+    EntityType.IND_ZONE: 50,
+    EntityType.SER_ZONE: 50,
+    EntityType.RES_ZONE: 50,
+    EntityType.STADIUM: 5000,
+    EntityType.POLICE: 500,
+    EntityType.ROAD: 10,
+    EntityType.FIRE_STATION: 500,
+    EntityType.SCHOOL: 1000,
+    EntityType.UNIVERSITY: 5000,
+    EntityType.POWER_PLANT: 10000,
+    EntityType.POWERLINE: 5,
+    EntityType.VIP: 2000,
 }
 MAINTENANCE_FEES = {
-    "Road": 1,
-    "Police": 50,
-    "Stadium": 200,
-    "FireStation": 50,
-    "School": 100,
-    "University": 500,
-    "PowerPlant": 1000,
-    "PowerLine": 1,
-    "ResZone": 5,
-    "IndZone": 5,
-    "SerZone": 5,
+    EntityType.ROAD: 1,
+    EntityType.POLICE: 50,
+    EntityType.STADIUM: 200,
+    EntityType.FIRE_STATION: 50,
+    EntityType.SCHOOL: 100,
+    EntityType.UNIVERSITY: 500,
+    EntityType.POWER_PLANT: 1000,
+    EntityType.POWERLINE: 1,
+    EntityType.RES_ZONE: 5,
+    EntityType.IND_ZONE: 5,
+    EntityType.SER_ZONE: 5,
 }
 ITEM_DESCRIPTIONS = {
-    # Tools & Nature
-    "Axe": "Clears trees for development.",
-    "Hammer": "Demolishes structures and rocks. Refunds part of the cost.",
-    "Tree": "Forest tree. Increases nearby resident satisfaction.",
-    "Rock": "Blocks construction. Remove with Hammer.",
-    "VIP": "Upgrades a zone to VIP: doubles capacity and adds luxury style.",
-    # Infrastructure
-    "Road": "Required for commuting and zone development.",
-    "PowerLine": "Transfers electricity between separate areas.",
-    # Zones
-    "ResZone": "Residential area. Homes build automatically if road-connected.",
-    "IndZone": "Industrial area. Provides jobs, lowers nearby residential satisfaction.",
-    "SerZone": "Service area. Provides jobs and balances industry.",
-    # Services
-    "Police": "Ensures public safety within its radius.",
-    "Stadium": "Large satisfaction boost nearby.",
-    "FireStation": "Reduces fire risk and responds to emergencies.",
-    "School": "Secondary education. Increases income and taxes.",
-    "University": "Tertiary education. Maximizes income and taxes.",
-    "PowerPlant": "Generates electricity. Must connect to zones or power lines.",
+    EntityType.AXE: "Clears trees for development.",
+    EntityType.HAMMER: "Demolishes structures and rocks. Refunds part of the cost.",
+    EntityType.TREE: "Forest tree. Increases nearby resident satisfaction.",
+    EntityType.ROCK: "Blocks construction. Remove with Hammer.",
+    EntityType.VIP: "Upgrades a zone to VIP: doubles capacity and adds luxury style.",
+    EntityType.ROAD: "Required for commuting and zone development.",
+    EntityType.POWERLINE: "Transfers electricity between separate areas.",
+    EntityType.RES_ZONE: "Residential area. Homes build automatically if road-connected.",
+    EntityType.IND_ZONE: "Industrial area. Provides jobs, lowers nearby residential satisfaction.",
+    EntityType.SER_ZONE: "Service area. Provides jobs and balances industry.",
+    EntityType.POLICE: "Ensures public safety within its radius.",
+    EntityType.STADIUM: "Large satisfaction boost nearby.",
+    EntityType.FIRE_STATION: "Reduces fire risk and responds to emergencies.",
+    EntityType.SCHOOL: "Secondary education. Increases income and taxes.",
+    EntityType.UNIVERSITY: "Tertiary education. Maximizes income and taxes.",
+    EntityType.POWER_PLANT: "Generates electricity. Must connect to zones or power lines.",
 }
-
 
 # ==========================================
 # ASSET URLs

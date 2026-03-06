@@ -14,6 +14,9 @@ from .setting import (
     BLOCK_URL,
     TREE_URL,
     ROCK_URL,
+    EntityType,
+    GameEvent,
+    GridKey,
 )
 from .workers import Worker
 from .buildings import (
@@ -101,30 +104,30 @@ class World:
 
         # Map string names to classes for cleaner building instantiation
         self.building_types = {
-            "ResZone": ResZone,
-            "IndZone": IndZone,
-            "SerZone": SerZone,
-            "Stadium": Stadium,
-            "Police": Police,
-            "FireStation": FireStation,
-            "School": School,
-            "University": University,
-            "PowerPlant": PowerPlant,
-            "Road": Road,
-            "PowerLine": PowerLine,
-            "Tree": Tree,
+            EntityType.RES_ZONE: ResZone,
+            EntityType.IND_ZONE: IndZone,
+            EntityType.SER_ZONE: SerZone,
+            EntityType.STADIUM: Stadium,
+            EntityType.POLICE: Police,
+            EntityType.FIRE_STATION: FireStation,
+            EntityType.SCHOOL: School,
+            EntityType.UNIVERSITY: University,
+            EntityType.POWER_PLANT: PowerPlant,
+            EntityType.ROAD: Road,
+            EntityType.POWERLINE: PowerLine,
+            EntityType.TREE: Tree,
         }
 
-        self.tools = {"Axe": Axe(), "Hammer": Hammer(), "VIP": VIP()}
+        self.tools = {EntityType.AXE: Axe(), EntityType.HAMMER: Hammer(), EntityType.VIP: VIP()}
 
         for gx in range(self.grid_length_x):
             for gy in range(self.grid_length_y):
-                if self.world[gx][gy]["tile"] == "tree":
-                    self.world[gx][gy]["tile"] = ""  # Remove scenery
-                    render_pos = self.world[gx][gy]["render_pos"]
+                if self.world[gx][gy][GridKey.TILE] == EntityType.TREE:
+                    self.world[gx][gy][GridKey.TILE] = ""  # Remove scenery
+                    render_pos = self.world[gx][gy][GridKey.RENDER_POS]
                     tree = Tree(
                         render_pos,
-                        self.tiles["tree"],
+                        self.tiles[EntityType.TREE],
                         self.resource_manager,
                         (gx, gy),
                         is_old_tree=True,
@@ -132,7 +135,7 @@ class World:
                     tree.game = self.game
                     self.entities.append(tree)
                     self.buildings[gx][gy] = tree
-                    self.world[gx][gy]["collision"] = True
+                    self.world[gx][gy][GridKey.COLLISION] = True
                     self.collision_matrix[gy][gx] = 0
 
     def update(self, camera, game_paused):
@@ -172,9 +175,8 @@ class World:
 
                 # Extract grid cell data once
                 cell = self.world[grid_pos[0]][grid_pos[1]]
-                render_pos = cell["render_pos"]
-                iso_poly = cell["iso_poly"]
-                # collision = cell["collision"]
+                render_pos = cell[GridKey.RENDER_POS]
+                iso_poly = cell[GridKey.ISO_POLY]
                 selected_name = self.hud.selected_tile["name"]
 
                 if selected_name in self.tools:
@@ -182,9 +184,9 @@ class World:
                     can_use = tool.can_use(grid_pos, self)
                     self.temp_tile = {
                         "image": img,
-                        "render_pos": render_pos,
-                        "iso_poly": iso_poly,
-                        "collision": not can_use,
+                        GridKey.RENDER_POS: render_pos,
+                        GridKey.ISO_POLY: iso_poly,
+                        GridKey.COLLISION: not can_use,
                     }
                     if mouse_action[0] and can_use and not self.game_paused:
                         tool.use(grid_pos, self)
@@ -210,22 +212,26 @@ class World:
 
                     self.temp_tile = {
                         "image": img,
-                        "render_pos": (minx, miny),
-                        "iso_poly": multi_iso_poly,
-                        "collision": not can_build,
+                        GridKey.RENDER_POS: (minx, miny),
+                        GridKey.ISO_POLY: multi_iso_poly,
+                        GridKey.COLLISION: not can_build,
                         "b_w": b_width,
                         "b_h": b_height,
                     }
 
                     # Place building
-                    if mouse_action[0] and not self.temp_tile["collision"] and not self.game_paused:
+                    if (
+                        mouse_action[0]
+                        and not self.temp_tile[GridKey.COLLISION]
+                        and not self.game_paused
+                    ):
                         building_name = self.hud.selected_tile["name"]
                         building_class = self.building_types.get(building_name)
 
                         if building_class:
                             building_image = self.hud.selected_tile["image"]
                             kwargs = {}
-                            if building_name == "Tree":
+                            if building_name == EntityType.TREE:
                                 kwargs["plant_date"] = self.game.current_date
                             ent = building_class(
                                 (minx, miny),
@@ -236,7 +242,7 @@ class World:
                             )
                             ent.game = self.game  # Set game reference
                             self.resource_manager.apply_cost_to_resource(building_name, self.game)
-                            EventBus.publish("play_sound", "creation")
+                            EventBus.publish(GameEvent.PLAY_SOUND, "creation")
 
                             # Update initial road access
                             ent.has_road_access = self.has_road_access(
@@ -247,7 +253,7 @@ class World:
                             for x in range(grid_pos[0], grid_pos[0] + b_width):
                                 for y in range(grid_pos[1], grid_pos[1] + b_height):
                                     self.buildings[x][y] = ent
-                                    self.world[x][y]["collision"] = True
+                                    self.world[x][y][GridKey.COLLISION] = True
                                     self.collision_matrix[y][x] = 0
 
                             # NEW: Update road access for ALL buildings if we just placed a road
@@ -266,7 +272,7 @@ class World:
                                         ):
                                             newly_connected = True
                                 # Recalculate satisfaction immediately for better responsiveness
-                                EventBus.publish("recalculate_satisfaction")
+                                EventBus.publish(GameEvent.RECALC_SATISFACTION)
 
                             # Instant Power Recalculation Trigger
                             if isinstance(
@@ -282,31 +288,37 @@ class World:
                                     University,
                                 ),
                             ):
-                                EventBus.publish("recalculate_satisfaction")
+                                EventBus.publish(GameEvent.RECALC_SATISFACTION)
 
                             # Initial image update for zones
                             if hasattr(ent, "update_image"):
                                 ent.update_image()
                                 if isinstance(ent, ResZone):
                                     EventBus.publish(
-                                        "notify", "RESIDENT AREA BUILT", (100, 200, 255)
+                                        GameEvent.NOTIFY, "RESIDENT AREA BUILT", (100, 200, 255)
                                     )
-                                    EventBus.publish("recalculate_satisfaction")
+                                    EventBus.publish(GameEvent.RECALC_SATISFACTION)
                                 elif isinstance(ent, (IndZone, SerZone)):
-                                    EventBus.publish("notify", "NEW WORKPLACE BUILT", (255, 165, 0))
-                                    EventBus.publish("recalculate_satisfaction")
+                                    EventBus.publish(
+                                        GameEvent.NOTIFY, "NEW WORKPLACE BUILT", (255, 165, 0)
+                                    )
+                                    EventBus.publish(GameEvent.RECALC_SATISFACTION)
 
                             if isinstance(ent, Road):
                                 if newly_connected:
-                                    EventBus.publish("notify", "ROAD CONNECTED", (200, 200, 200))
+                                    EventBus.publish(
+                                        GameEvent.NOTIFY, "ROAD CONNECTED", (200, 200, 200)
+                                    )
                             elif isinstance(
                                 ent, (Police, Stadium, FireStation, School, University, PowerPlant)
                             ):
                                 EventBus.publish(
-                                    "notify", f"NEW {building_name.upper()} BUILT!", (255, 255, 100)
+                                    GameEvent.NOTIFY,
+                                    f"NEW {building_name.upper()} BUILT!",
+                                    (255, 255, 100),
                                 )
                                 # Recalculate satisfaction immediately to apply new bonuses
-                                EventBus.publish("recalculate_satisfaction")
+                                EventBus.publish(GameEvent.RECALC_SATISFACTION)
 
                         # Do not deselect if it's a Road or PowerLine for continuous construction
                         if not isinstance(ent, (Road, PowerLine, Tree)):
@@ -322,7 +334,7 @@ class World:
         else:
             if self.can_place_tile(grid_pos):
                 building = self.buildings[grid_pos[0]][grid_pos[1]]
-                world_tile = self.world[grid_pos[0]][grid_pos[1]]["tile"]
+                world_tile = self.world[grid_pos[0]][grid_pos[1]][GridKey.TILE]
 
                 # Select building to examine
                 if mouse_action[0]:
@@ -330,7 +342,7 @@ class World:
                         self.examine_tile = building.origin
                         self.hud.examined_tile = building
                         self.examine_mask_points = pg.mask.from_surface(building.image).outline()
-                    elif world_tile in ["tree", "rock"]:
+                    elif world_tile in [EntityType.TREE, EntityType.ROCK]:
                         self.examine_tile = (grid_pos[0], grid_pos[1])
                         feature = Scenery(world_tile, self.tiles[world_tile])
                         self.hud.examined_tile = feature
@@ -373,11 +385,11 @@ class World:
 
         for x in range(start_x, end_x):
             for y in range(start_y, end_y):
-                render_pos = self.world[x][y]["render_pos"]
+                render_pos = self.world[x][y][GridKey.RENDER_POS]
                 screen_x = render_pos[0] + offset_x
 
                 # --- World Tiles (Trees, Rocks) ---
-                tile_key = self.world[x][y]["tile"]
+                tile_key = self.world[x][y][GridKey.TILE]
                 if tile_key != "":
                     tile_img = self.tiles[tile_key]
                     screen_y = render_pos[1] - (tile_img.get_height() - TILE_SIZE) + offset_y
@@ -462,7 +474,7 @@ class World:
 
         if getattr(self.game, "dinosaur_entity", None) is not None:
             dino = self.game.dinosaur_entity
-            d_render_pos = dino.tile["render_pos"]
+            d_render_pos = dino.tile[GridKey.RENDER_POS]
             d_screen_x = d_render_pos[0] + offset_x
             d_screen_y = d_render_pos[1] - (dino.image.get_height() - TILE_SIZE) + offset_y
 
@@ -481,7 +493,7 @@ class World:
 
         for ent in self.entities:
             if isinstance(ent, (Car, FireTruck)):
-                ft_render_pos = ent.tile["render_pos"]
+                ft_render_pos = ent.tile[GridKey.RENDER_POS]
                 ft_screen_x = ft_render_pos[0] + offset_x
                 ft_screen_y = ft_render_pos[1] - (ent.image.get_height() - TILE_SIZE) + offset_y
 
@@ -521,13 +533,13 @@ class World:
 
         # 4. Draw Ghost Tile last so it stays completely visible as a UI overlay
         if self.temp_tile is not None:
-            iso_poly = self.temp_tile["iso_poly"]
+            iso_poly = self.temp_tile[GridKey.ISO_POLY]
             shifted_poly = [(px + offset_x, py + offset_y) for px, py in iso_poly]
 
-            color = (255, 0, 0) if self.temp_tile["collision"] else (255, 255, 255)
+            color = (255, 0, 0) if self.temp_tile[GridKey.COLLISION] else (255, 255, 255)
             pg.draw.polygon(screen, color, shifted_poly, 3)
 
-            render_pos = self.temp_tile["render_pos"]
+            render_pos = self.temp_tile[GridKey.RENDER_POS]
             img = self.temp_tile["image"]
             b_w = self.temp_tile.get("b_w", 1)
             b_h = self.temp_tile.get("b_h", 1)
@@ -539,7 +551,6 @@ class World:
 
     def create_world(self):
         world = []
-        # Calculate this offset once
         center_offset_x = self.grass_tiles.get_width() / 2
 
         for grid_x in range(self.grid_length_x):
@@ -548,9 +559,9 @@ class World:
                 world_tile = self.grid_to_world(grid_x, grid_y)
                 world[grid_x].append(world_tile)
 
-                render_pos = world_tile["render_pos"]
+                render_pos = world_tile[GridKey.RENDER_POS]
                 self.grass_tiles.blit(
-                    self.tiles["block"], (render_pos[0] + center_offset_x, render_pos[1])
+                    self.tiles[EntityType.BLOCK], (render_pos[0] + center_offset_x, render_pos[1])
                 )
 
         return world
@@ -573,22 +584,22 @@ class World:
         perlin = 100 * noise.pnoise2(grid_x / self.perlin_scale, grid_y / self.perlin_scale)
 
         if perlin >= 15 or perlin <= -35:
-            tile = "tree"
+            tile = EntityType.TREE
         else:
             if r == 1:
-                tile = "tree"
+                tile = EntityType.TREE
             elif r == 2:
-                tile = "rock"
+                tile = EntityType.ROCK
             else:
                 tile = ""
 
         return {
-            "grid": [grid_x, grid_y],
-            "cart_rect": rect,
-            "iso_poly": iso_poly,
-            "render_pos": [minx, miny],
-            "tile": tile,
-            "collision": tile != "",  # Simplified boolean logic
+            GridKey.GRID: [grid_x, grid_y],
+            GridKey.CART_RECT: rect,
+            GridKey.ISO_POLY: iso_poly,
+            GridKey.RENDER_POS: [minx, miny],
+            GridKey.TILE: tile,
+            GridKey.COLLISION: tile != EntityType.BLOCK,  # Simplified boolean logic
         }
 
     def create_collision_matrix(self):
@@ -597,7 +608,7 @@ class World:
         ]
         for grid_x in range(self.grid_length_x):
             for grid_y in range(self.grid_length_y):
-                if self.world[grid_x][grid_y]["collision"]:
+                if self.world[grid_x][grid_y][GridKey.COLLISION]:
                     collision_matrix[grid_y][grid_x] = 0
         return collision_matrix
 
@@ -619,9 +630,9 @@ class World:
     @staticmethod
     def load_images():
         return {
-            "tree": pg.image.load(TREE_URL).convert_alpha(),
-            "rock": pg.image.load(ROCK_URL).convert_alpha(),
-            "block": pg.image.load(BLOCK_URL).convert_alpha(),
+            EntityType.TREE: pg.image.load(TREE_URL).convert_alpha(),
+            EntityType.ROCK: pg.image.load(ROCK_URL).convert_alpha(),
+            EntityType.BLOCK: pg.image.load(BLOCK_URL).convert_alpha(),
         }
 
     def can_place_tile(self, grid_pos):
@@ -652,7 +663,7 @@ class World:
             for y in range(origin_y, origin_y + height):
                 if not (0 <= x < self.grid_length_x and 0 <= y < self.grid_length_y):
                     return False
-                if self.world[x][y]["collision"]:
+                if self.world[x][y][GridKey.COLLISION]:
                     return False
         return True
 
@@ -772,12 +783,12 @@ class World:
 
     def execute_demolition(self, grid_pos, pay_compensation=0, apply_penalty=0, refund=True):
         has_building = self.buildings[grid_pos[0]][grid_pos[1]] is not None
-        is_rock = self.world[grid_pos[0]][grid_pos[1]]["tile"] == "rock"
+        is_rock = self.world[grid_pos[0]][grid_pos[1]][GridKey.TILE] == EntityType.ROCK
 
         if has_building:
             b = self.buildings[grid_pos[0]][grid_pos[1]]
 
-            EventBus.publish("play_sound", "destruction")
+            EventBus.publish(GameEvent.PLAY_SOUND, "destruction")
 
             # 1. Apply financial and satisfaction consequences
             if pay_compensation > 0:
@@ -786,13 +797,13 @@ class World:
                     self.game, "EVICTION PAYOUT", 0, pay_compensation
                 )
                 EventBus.publish(
-                    "notify", f"PAID COMPENSATION: -${pay_compensation:,}", (255, 100, 100)
+                    GameEvent.NOTIFY, f"PAID COMPENSATION: -${pay_compensation:,}", (255, 100, 100)
                 )
 
             if apply_penalty > 0:
                 self.resource_manager.eviction_penalty += apply_penalty
                 EventBus.publish(
-                    "notify", f"CITIZENS ANGERED! (-{apply_penalty}% Sat)", (255, 50, 50)
+                    GameEvent.NOTIFY, f"CITIZENS ANGERED! (-{apply_penalty}% Sat)", (255, 50, 50)
                 )
 
             # 2. Rehousing Logic for ResZones
@@ -842,10 +853,12 @@ class World:
                         elif res.edu_tertiary > 0:
                             res.edu_tertiary -= 1
                     EventBus.publish(
-                        "notify", f"{displaced} CITIZENS LEFT THE CITY!", (255, 50, 50)
+                        GameEvent.NOTIFY, f"{displaced} CITIZENS LEFT THE CITY!", (255, 50, 50)
                     )
                 else:
-                    EventBus.publish("notify", "ALL DISPLACED CITIZENS REHOUSED", (100, 255, 100))
+                    EventBus.publish(
+                        GameEvent.NOTIFY, "ALL DISPLACED CITIZENS REHOUSED", (100, 255, 100)
+                    )
 
             # 3. Process Salvage Refund
             if refund:
@@ -871,7 +884,7 @@ class World:
             for x in range(ox, ox + b_w):
                 for y in range(oy, oy + b_h):
                     self.buildings[x][y] = None
-                    self.world[x][y]["collision"] = False
+                    self.world[x][y][GridKey.COLLISION] = False
                     self.collision_matrix[y][x] = 1
 
             # 5. Handle Connectivity Updates
@@ -888,7 +901,7 @@ class World:
                 self.hud.examined_tile = None
                 self.examine_mask_points = None
 
-            EventBus.publish("recalculate_satisfaction")
+            EventBus.publish(GameEvent.RECALC_SATISFACTION)
 
         elif is_rock:
             if self.examine_tile == (grid_pos[0], grid_pos[1]):
@@ -896,11 +909,11 @@ class World:
                 self.hud.examined_tile = None
                 self.examine_mask_points = None
 
-            self.world[grid_pos[0]][grid_pos[1]]["tile"] = ""
-            self.world[grid_pos[0]][grid_pos[1]]["collision"] = False
+            self.world[grid_pos[0]][grid_pos[1]][GridKey.TILE] = ""
+            self.world[grid_pos[0]][grid_pos[1]][GridKey.COLLISION] = False
             self.collision_matrix[grid_pos[1]][grid_pos[0]] = 1
-            EventBus.publish("play_sound", "destruction")
-            EventBus.publish("notify", "ROCK SMASHED!", (200, 200, 200))
+            EventBus.publish(GameEvent.PLAY_SOUND, "destruction")
+            EventBus.publish(GameEvent.NOTIFY, "ROCK SMASHED!", (200, 200, 200))
 
     def process_fires(self):
         now = pg.time.get_ticks()
@@ -939,7 +952,7 @@ class World:
                     b.on_fire = True
                     b.fire_start_time = now
                     b.targeted_by_truck = False
-                    EventBus.publish("notify", "IT'S FUCKING BURNING!!!!", (255, 50, 50))
+                    EventBus.publish(GameEvent.NOTIFY, "IT'S FUCKING BURNING!!!!", (255, 50, 50))
 
             # --- SPREAD LOGIC ---
             elif b.on_fire:
@@ -962,9 +975,13 @@ class World:
                                         neighbor.on_fire = True
                                         neighbor.fire_start_time = now
                                         neighbor.targeted_by_truck = False
-                                        EventBus.publish("notify", "FIRE SPREAD!", (255, 100, 50))
+                                        EventBus.publish(
+                                            GameEvent.NOTIFY, "FIRE SPREAD!", (255, 100, 50)
+                                        )
 
-                    EventBus.publish("notify", f"{b.name.upper()} BURNED DOWN!", (255, 50, 50))
+                    EventBus.publish(
+                        GameEvent.NOTIFY, f"{b.name.upper()} BURNED DOWN!", (255, 50, 50)
+                    )
                     self.execute_demolition(b.origin, apply_penalty=10, refund=False)
                     continue
 

@@ -12,7 +12,7 @@ from .camera import Camera
 from .hud import Hud
 from .workers import Worker
 from .resource_manager import ResourceManager
-from .buildings import ResZone, IndZone, SerZone
+from .buildings import ResZone, IndZone, SerZone, PowerPlant, Tree
 from .event_bus import EventBus
 from .setting import (
     SPEEDS,
@@ -21,6 +21,7 @@ from .setting import (
     MAP_HEIGHT,
     WHITE,
     BACKGROUND_COLOR,
+    EntityType,
 )
 
 import json
@@ -531,10 +532,10 @@ class Game:
                         building_save_data["occupants"] = b.occupants
                     if hasattr(b, "is_powered"):
                         building_save_data["is_powered"] = b.is_powered
-                    if b.name == "PowerPlant":
+                    if isinstance(b, PowerPlant):
                         building_save_data["network_supply"] = getattr(b, "network_supply", 0)
                         building_save_data["network_demand"] = getattr(b, "network_demand", 0)
-                    if b.name == "Tree":
+                    if isinstance(b, Tree):
                         building_save_data["is_old_tree"] = getattr(b, "is_old_tree", True)
                         if b.plant_date:
                             building_save_data["plant_date"] = b.plant_date.strftime("%Y-%m-%d")
@@ -622,13 +623,14 @@ class Game:
             for y in range(self.world.grid_length_y):
                 tile_type = data["map"][x][y]
                 self.world.world[x][y]["tile"] = tile_type
-                self.world.world[x][y]["collision"] = tile_type != ""
-                self.world.collision_matrix[y][x] = 1 if tile_type == "" else 0
+                self.world.world[x][y]["collision"] = tile_type != EntityType.BLOCK
+                self.world.collision_matrix[y][x] = 1 if tile_type == EntityType.BLOCK else 0
 
                 # Re-render grass tiles
                 render_pos = self.world.world[x][y]["render_pos"]
                 self.world.grass_tiles.blit(
-                    self.world.tiles["block"], (render_pos[0] + center_offset_x, render_pos[1])
+                    self.world.tiles[EntityType.BLOCK],
+                    (render_pos[0] + center_offset_x, render_pos[1]),
                 )
 
         # ============ Restore Buildings ============
@@ -644,7 +646,7 @@ class Game:
             if building_class:
                 image = self.hud.images.get(name)
                 kwargs = {}
-                if name == "Tree":
+                if name == EntityType.TREE:
                     kwargs["is_old_tree"] = b_data.get("is_old_tree", True)
                     p_date_str = b_data.get("plant_date")
                     if p_date_str:
@@ -678,7 +680,7 @@ class Game:
                     ent.is_powered = b_data["is_powered"]
                     if hasattr(ent, "update_image"):
                         ent.update_image()
-                if name == "PowerPlant":
+                if isinstance(ent, PowerPlant):
                     ent.network_supply = b_data.get("network_supply", 0)
                     ent.network_demand = b_data.get("network_demand", 0)
 

@@ -1,4 +1,5 @@
 from game.event_bus import EventBus
+from game.setting import GameEvent
 
 
 class EconomySystem:
@@ -22,7 +23,7 @@ class EconomySystem:
         if year_entry:
             self._notify_annual_budget(year_entry)
         self._check_retirement_and_graduation()
-        EventBus.publish("recalculate_satisfaction")
+        EventBus.publish(GameEvent.RECALC_SATISFACTION)
         self._check_negative_consecutive_years()
         self._check_game_over_conditions()
 

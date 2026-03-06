@@ -14,9 +14,11 @@ from .setting import (
     DINOSAUR_URL,
 )
 
+
 def is_ready_to_move(entity, now, game_speed):
     """Checks if enough time has passed for the entity to take its next step."""
     return (now - entity.move_timer) > (entity.speed / game_speed)
+
 
 def load_entity_image(url, fallback_url=WORKER_URL, scale_factor=2, target_w=None):
     """Load entity image based on URL and scale factors"""
@@ -33,6 +35,7 @@ def load_entity_image(url, fallback_url=WORKER_URL, scale_factor=2, target_w=Non
             img, (int(img.get_width() * scale_factor), int(img.get_height() * scale_factor))
         )
     return img
+
 
 def build_nav_matrix(world, walkable_building_names, unblock_zones):
     """Build matrix from building names and unblocked zones"""
@@ -52,6 +55,7 @@ def build_nav_matrix(world, walkable_building_names, unblock_zones):
 
     return matrix
 
+
 def get_astar_path(matrix, start_grid, end_grid):
     """Get A* path from matrix and destination"""
     grid = Grid(matrix=matrix)
@@ -62,6 +66,7 @@ def get_astar_path(matrix, start_grid, end_grid):
     path, _ = finder.find_path(start_node, end_node, grid)
 
     return [(node.x, node.y) for node in path] if path else []
+
 
 class Worker:
     def __init__(self, tile, world):
@@ -90,7 +95,7 @@ class Worker:
             x = random.randint(0, self.world.grid_length_x - 1)
             y = random.randint(0, self.world.grid_length_y - 1)
             if not self.world.world[x][y]["collision"]:
-                self.path = get_astar_path(self.world.collision_matrix, self.tile["grid"], (x,y))
+                self.path = get_astar_path(self.world.collision_matrix, self.tile["grid"], (x, y))
                 if self.path:
                     self.path_index = 0
                     searching_for_path = False

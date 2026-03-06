@@ -12,6 +12,7 @@ from game.setting import (
     STARTER_POPULATION_LIMIT,
     GROWTH_SCALER,
     BASE_DECLINE_RATE,
+    GameEvent,
 )
 from game.utils import get_line, logger
 
@@ -22,11 +23,11 @@ class PopulationSystem:
         self.resource_manager = resource_manager
         self.game = game_context
         EventBus.subscribe(
-            "recalculate_satisfaction",
+            GameEvent.RECALC_SATISFACTION,
             lambda: self.calculate_satisfaction_and_growth(skip_growth=True),
         )
         EventBus.subscribe(
-            "recalculate_satisfaction_and_growth",
+            GameEvent.RECALC_SAT_AND_GROWTH,
             lambda: self.calculate_satisfaction_and_growth(skip_growth=False),
         )
 
