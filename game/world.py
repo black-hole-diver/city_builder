@@ -38,6 +38,7 @@ from .buildings import (
 from .tools import Axe, Hammer, VIP
 from typing import List, Optional
 
+
 class Scenery:
     def __init__(self, name, image):
         self.name = name.capitalize()
@@ -117,11 +118,7 @@ class World:
             EntityType.TREE: Tree,
         }
 
-        self.tools = {
-            EntityType.AXE: Axe(),
-            EntityType.HAMMER: Hammer(),
-            EntityType.VIP: VIP()
-        }
+        self.tools = {EntityType.AXE: Axe(), EntityType.HAMMER: Hammer(), EntityType.VIP: VIP()}
 
         for gx in range(self.grid_length_x):
             for gy in range(self.grid_length_y):

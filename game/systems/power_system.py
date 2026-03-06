@@ -1,6 +1,7 @@
 from game.setting import POWER_PLANT_SUPPLY, GameEvent
 from game.event_bus import EventBus
 
+
 class PowerSystem:
     def __init__(self, world):
         self.world = world

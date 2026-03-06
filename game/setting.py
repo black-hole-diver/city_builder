@@ -23,6 +23,11 @@ class GameEvent:
     EXECUTE_DEMOLITION = "execute_demolition"
     IGNORE_CLICKS = "ignore_clicks"
     UPDATE_POWER_CONNECTIVITY = "update_power_connectivity"
+    INCREASE_TAX = "increase_tax"
+    DECREASE_TAX = "decrease_tax"
+    TAKE_LOAN = "take_loan"
+    REPAY_LOAN = "repay_loan"
+
 
 # ==========================================
 # CORE GAME SETTINGS

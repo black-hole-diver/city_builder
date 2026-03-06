@@ -22,7 +22,7 @@ from .setting import (
     WHITE,
     BACKGROUND_COLOR,
     EntityType,
-    GameEvent
+    GameEvent,
 )
 
 import json
