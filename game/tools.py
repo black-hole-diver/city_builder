@@ -97,9 +97,9 @@ class Hammer(Tool):
                         stats["sat_penalty"] = 5
 
                     # Pause and trigger the UI confirmation
-                    world.game.demolish_target_pos = grid_pos
-                    world.game.demolish_stats = stats
-                    world.game.menu_state = "CONFIRM_DEMOLISH"
+                    world.game.hud.demolish_target_pos = grid_pos
+                    world.game.hud.demolish_stats = stats
+                    world.game.hud.active_modal = "CONFIRM_DEMOLISH"
                 else:
                     world.execute_demolition(grid_pos)
             elif is_rock:

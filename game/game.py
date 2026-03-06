@@ -49,7 +49,7 @@ class Game:
 
         # Initialize HUD and world
         self.hud = Hud(self.resource_manager, self.width, self.height)
-        self.hud.game = self  # Give HUD a reference to game
+        #self.hud.game = self  # Give HUD a reference to game
         self.world = World(
             self, self.resource_manager, self.entities, self.hud, 50, 50, self.width, self.height
         )
@@ -75,7 +75,7 @@ class Game:
         self.dinosaur_entity = None
 
         # ============ Menu and Save System ============
-        self.menu_state = "MAIN_MENU"
+        self.hud.active_modal = "MAIN_MENU"
         self.save_slots = ["save_slot_1.json", "save_slot_2.json", "save_slot_3.json"]
 
         # ============ Demolition Tracker ==========
@@ -172,36 +172,38 @@ class Game:
                 self.background = self.create_starry_background()
             if event.type == pg.KEYDOWN:
                 # Rename building
-                if getattr(self, "menu_state", None) == "RENAME":
+                if self.hud.active_modal == "RENAME":
                     if event.key == pg.K_RETURN:
-                        if self.rename_target:
-                            clean_name = self.rename_input_text.strip()
-                            self.rename_target.custom_name = clean_name if clean_name else None
-                        self.menu_state = None
+                        if self.hud.rename_target:
+                            clean_name = self.hud.rename_input_text.strip()
+                            self.hud.rename_target.custom_name = clean_name if clean_name else None
+                        self.hud.active_modal = None
+                        self.hud.rename_input_text = ""
                     elif event.key == pg.K_ESCAPE:
-                        self.menu_state = None
+                        self.hud.active_modal = None
+                        self.hud.rename_input_text = ""
                     elif event.key == pg.K_BACKSPACE:
-                        self.rename_input_text = self.rename_input_text[:-1]
+                        self.hud.rename_input_text = self.hud.rename_input_text[:-1]
                     else:
-                        if len(self.rename_input_text) < 18:
-                            self.rename_input_text += event.unicode
-                            logger.info(f"Renaming building: {self.rename_input_text}")
+                        if len(self.hud.rename_input_text) < 18:
+                            self.hud.rename_input_text += event.unicode
+                            logger.info(f"Renaming building: {self.hud.rename_input_text}")
                     continue
                 if event.key == pg.K_ESCAPE:
                     if self.hud.show_help:
                         self.hud.show_help = False
                     elif self.hud.show_budget:
                         self.hud.show_budget = False
-                    elif self.menu_state is not None:
-                        self.menu_state = None
+                    elif self.hud.active_modal is not None:
+                        self.hud.active_modal = None
                     else:
                         self.quit_game()
                 if event.key == pg.K_SPACE:
                     self.paused = not self.paused
                 if event.key == pg.K_F5:
-                    self.menu_state = "SAVE"
+                    self.hud.active_modal = "SAVE"
                 if event.key == pg.K_F9:
-                    self.menu_state = "LOAD"
+                    self.hud.active_modal = "LOAD"
 
                 if event.key == pg.K_1:
                     self.day_timer = (self.day_timer / SPEEDS[self.current_speed]) * SPEEDS[1]
@@ -228,12 +230,13 @@ class Game:
 
     def update(self):
         """Update game state, handle menu actions, and process game logic."""
+        self.hud.update()
         # ============ Handle Menu Actions ============
         if self.hud.menu_action:
             if self.hud.menu_action == "SAVE":
-                self.menu_state = "SAVE"
+                self.hud.active_modal = "SAVE"
             elif self.hud.menu_action == "LOAD":
-                self.menu_state = "LOAD"
+                self.hud.active_modal = "LOAD"
             elif self.hud.menu_action == "MAIN_LOAD":
                 # Find the most recently modified save file
                 latest_save = None
@@ -247,33 +250,32 @@ class Game:
 
                 if latest_save:
                     self.load_game(latest_save)
-                    self.menu_state = None
+                    self.hud.active_modal = None
                 else:
                     self.add_notification("No save files found!", (255, 100, 100))
             elif self.hud.menu_action == "RESTART":
                 self.restart_game()
             elif self.hud.menu_action == "PLAY":
-                self.menu_state = None  # Transition to active gameplay
+                self.hud.active_modal = None  # Transition to active gameplay
 
             self.hud.menu_action = None
 
         # ============ Menu State Handling ============
-        if self.menu_state == "MAIN_MENU":
-            self.hud.update()
-            return
+        # if self.hud.active_modal == "MAIN_MENU":
+        #     self.hud.draw_main_menu(self.screen, self.sound_on)
+        #     return
 
-        if self.menu_state is not None:
+        if self.hud.active_modal is not None:
             return
 
         # Game over state: HUD must still update to handle buttons
         if self.resource_manager.is_mayor_replaced:
-            self.hud.update()
+            #self.hud.update()
             return
 
         # ============ Core Game Updates ============
         self.camera.update()
         self.world.update(self.camera, self.paused)
-        self.hud.update()
 
         # Handle Dinosaur Button Click
         if getattr(self.hud, "dino_action", False) and not self.rampage_active:
@@ -413,15 +415,15 @@ class Game:
             glow_color = (brightness, brightness, 180)
             pg.draw.circle(self.screen, glow_color, (x, y), radius)
 
-        if self.menu_state == "MAIN_MENU":
-            self.hud.draw_main_menu(self.screen)
+        if self.hud.active_modal == "MAIN_MENU":
+            self.hud.draw_main_menu(self.screen, self.sound_on)
             pg.display.flip()
             return
 
         self.world.draw(self.screen, self.camera)
-        self.hud.draw(self.screen, self.current_date, self.current_speed)
+        self.hud.draw(self.screen, self.current_date, self.current_speed, self.sound_on)
 
-        if self.menu_state in ["SAVE", "LOAD"]:
+        if self.hud.active_modal in ["SAVE", "LOAD"]:
             self.process_menu_overlay()
 
         if self.paused:
@@ -481,7 +483,7 @@ class Game:
     def restart_game(self):
         """Reinitialize the game state for a fresh start."""
         self.__init__(self.screen, self.clock)
-        self.menu_state = None  # Start playing immediately
+        self.hud.active_modal = None  # Start playing immediately
         self.playing = True
         self.hud.menu_action = None  # Clear lingering menu actions
 
@@ -729,7 +731,7 @@ class Game:
         pg.draw.rect(self.screen, (40, 40, 60), menu_rect)
         pg.draw.rect(self.screen, (255, 255, 255), menu_rect, 3)
 
-        title = f"{self.menu_state} GAME"
+        title = f"{self.hud.active_modal} GAME"
         draw_text(self.screen, title, 50, (255, 255, 255), (menu_x + 190, menu_y + 20))
 
         # ============ Mouse Input Handling ============
@@ -799,7 +801,7 @@ class Game:
             if mouse_clicked:
                 # Close button
                 if close_rect.collidepoint(mouse_pos):
-                    self.menu_state = None
+                    self.hud.active_modal = None
                     self.hud.mouse_pressed = True  # Prevent clicking through menu
                     return
 
@@ -809,18 +811,18 @@ class Game:
 
                 # Slot button
                 elif slot_rect.collidepoint(mouse_pos):
-                    if self.menu_state == "SAVE":
+                    if self.hud.active_modal == "SAVE":
                         self.save_game(filename)
-                    elif self.menu_state == "LOAD":
+                    elif self.hud.active_modal == "LOAD":
                         if info_text != "Empty Slot":
                             self.load_game(filename)
 
-                    self.menu_state = None  # Close menu after action
+                    self.hud.active_modal = None  # Close menu after action
                     self.hud.mouse_pressed = True  # Prevent clicking through menu
 
         # Right-click to close
         if mouse_state[2]:
-            self.menu_state = None
+            self.hud.active_modal = None
             self.hud.mouse_pressed = True
 
     def spawn_cars(self):

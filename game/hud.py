@@ -112,12 +112,11 @@ class Hud:
         self.load_save_btn_rect = pg.Rect(self.game_over_rect.right - 260, btn_y, 160, 45)
 
         self.menu_action = None
-        self.game = None
-        # self.active_modal = None
-        # self.demolish_stats = None
-        # self.demolish_target_pos = None
-        # self.rename_input_text = ""
-        # self.sound_on = True
+        self.active_modal = None
+        self.demolish_stats = None
+        self.demolish_target_pos = None
+        self.rename_input_text = ""
+        self.sound_on = True
 
     @property
     def examined_tile(self):
@@ -278,31 +277,29 @@ class Hud:
                 and self.rename_btn_rect
                 and self.rename_btn_rect.collidepoint(mouse_pos)
             ):
-                if self.game and self.examined_tile:
-                    self.game.menu_state = "RENAME"
-                    self.game.rename_target = self.examined_tile
+                if self.examined_tile:
+                    self.active_modal = "RENAME"
+                    self.rename_target = self.examined_tile
                     # Pre-fill input with existing custom name or leave blank
-                    self.game.rename_input_text = (
+                    self.rename_input_text = (
                         getattr(self.examined_tile, "custom_name", "") or ""
                     )
                 self.mouse_pressed = True
                 return
-            if self.game and self.game.menu_state == "CONFIRM_DEMOLISH":
+            if self.active_modal == "CONFIRM_DEMOLISH":
                 if hasattr(self, "demo_yes_rect") and self.demo_yes_rect.collidepoint(mouse_pos):
-                    pos = self.game.demolish_target_pos
-                    stats = self.game.demolish_stats
                     EventBus.publish(
                         GameEvent.EXECUTE_DEMOLITION,
-                        pos,
-                        pay_compensation=stats["cost"],
-                        apply_penalty=stats["sat_penalty"],
+                        self.demolish_target_pos,
+                        pay_compensation=self.demolish_stats["cost"],
+                        apply_penalty=self.demolish_stats["sat_penalty"],
                     )
-                    self.game.menu_state = None
+                    self.active_modal = None
                 elif hasattr(self, "demo_no_rect") and self.demo_no_rect.collidepoint(mouse_pos):
-                    self.game.menu_state = None
+                    self.active_modal = None
                 self.mouse_pressed = True  # Prevent clicking through
                 return
-            if self.game and self.game.menu_state == "MAIN_MENU":
+            if self.active_modal == "MAIN_MENU":
                 if self.play_btn_rect.collidepoint(mouse_pos):
                     self.menu_action = "PLAY"
                 elif self.main_load_btn_rect.collidepoint(mouse_pos):
@@ -310,7 +307,7 @@ class Hud:
                 elif hasattr(self, "music_btn_rect_main") and self.music_btn_rect_main.collidepoint(
                     mouse_pos
                 ):
-                    self.game.toggle_music()
+                    EventBus.publish(GameEvent.TOGGLE_MUSIC)
                 return
 
             if hasattr(self, "dino_btn_rect") and self.dino_btn_rect.collidepoint(mouse_pos):
@@ -342,7 +339,7 @@ class Hud:
                 if self.show_budget:
                     self.show_help = False
             elif self.music_btn_rect.collidepoint(mouse_pos):
-                EventBus.publish("toggle_music")
+                EventBus.publish(GameEvent.TOGGLE_MUSIC)
 
             # Game Over Interactions
             if self.resource_manager.is_mayor_replaced:
@@ -382,7 +379,7 @@ class Hud:
         pg.draw.rect(screen, (40, 45, 55), box_rect, border_radius=12)  # Dark slate grey
         pg.draw.rect(screen, (255, 100, 100), box_rect, 2, border_radius=12)  # Red warning border
 
-        stats = self.game.demolish_stats
+        stats = self.demolish_stats
 
         # Title
         draw_text(
@@ -499,24 +496,25 @@ class Hud:
 
                 if self.demo_yes_rect.collidepoint(mouse_pos):
                     # Execute demolition
-                    pos = self.game.demolish_target_pos
+                    pos = self.demolish_target_pos
                     EventBus.publish(
                         GameEvent.EXECUTE_DEMOLITION,
                         pos,
                         pay_compensation=stats["cost"],
                         apply_penalty=stats["sat_penalty"],
                     )
-                    self.game.menu_state = None
+                    self.active_modal = None
                     EventBus.publish(GameEvent.IGNORE_CLICKS)
 
                 elif self.demo_no_rect.collidepoint(mouse_pos):
                     # Cancel demolition
-                    self.game.menu_state = None
+                    self.active_modal = None
                     EventBus.publish(GameEvent.IGNORE_CLICKS)
         else:
             self.demo_click_handled = False  # Reset debounce when mouse is released
 
-    def draw(self, screen, current_date=None, current_speed=1):
+    def draw(self, screen, current_date=None, current_speed=1, sound_on=True):
+        self.sound_on=sound_on
         # Draw HUD elements using their pre-calculated Rects
         screen.blit(self.resource_surface, self.resource_rect.topleft)
         screen.blit(self.build_surface, self.build_rect.topleft)
@@ -526,13 +524,13 @@ class Hud:
             screen.blit(self.select_surface, self.select_rect.topleft)
             raw_name = self.examined_tile.name
             default_text = self.display_names.get(raw_name, raw_name)
-            is_renaming = self.game and self.game.menu_state == "RENAME"
+            is_renaming = self.active_modal == "RENAME"
             has_custom_name = bool(getattr(self.examined_tile, "custom_name", None))
 
-            if self.game and self.game.menu_state == "RENAME":
+            if self.active_modal == "RENAME":
                 # Blinking cursor effect
                 cursor = "_" if (pg.time.get_ticks() // 500) % 2 == 0 else " "
-                title_text = f"{self.game.rename_input_text}{cursor}"
+                title_text = f"{self.rename_input_text}{cursor}"
                 title_color = (255, 255, 255)  # White while typing
             else:
                 title_text = getattr(self.examined_tile, "custom_name", None) or default_text
@@ -828,9 +826,9 @@ class Hud:
             screen, self.budget_btn_rect, "BUDGET", "btn_20", budget_color, budget_hover
         )
 
-        music_text = "SOUND: ON" if (self.game and self.game.sound_on) else "SOUND: OFF"
-        music_color = (60, 90, 60) if (self.game and self.game.sound_on) else (130, 60, 60)
-        music_hover = (80, 110, 80) if (self.game and self.game.sound_on) else (150, 80, 80)
+        music_text = "SOUND: ON" if self.sound_on else "SOUND: OFF"
+        music_color = (60, 90, 60) if self.sound_on else (130, 60, 60)
+        music_hover = (80, 110, 80) if self.sound_on else (150, 80, 80)
         self._draw_styled_button(
             screen, self.music_btn_rect, music_text, "btn_20", music_color, music_hover
         )
@@ -841,7 +839,7 @@ class Hud:
         if self.show_budget:
             self.draw_budget_panel(screen)
 
-        if self.game and self.game.menu_state == "CONFIRM_DEMOLISH":
+        if self.active_modal == "CONFIRM_DEMOLISH":
             self.draw_demolish_confirmation(screen)
 
         if self.resource_manager.is_mayor_replaced:
@@ -1008,8 +1006,9 @@ class Hud:
             (panel_x + 130, panel_y + panel_h - 30),
         )
 
-    def draw_main_menu(self, screen):
+    def draw_main_menu(self, screen, sound_on=True):
         # Draw a darkened overlay for the menu
+        self.sound_on=sound_on
         overlay = pg.Surface((self.width, self.height), pg.SRCALPHA)
         overlay.fill((0, 0, 0, 150))
         screen.blit(overlay, (0, 0))
@@ -1029,9 +1028,9 @@ class Hud:
         )
 
         # Music Button in Main Menu
-        music_text = "SOUND: ON" if (self.game and self.game.sound_on) else "SOUND: OFF"
-        music_color = (60, 90, 60) if (self.game and self.game.sound_on) else (130, 60, 60)
-        music_hover = (80, 110, 80) if (self.game and self.game.sound_on) else (150, 80, 80)
+        music_text = "SOUND: ON" if self.sound_on else "SOUND: OFF"
+        music_color = (60, 90, 60) if self.sound_on else (130, 60, 60)
+        music_hover = (80, 110, 80) if self.sound_on else (150, 80, 80)
 
         # Position music button below the load button
         music_btn_menu_rect = pg.Rect(0, 0, 160, 40)
