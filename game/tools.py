@@ -101,9 +101,13 @@ class Hammer(Tool):
                     world.game.hud.demolish_stats = stats
                     world.game.hud.active_modal = "CONFIRM_DEMOLISH"
                 else:
-                    world.execute_demolition(grid_pos)
+                    EventBus.publish(
+                        GameEvent.EXECUTE_DEMOLITION, grid_pos
+                    )
             elif is_rock:
-                world.execute_demolition(grid_pos)
+                EventBus.publish(
+                    GameEvent.EXECUTE_DEMOLITION, grid_pos
+                )
 
 
 class VIP(Tool):

@@ -281,9 +281,7 @@ class Hud:
                     self.active_modal = "RENAME"
                     self.rename_target = self.examined_tile
                     # Pre-fill input with existing custom name or leave blank
-                    self.rename_input_text = (
-                        getattr(self.examined_tile, "custom_name", "") or ""
-                    )
+                    self.rename_input_text = getattr(self.examined_tile, "custom_name", "") or ""
                 self.mouse_pressed = True
                 return
             if self.active_modal == "CONFIRM_DEMOLISH":
@@ -514,7 +512,7 @@ class Hud:
             self.demo_click_handled = False  # Reset debounce when mouse is released
 
     def draw(self, screen, current_date=None, current_speed=1, sound_on=True):
-        self.sound_on=sound_on
+        self.sound_on = sound_on
         # Draw HUD elements using their pre-calculated Rects
         screen.blit(self.resource_surface, self.resource_rect.topleft)
         screen.blit(self.build_surface, self.build_rect.topleft)
@@ -1008,7 +1006,7 @@ class Hud:
 
     def draw_main_menu(self, screen, sound_on=True):
         # Draw a darkened overlay for the menu
-        self.sound_on=sound_on
+        self.sound_on = sound_on
         overlay = pg.Surface((self.width, self.height), pg.SRCALPHA)
         overlay.fill((0, 0, 0, 150))
         screen.blit(overlay, (0, 0))

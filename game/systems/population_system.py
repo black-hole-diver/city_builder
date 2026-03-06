@@ -564,7 +564,8 @@ class PopulationSystem:
         from game.setting import FIRE_STATION_RADIUS
 
         active_stations = [
-            e for e in self.game.entities
+            e
+            for e in self.game.entities
             if isinstance(e, FireStation)
             and getattr(e, "is_powered", False)
             and getattr(e, "has_road_access", False)

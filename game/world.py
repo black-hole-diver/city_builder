@@ -6,9 +6,6 @@ from .utils import logger
 from game.event_bus import EventBus
 from .setting import (
     TILE_SIZE,
-    FIRE_SPREAD_TIME,
-    FIRE_STATION_RADIUS,
-    CHANCE,
     BUILDING_REFUND_PERCENT,
     ZONE_REFUND_PERCENT,
     BLOCK_URL,
@@ -138,7 +135,6 @@ class World:
                     self.world[gx][gy][GridKey.COLLISION] = True
                     self.collision_matrix[gy][gx] = 0
 
-        EventBus.subscribe(GameEvent.EXECUTE_DEMOLITION, self.execute_demolition)
         EventBus.subscribe(GameEvent.IGNORE_CLICKS, self._set_ignore_clicks)
 
     def update(self, camera, game_paused):
@@ -149,9 +145,6 @@ class World:
             if now - self.fire_frame_timer > 80:
                 self.fire_current_frame = (self.fire_current_frame + 1) % len(self.fire_images)
                 self.fire_frame_timer = now
-
-        if not self.game_paused:
-            self.process_fires()
 
         mouse_pos = pg.mouse.get_pos()
         mouse_action = pg.mouse.get_pressed()
@@ -443,8 +436,8 @@ class World:
 
                     # for narrow objects
                     if isinstance(building, (Tree, PowerLine)):
-                        center_x = minx + ((maxx-minx)/2)
-                        center_y = miny + ((maxy-miny)/2)
+                        center_x = minx + ((maxx - minx) / 2)
+                        center_y = miny + ((maxy - miny) / 2)
                         b_screen_x = (center_x + offset_x) - (building.image.get_width() / 2)
                         b_screen_y = (center_y + offset_y) - building.image.get_height()
                     else:
@@ -574,7 +567,7 @@ class World:
                 floor_height = (b_w + b_h) * (TILE_SIZE / 2)
                 preview_y = render_pos[1] - (img.get_height() - floor_height) + offset_y
 
-            screen.blit(img, (preview_x,preview_y))
+            screen.blit(img, (preview_x, preview_y))
 
     def create_world(self):
         world = []
@@ -807,223 +800,6 @@ class World:
                         return False
 
         return True
-
-    def execute_demolition(self, grid_pos, pay_compensation=0, apply_penalty=0, refund=True):
-        has_building = self.buildings[grid_pos[0]][grid_pos[1]] is not None
-        is_rock = self.world[grid_pos[0]][grid_pos[1]][GridKey.TILE] == EntityType.ROCK
-
-        if has_building:
-            b = self.buildings[grid_pos[0]][grid_pos[1]]
-
-            EventBus.publish(GameEvent.PLAY_SOUND, "destruction")
-
-            # 1. Apply financial and satisfaction consequences
-            if pay_compensation > 0:
-                self.resource_manager.funds -= pay_compensation
-                self.resource_manager.log_transaction(
-                    self.game, "EVICTION PAYOUT", 0, pay_compensation
-                )
-                EventBus.publish(
-                    GameEvent.NOTIFY, f"PAID COMPENSATION: -${pay_compensation:,}", (255, 100, 100)
-                )
-
-            if apply_penalty > 0:
-                self.resource_manager.eviction_penalty += apply_penalty
-                EventBus.publish(
-                    GameEvent.NOTIFY, f"CITIZENS ANGERED! (-{apply_penalty}% Sat)", (255, 50, 50)
-                )
-
-            # 2. Rehousing Logic for ResZones
-            if isinstance(b, ResZone) and getattr(b, "occupants", 0) > 0:
-                displaced = b.occupants
-                other_res = [z for z in self.entities if isinstance(z, ResZone) and z != b]
-
-                # Try to fit them into other zones
-                for z in other_res:
-                    if displaced <= 0:
-                        break
-                    space = z.capacity - z.occupants
-                    if space > 0:
-                        moved = min(displaced, space)
-                        z.occupants += moved
-                        displaced -= moved
-                        if hasattr(z, "update_image"):
-                            z.update_image()
-
-                # Citizens who couldn't find a home leave the city forever
-                if displaced > 0:
-                    # Distribute evictions proportionally across education levels
-                    if self.resource_manager.population > 0:
-                        sec_ratio = (
-                            self.resource_manager.edu_secondary / self.resource_manager.population
-                        )
-                        tert_ratio = (
-                            self.resource_manager.edu_tertiary / self.resource_manager.population
-                        )
-                        sec_left = int(displaced * sec_ratio)
-                        tert_left = int(displaced * tert_ratio)
-                        self.resource_manager.edu_secondary = max(
-                            0, self.resource_manager.edu_secondary - sec_left
-                        )
-                        self.resource_manager.edu_tertiary = max(
-                            0, self.resource_manager.edu_tertiary - tert_left
-                        )
-                    self.resource_manager.population = max(
-                        0, self.resource_manager.population - displaced
-                    )
-                    res = self.resource_manager
-                    for _ in range(displaced):
-                        if res.edu_primary > 0:
-                            res.edu_primary -= 1
-                        elif res.edu_secondary > 0:
-                            res.edu_secondary -= 1
-                        elif res.edu_tertiary > 0:
-                            res.edu_tertiary -= 1
-                    EventBus.publish(
-                        GameEvent.NOTIFY, f"{displaced} CITIZENS LEFT THE CITY!", (255, 50, 50)
-                    )
-                else:
-                    EventBus.publish(
-                        GameEvent.NOTIFY, "ALL DISPLACED CITIZENS REHOUSED", (100, 255, 100)
-                    )
-
-            # 3. Process Salvage Refund
-            if refund:
-                refund_percent = (
-                    ZONE_REFUND_PERCENT if hasattr(b, "occupants") else BUILDING_REFUND_PERCENT
-                )
-                cost = self.resource_manager.costs.get(b.name, 0)
-                refund_amount = int(cost * refund_percent)
-                self.resource_manager.funds += refund_amount
-                if refund_amount > 0:
-                    self.resource_manager.log_transaction(
-                        self.game, f"SALVAGE {b.name}", refund_amount, 0
-                    )
-
-            # 4. Remove Entity and Clear Matrix
-            if b in self.entities:
-                self.entities.remove(b)
-
-            b_w = b.grid_width
-            b_h = b.grid_height
-            ox, oy = b.origin
-
-            for x in range(ox, ox + b_w):
-                for y in range(oy, oy + b_h):
-                    self.buildings[x][y] = None
-                    self.world[x][y][GridKey.COLLISION] = False
-                    self.collision_matrix[y][x] = 1
-
-            # 5. Handle Connectivity Updates
-            if isinstance(b, Road):
-                for e in self.entities:
-                    if hasattr(e, "has_road_access"):
-                        e.has_road_access = self.has_road_access(
-                            e.origin[0], e.origin[1], e.grid_width, e.grid_height
-                        )
-
-            # 6. Clear UI targeting
-            if self.examine_tile == b.origin:
-                self.examine_tile = None
-                self.hud.examined_tile = None
-                self.examine_mask_points = None
-
-            EventBus.publish(GameEvent.RECALC_SATISFACTION)
-
-        elif is_rock:
-            if self.examine_tile == (grid_pos[0], grid_pos[1]):
-                self.examine_tile = None
-                self.hud.examined_tile = None
-                self.examine_mask_points = None
-
-            self.world[grid_pos[0]][grid_pos[1]][GridKey.TILE] = ""
-            self.world[grid_pos[0]][grid_pos[1]][GridKey.COLLISION] = False
-            self.collision_matrix[grid_pos[1]][grid_pos[0]] = 1
-            EventBus.publish(GameEvent.PLAY_SOUND, "destruction")
-            EventBus.publish(GameEvent.NOTIFY, "ROCK SMASHED!", (200, 200, 200))
-
-    def process_fires(self):
-        now = pg.time.get_ticks()
-        stations = [
-            b
-            for b in self.entities
-            if isinstance(b, FireStation) and getattr(b, "is_powered", False)
-        ]
-
-        for b in self.entities.copy():
-            if not hasattr(b, "on_fire") or isinstance(b, (Road, Tree, FireStation)):
-                continue
-
-            # --- START LOGIC ---
-            if not b.on_fire:
-                chance = CHANCE * 0.01
-                if isinstance(b, (PowerPlant, IndZone)):
-                    chance = CHANCE * 0.1  # Higher risk
-
-                # Check station radius
-                is_protected = False
-                for station in stations:
-                    dist = abs(b.origin[0] - station.origin[0]) + abs(
-                        b.origin[1] - station.origin[1]
-                    )
-                    if dist <= FIRE_STATION_RADIUS:
-                        is_protected = True
-                        break
-
-                if is_protected:
-                    chance *= 0.1  # 90% reduction
-
-                import random
-
-                if random.random() < chance:
-                    b.on_fire = True
-                    b.fire_start_time = now
-                    b.targeted_by_truck = False
-                    EventBus.publish(GameEvent.NOTIFY, "IT'S FUCKING BURNING!!!!", (255, 50, 50))
-
-            # --- SPREAD LOGIC ---
-            elif b.on_fire:
-                if now - b.fire_start_time > FIRE_SPREAD_TIME:
-                    adj = [(0, 1), (0, -1), (1, 0), (-1, 0)]
-                    # Check every tile the building occupies, not just the top-left!
-                    for x in range(b.origin[0], b.origin[0] + b.grid_width):
-                        for y in range(b.origin[1], b.origin[1] + b.grid_height):
-                            for dx, dy in adj:
-                                nx, ny = x + dx, y + dy
-                                if 0 <= nx < self.grid_length_x and 0 <= ny < self.grid_length_y:
-                                    neighbor = self.buildings[nx][ny]
-                                    if (
-                                        neighbor
-                                        and neighbor != b
-                                        and hasattr(neighbor, "on_fire")
-                                        and not neighbor.on_fire
-                                        and not isinstance(neighbor, (Road, Tree, FireStation))
-                                    ):
-                                        neighbor.on_fire = True
-                                        neighbor.fire_start_time = now
-                                        neighbor.targeted_by_truck = False
-                                        EventBus.publish(
-                                            GameEvent.NOTIFY, "FIRE SPREAD!", (255, 100, 50)
-                                        )
-
-                    EventBus.publish(
-                        GameEvent.NOTIFY, f"{b.name.upper()} BURNED DOWN!", (255, 50, 50)
-                    )
-                    self.execute_demolition(b.origin, apply_penalty=10, refund=False)
-                    continue
-
-                # --- DISPATCH TRUCK ---
-                if not b.targeted_by_truck and stations:
-                    closest_station = min(
-                        stations,
-                        key=lambda st: (
-                            abs(b.origin[0] - st.origin[0]) + abs(b.origin[1] - st.origin[1])
-                        ),
-                    )
-                    from .workers import FireTruck
-
-                    FireTruck(closest_station, b, self)
-                    b.targeted_by_truck = True
 
     def _set_ignore_clicks(self):
         self.ignore_clicks_until_release = True

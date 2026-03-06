@@ -5,6 +5,8 @@ import random
 from .systems.population_system import PopulationSystem
 from .systems.power_system import PowerSystem
 from .systems.economy_system import EconomySystem
+from .systems.disaster_system import DisasterSystem
+from .systems.construction_manager import ConstructionManager
 
 from .world import World
 from .utils import draw_text, logger
@@ -49,7 +51,7 @@ class Game:
 
         # Initialize HUD and world
         self.hud = Hud(self.resource_manager, self.width, self.height)
-        #self.hud.game = self  # Give HUD a reference to game
+        # self.hud.game = self  # Give HUD a reference to game
         self.world = World(
             self, self.resource_manager, self.entities, self.hud, 50, 50, self.width, self.height
         )
@@ -107,6 +109,8 @@ class Game:
         self.power_system = PowerSystem(self.world)
         self.economy_system = EconomySystem(self.world, self.resource_manager, self)
         self.population_system = PopulationSystem(self.world, self.resource_manager, self)
+        self.disaster_system = DisasterSystem(self, self.world)
+        self.construction_manager = ConstructionManager(self, self.world)
 
     def toggle_music(self):
         self.sound_on = not self.sound_on
@@ -205,6 +209,9 @@ class Game:
                 if event.key == pg.K_F9:
                     self.hud.active_modal = "LOAD"
 
+                if event.key == pg.K_f:
+                    self.disaster_system.start_random_fire()
+
                 if event.key == pg.K_1:
                     self.day_timer = (self.day_timer / SPEEDS[self.current_speed]) * SPEEDS[1]
                     self.current_speed = 1
@@ -270,7 +277,7 @@ class Game:
 
         # Game over state: HUD must still update to handle buttons
         if self.resource_manager.is_mayor_replaced:
-            #self.hud.update()
+            # self.hud.update()
             return
 
         # ============ Core Game Updates ============
@@ -291,6 +298,8 @@ class Game:
         if not self.paused:
             # Animate stars
             self.star_offset += 0.2
+
+            self.disaster_system.update()
 
             now = pg.time.get_ticks()
 
