@@ -36,7 +36,7 @@ class PopulationSystem:
         res_zones, ind_zones, ser_zones, services, _ = self._zone_distribution()
         self._update_road_access()
         road_networks = self._get_road_networks()
-        self.game.power_system.update_connectivity()
+        EventBus.publish(GameEvent.UPDATE_POWER_CONNECTIVITY)
 
         total_ind_jobs = sum(z.capacity for z in ind_zones if z.has_road_access)
         total_ser_jobs = sum(z.capacity for z in ser_zones if z.has_road_access)

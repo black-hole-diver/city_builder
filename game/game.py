@@ -22,6 +22,7 @@ from .setting import (
     WHITE,
     BACKGROUND_COLOR,
     EntityType,
+    GameEvent
 )
 
 import json
@@ -97,10 +98,10 @@ class Game:
         except Exception as e:
             logger.error(f"Error loading music: {e}")
 
-        EventBus.subscribe("play_sound", self.play_sound)
-        EventBus.subscribe("notify", self.add_notification)
-        EventBus.subscribe("toggle_music", self.toggle_music)
-        EventBus.subscribe("start_rampage", self.start_rampage)
+        EventBus.subscribe(GameEvent.PLAY_SOUND, self.play_sound)
+        EventBus.subscribe(GameEvent.NOTIFY, self.add_notification)
+        EventBus.subscribe(GameEvent.TOGGLE_MUSIC, self.toggle_music)
+        EventBus.subscribe(GameEvent.START_RAMPAGE, self.start_rampage)
 
         # Systems
         self.power_system = PowerSystem(self.world)

@@ -9,7 +9,6 @@ class EconomySystem:
         self.game = game_context
 
     def apply_annual_logic(self):
-        """Moved from Game.apply_annual_logic"""
         """Handle annual events: budget summary, satisfaction, and game over conditions."""
         current_year = self.game.current_date.year - 1
         year_entry = next(
@@ -36,20 +35,33 @@ class EconomySystem:
     def _check_game_over_conditions(self):
         if self.resource_manager.satisfaction < 10:
             self.resource_manager.is_mayor_replaced = True
-            self.game.add_notification("YOU ARE FIRED!!!!", (255, 0, 0))
+            EventBus.publish(
+                GameEvent.NOTIFY,
+                "YOU ARE FIRED!!!!",
+                (255, 0, 0)
+            )
 
         if self.resource_manager.years_negative_budget > 5:
             self.resource_manager.is_mayor_replaced = True
-            self.game.add_notification("GAME OVER: DEBT LIMIT EXCEEDED", (255, 0, 0))
+            EventBus.publish(
+                GameEvent.NOTIFY,
+                "GAME OVER: DEBT LIMIT EXCEEDED",
+                (255, 0, 0)
+            )
 
     def _notify_annual_budget(self, year_entry):
         tax = int(year_entry["income"])
         maintenance = int(year_entry["expenses"])
-        self.game.add_notification("TAXING TIME!", (255, 215, 0))
-        self.game.add_notification(
-            f"Annual Budget: +${tax} -${maintenance}",
-            (100, 255, 100) if tax >= maintenance else (255, 100, 100),
-        )
+        EventBus.publish(
+                GameEvent.NOTIFY,
+                "TAXING TIME!",
+                (255, 215, 0)
+            )
+        EventBus.publish(
+                GameEvent.NOTIFY,
+                f"Annual Budget: +${tax} -${maintenance}",
+                (100, 255, 100) if tax >= maintenance else (255, 100, 100)
+            )
 
     def _check_retirement_and_graduation(self):
         from game.buildings import School, University
@@ -101,4 +113,8 @@ class EconomySystem:
             self.resource_manager.edu_tertiary += graduates
 
         if len(schools) > 0 or len(unis) > 0:
-            self.game.add_notification("ACADEMIC YEAR COMPLETE", (100, 200, 255))
+            EventBus.publish(
+                GameEvent.NOTIFY,
+                "ACADEMIC YEAR COMPLETE",
+                (100, 200, 255)
+            )

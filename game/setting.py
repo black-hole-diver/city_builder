@@ -22,6 +22,7 @@ class GameEvent:
     TOGGLE_MUSIC = "toggle_music"
     EXECUTE_DEMOLITION = "execute_demolition"
     IGNORE_CLICKS = "ignore_clicks"
+    UPDATE_POWER_CONNECTIVITY = "update_power_connectivity"
 
 # ==========================================
 # CORE GAME SETTINGS
