@@ -434,12 +434,23 @@ class World:
                         (cart_x, cart_y + b_h * TILE_SIZE),
                     ]
                     multi_iso = [self.cart_to_iso(px, py) for px, py in multi_rect]
-                    minx = min(px for px, py in multi_iso)
-                    miny = min(py for px, py in multi_iso)
+                    minx = min(px for px, _ in multi_iso)
+                    maxx = max(px for px, _ in multi_iso)
+                    miny = min(py for _, py in multi_iso)
+                    maxy = max(py for _, py in multi_iso)
 
-                    b_screen_x = minx + offset_x
-                    floor_height = (b_w + b_h) * (TILE_SIZE / 2)
-                    b_screen_y = miny - (building.image.get_height() - floor_height) + offset_y
+                    from .buildings import Tree, PowerLine
+
+                    # for narrow objects
+                    if isinstance(building, (Tree, PowerLine)):
+                        center_x = minx + ((maxx-minx)/2)
+                        center_y = miny + ((maxy-miny)/2)
+                        b_screen_x = (center_x + offset_x) - (building.image.get_width() / 2)
+                        b_screen_y = (center_y + offset_y) - building.image.get_height()
+                    else:
+                        b_screen_x = minx + offset_x
+                        floor_height = (b_w + b_h) * (TILE_SIZE / 2)
+                        b_screen_y = miny - (building.image.get_height() - floor_height) + offset_y
 
                     # Calculate depth specifically for multi-tile buildings
                     depth = x + (b_w / 2.0) + y + (b_h / 2.0)
@@ -511,10 +522,9 @@ class World:
                     }
                 )
 
-        # 2. Sort the queue by our calculated depth!
+        # -- Render from back to front --
         render_queue.sort(key=lambda q_item: q_item["depth"])
 
-        # 3. Render everything from back-to-front
         for item in render_queue:
             screen.blit(item["image"], item["pos"])
             if item["mask"]:
@@ -534,7 +544,7 @@ class World:
                 )
                 screen.blit(curr_fire_img, (fx, fy))
 
-        # 4. Draw Ghost Tile last so it stays completely visible as a UI overlay
+        # -- Hovering items on tiles --
         if self.temp_tile is not None:
             iso_poly = self.temp_tile[GridKey.ISO_POLY]
             shifted_poly = [(px + offset_x, py + offset_y) for px, py in iso_poly]
@@ -547,10 +557,24 @@ class World:
             b_w = self.temp_tile.get("b_w", 1)
             b_h = self.temp_tile.get("b_h", 1)
 
-            floor_height = (b_w + b_h) * (TILE_SIZE / 2)
-            screen_y = render_pos[1] - (img.get_height() - floor_height) + offset_y
+            from .setting import EntityType
 
-            screen.blit(img, (render_pos[0] + offset_x, screen_y))
+            selected_name = self.hud.selected_tile["name"] if self.hud.selected_tile else None
+            if selected_name in (EntityType.TREE, EntityType.POWERLINE):
+                minx = min(px for px, _ in iso_poly)
+                maxx = max(px for px, _ in iso_poly)
+                miny = min(py for _, py in iso_poly)
+                maxy = max(py for _, py in iso_poly)
+                center_x = minx + ((maxx - minx) / 2)
+                center_y = miny + ((maxy - miny) / 2)
+                preview_x = (center_x + offset_x) - (img.get_width() / 2)
+                preview_y = (center_y + offset_y) - img.get_height()
+            else:
+                preview_x = render_pos[0] + offset_x
+                floor_height = (b_w + b_h) * (TILE_SIZE / 2)
+                preview_y = render_pos[1] - (img.get_height() - floor_height) + offset_y
+
+            screen.blit(img, (preview_x,preview_y))
 
     def create_world(self):
         world = []
