@@ -37,6 +37,7 @@ class PopulationSystem:
         self._update_road_access()
         road_networks = self._get_road_networks()
         EventBus.publish(GameEvent.UPDATE_POWER_CONNECTIVITY)
+        self._update_fire_protection()
 
         total_ind_jobs = sum(z.capacity for z in ind_zones if z.has_road_access)
         total_ser_jobs = sum(z.capacity for z in ser_zones if z.has_road_access)
@@ -556,3 +557,25 @@ class PopulationSystem:
             self._allocate_students(schools, self.resource_manager.edu_primary)
         if unis and self.resource_manager.edu_secondary > 0:
             self._allocate_students(unis, self.resource_manager.edu_secondary)
+
+    def _update_fire_protection(self):
+        """Update fire protection status of the buildings"""
+        from game.buildings import FireStation, Tree, Road, Building
+        from game.setting import FIRE_STATION_RADIUS
+
+        active_stations = [
+            e for e in self.game.entities
+            if isinstance(e, FireStation)
+            and getattr(e, "is_powered", False)
+            and getattr(e, "has_road_access", False)
+        ]
+
+        for b in self.game.entities:
+            if not isinstance(b, Building) or isinstance(b, (Tree, Road, FireStation)):
+                continue
+            b.is_fire_protected = False
+            for st in active_stations:
+                dist = abs(b.origin[0] - st.origin[0]) + abs(b.origin[1] - st.origin[1])
+                if dist <= FIRE_STATION_RADIUS:
+                    b.is_fire_protected = True
+                    break

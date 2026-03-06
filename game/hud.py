@@ -688,28 +688,12 @@ class Hud:
                             screen, "Power: NO POWER", 22, (255, 100, 100), (desc_x, current_y)
                         )
                     current_y += 20
+
             # ==========================================
-            # ==========================================
-            # NEW: Fire Protection Status
+            # Fire Protection Status
             # ==========================================
             if isinstance(b, Building) and not isinstance(b, (Tree, Road, FireStation)):
-                # Check for nearby powered Fire Stations
-                from .setting import FIRE_STATION_RADIUS
-
-                is_fire_protected = False
-                if self.game:
-                    for ent in self.game.entities:
-                        if (
-                            isinstance(ent, FireStation)
-                            and getattr(ent, "is_powered", False)
-                            and getattr(ent, "has_road_access", False)
-                        ):
-                            dist = abs(b.origin[0] - ent.origin[0]) + abs(
-                                b.origin[1] - ent.origin[1]
-                            )
-                            if dist <= FIRE_STATION_RADIUS:
-                                is_fire_protected = True
-                                break
+                is_fire_protected = getattr(b, "is_fire_protected", False)
                 if is_fire_protected:
                     draw_text(
                         screen, "Safety: FIRE PROOFED", 22, (100, 255, 255), (desc_x, current_y)
