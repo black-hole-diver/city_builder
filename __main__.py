@@ -1,17 +1,17 @@
 import pygame as pg
 from game.game import Game
-import sys
-import os
+# import sys
+# import os
 
 # producing a .app with pyinstaller:
 # `pyinstaller --noconfirm --onedir --windowed --name "Power City Builder" \
 # --add-data "assets:assets" \ __main__.py``
 
-if getattr(sys, "frozen", False):
-    application_path = os.path.dirname(sys.executable)
-else:
-    application_path = os.path.dirname(os.path.abspath(__file__))
-os.chdir(application_path)
+# if getattr(sys, "frozen", False):
+#     application_path = os.path.dirname(sys.executable)
+# else:
+#     application_path = os.path.dirname(os.path.abspath(__file__))
+# os.chdir(application_path)
 
 # City builder tutorial series | A*Pathfinding | pygame
 # Skeleton from Arachnid56
