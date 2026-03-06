@@ -97,10 +97,12 @@ class DisasterSystem:
                     )
                     FireTruck(closest_station, b, self.world)
                     b.targeted_by_truck = True
+
     def start_random_fire(self):
         """Instantly sets a random building on fire for testing purposes."""
         valid_buildings = [
-            b for b in self.game.entities
+            b
+            for b in self.game.entities
             if isinstance(b, Building)
             and not isinstance(b, (Road, Tree, FireStation))
             and not getattr(b, "on_fire", False)

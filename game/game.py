@@ -7,13 +7,13 @@ from .systems.power_system import PowerSystem
 from .systems.economy_system import EconomySystem
 from .systems.disaster_system import DisasterSystem
 from .systems.construction_manager import ConstructionManager
+from .systems.resource_manager import ResourceManager
 
 from .world import World
 from .utils import draw_text, logger
 from .camera import Camera
 from .hud import Hud
 from .workers import Worker
-from .resource_manager import ResourceManager
 from .buildings import ResZone, IndZone, SerZone, PowerPlant, Tree
 from .event_bus import EventBus
 from .setting import (
@@ -653,7 +653,7 @@ class Game:
             occupants = b_data.get("occupants")
 
             render_pos = self.world.world[x][y]["render_pos"]
-            building_class = self.world.building_types.get(name)
+            building_class = self.construction_manager.building_types.get(name)
 
             if building_class:
                 image = self.hud.images.get(name)

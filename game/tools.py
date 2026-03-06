@@ -58,13 +58,14 @@ class Hammer(Tool):
 
             if has_building:
                 b = world.buildings[grid_pos[0]][grid_pos[1]]
-
                 is_occupied_zone = hasattr(b, "occupants") and b.occupants > 0
 
                 # Check if it's a road and if its removal breaks connectivity
                 is_critical_road = False
                 if isinstance(b, Road):
-                    if not world.is_road_safe_to_demolish(grid_pos[0], grid_pos[1]):
+                    if not world.game.construction_manager.is_road_safe_to_demolish(
+                        grid_pos[0], grid_pos[1]
+                    ):
                         is_critical_road = True
 
                 # Trigger warning ONLY for occupied zones or critical roads
@@ -100,14 +101,13 @@ class Hammer(Tool):
                     world.game.hud.demolish_target_pos = grid_pos
                     world.game.hud.demolish_stats = stats
                     world.game.hud.active_modal = "CONFIRM_DEMOLISH"
+                    EventBus.publish(GameEvent.IGNORE_CLICKS)
                 else:
-                    EventBus.publish(
-                        GameEvent.EXECUTE_DEMOLITION, grid_pos
-                    )
+                    EventBus.publish(GameEvent.EXECUTE_DEMOLITION, grid_pos)
+                    EventBus.publish(GameEvent.IGNORE_CLICKS)
             elif is_rock:
-                EventBus.publish(
-                    GameEvent.EXECUTE_DEMOLITION, grid_pos
-                )
+                EventBus.publish(GameEvent.EXECUTE_DEMOLITION, grid_pos)
+                EventBus.publish(GameEvent.IGNORE_CLICKS)
 
 
 class VIP(Tool):

@@ -6,8 +6,6 @@ from .utils import logger
 from game.event_bus import EventBus
 from .setting import (
     TILE_SIZE,
-    BUILDING_REFUND_PERCENT,
-    ZONE_REFUND_PERCENT,
     BLOCK_URL,
     TREE_URL,
     ROCK_URL,
@@ -19,20 +17,7 @@ from .workers import Worker
 from .buildings import (
     Building,
     Tree,
-    Zone,
-    ResZone,
-    IndZone,
-    SerZone,
-    Stadium,
-    Police,
-    FireStation,
-    School,
-    University,
-    PowerPlant,
-    Road,
-    PowerLine,
 )
-from .tools import Axe, Hammer, VIP
 from typing import List, Optional
 
 
@@ -99,24 +84,6 @@ class World:
         # NEW: Cache the mask outline so we don't recalculate it 60 times a second
         self.examine_mask_points = None
 
-        # Map string names to classes for cleaner building instantiation
-        self.building_types = {
-            EntityType.RES_ZONE: ResZone,
-            EntityType.IND_ZONE: IndZone,
-            EntityType.SER_ZONE: SerZone,
-            EntityType.STADIUM: Stadium,
-            EntityType.POLICE: Police,
-            EntityType.FIRE_STATION: FireStation,
-            EntityType.SCHOOL: School,
-            EntityType.UNIVERSITY: University,
-            EntityType.POWER_PLANT: PowerPlant,
-            EntityType.ROAD: Road,
-            EntityType.POWERLINE: PowerLine,
-            EntityType.TREE: Tree,
-        }
-
-        self.tools = {EntityType.AXE: Axe(), EntityType.HAMMER: Hammer(), EntityType.VIP: VIP()}
-
         for gx in range(self.grid_length_x):
             for gy in range(self.grid_length_y):
                 if self.world[gx][gy][GridKey.TILE] == EntityType.TREE:
@@ -165,7 +132,7 @@ class World:
         grid_pos = self.mouse_to_grid(mouse_pos[0], mouse_pos[1], camera.scroll)
 
         if self.hud.selected_tile is not None:
-            if self.can_place_tile(grid_pos):
+            if self.game.construction_manager.can_place_tile(grid_pos):
                 img = self.hud.selected_tile["image"].copy()
                 img.set_alpha(100)
 
@@ -175,8 +142,8 @@ class World:
                 iso_poly = cell[GridKey.ISO_POLY]
                 selected_name = self.hud.selected_tile["name"]
 
-                if selected_name in self.tools:
-                    tool = self.tools[selected_name]
+                if selected_name in self.game.construction_manager.tools:
+                    tool = self.game.construction_manager.tools[selected_name]
                     can_use = tool.can_use(grid_pos, self)
                     self.temp_tile = {
                         "image": img,
@@ -189,7 +156,9 @@ class World:
                 else:
                     b_width = self.hud.selected_tile.get("grid_width", 1)
                     b_height = self.hud.selected_tile.get("grid_height", 1)
-                    can_build = self.is_area_free(grid_pos[0], grid_pos[1], b_width, b_height)
+                    can_build = self.game.construction_manager.is_area_free(
+                        grid_pos[0], grid_pos[1], b_width, b_height
+                    )
 
                     cart_x = grid_pos[0] * TILE_SIZE
                     cart_y = grid_pos[1] * TILE_SIZE
@@ -221,114 +190,22 @@ class World:
                         and not self.temp_tile[GridKey.COLLISION]
                         and not self.game_paused
                     ):
-                        building_name = self.hud.selected_tile["name"]
-                        building_class = self.building_types.get(building_name)
+                        ent = self.game.construction_manager.place_building(
+                            grid_pos, self.hud.selected_tile, minx, miny
+                        )
+                        from .buildings import Road, PowerLine, Tree
 
-                        if building_class:
-                            building_image = self.hud.selected_tile["image"]
-                            kwargs = {}
-                            if building_name == EntityType.TREE:
-                                kwargs["plant_date"] = self.game.current_date
-                            ent = building_class(
-                                (minx, miny),
-                                building_image,
-                                self.resource_manager,
-                                grid_pos,
-                                **kwargs,
-                            )
-                            ent.game = self.game  # Set game reference
-                            self.resource_manager.apply_cost_to_resource(building_name, self.game)
-                            EventBus.publish(GameEvent.PLAY_SOUND, "creation")
-
-                            # Update initial road access
-                            ent.has_road_access = self.has_road_access(
-                                grid_pos[0], grid_pos[1], b_width, b_height
-                            )
-
-                            self.entities.append(ent)
-                            for x in range(grid_pos[0], grid_pos[0] + b_width):
-                                for y in range(grid_pos[1], grid_pos[1] + b_height):
-                                    self.buildings[x][y] = ent
-                                    self.world[x][y][GridKey.COLLISION] = True
-                                    self.collision_matrix[y][x] = 0
-
-                            # NEW: Update road access for ALL buildings if we just placed a road
-                            if isinstance(ent, Road):
-                                newly_connected = False
-                                for e in self.entities:
-                                    if hasattr(e, "has_road_access"):
-                                        was_connected = e.has_road_access
-                                        e.has_road_access = self.has_road_access(
-                                            e.origin[0], e.origin[1], e.grid_width, e.grid_height
-                                        )
-                                        if (
-                                            not was_connected
-                                            and e.has_road_access
-                                            and not isinstance(e, Road)
-                                        ):
-                                            newly_connected = True
-                                # Recalculate satisfaction immediately for better responsiveness
-                                EventBus.publish(GameEvent.RECALC_SATISFACTION)
-
-                            # Instant Power Recalculation Trigger
-                            if isinstance(
-                                ent,
-                                (
-                                    Zone,
-                                    PowerPlant,
-                                    PowerLine,
-                                    Police,
-                                    FireStation,
-                                    Stadium,
-                                    School,
-                                    University,
-                                ),
-                            ):
-                                EventBus.publish(GameEvent.RECALC_SATISFACTION)
-
-                            # Initial image update for zones
-                            if hasattr(ent, "update_image"):
-                                ent.update_image()
-                                if isinstance(ent, ResZone):
-                                    EventBus.publish(
-                                        GameEvent.NOTIFY, "RESIDENT AREA BUILT", (100, 200, 255)
-                                    )
-                                    EventBus.publish(GameEvent.RECALC_SATISFACTION)
-                                elif isinstance(ent, (IndZone, SerZone)):
-                                    EventBus.publish(
-                                        GameEvent.NOTIFY, "NEW WORKPLACE BUILT", (255, 165, 0)
-                                    )
-                                    EventBus.publish(GameEvent.RECALC_SATISFACTION)
-
-                            if isinstance(ent, Road):
-                                if newly_connected:
-                                    EventBus.publish(
-                                        GameEvent.NOTIFY, "ROAD CONNECTED", (200, 200, 200)
-                                    )
-                            elif isinstance(
-                                ent, (Police, Stadium, FireStation, School, University, PowerPlant)
-                            ):
-                                EventBus.publish(
-                                    GameEvent.NOTIFY,
-                                    f"NEW {building_name.upper()} BUILT!",
-                                    (255, 255, 100),
-                                )
-                                # Recalculate satisfaction immediately to apply new bonuses
-                                EventBus.publish(GameEvent.RECALC_SATISFACTION)
-
-                        # Do not deselect if it's a Road or PowerLine for continuous construction
                         if not isinstance(ent, (Road, PowerLine, Tree)):
                             self.hud.selected_tile = None
                         else:
-                            # Re-check affordability for continuous placement
-                            if not self.resource_manager.is_affordable(building_name):
+                            if not self.resource_manager.is_affordable(selected_name):
                                 self.hud.selected_tile = None
 
                         self.examine_tile = None
                         self.hud.examined_tile = None
                         self.examine_mask_points = None
         else:
-            if self.can_place_tile(grid_pos):
+            if self.game.construction_manager.can_place_tile(grid_pos):
                 building = self.buildings[grid_pos[0]][grid_pos[1]]
                 world_tile = self.world[grid_pos[0]][grid_pos[1]][GridKey.TILE]
 
@@ -654,152 +531,6 @@ class World:
             EntityType.ROCK: pg.image.load(ROCK_URL).convert_alpha(),
             EntityType.BLOCK: pg.image.load(BLOCK_URL).convert_alpha(),
         }
-
-    def can_place_tile(self, grid_pos):
-        mouse_pos = pg.mouse.get_pos()
-
-        # Check HUD panels using any() for cleaner, short-circuit logic
-        hud_rects = [self.hud.resource_rect, self.hud.build_rect, self.hud.select_rect]
-
-        if hasattr(self.hud, "dino_btn_rect"):
-            hud_rects.append(self.hud.dino_btn_rect)
-
-        if getattr(self.game, "menu_state", None) == "CONFIRM_DEMOLISH" and hasattr(
-            self.hud, "demo_box_rect"
-        ):
-            hud_rects.append(self.hud.demo_box_rect)
-
-        if any(rect.collidepoint(mouse_pos) for rect in hud_rects):
-            return False
-
-        # BUG FIX: changed `self.grid_length_x` to `self.grid_length_y` for the Y axis check
-        world_bounds = (0 <= grid_pos[0] < self.grid_length_x) and (
-            0 <= grid_pos[1] < self.grid_length_y
-        )
-        return world_bounds
-
-    def is_area_free(self, origin_x, origin_y, width, height):
-        for x in range(origin_x, origin_x + width):
-            for y in range(origin_y, origin_y + height):
-                if not (0 <= x < self.grid_length_x and 0 <= y < self.grid_length_y):
-                    return False
-                if self.world[x][y][GridKey.COLLISION]:
-                    return False
-        return True
-
-    def has_road_access(self, x, y, b_width, b_height):
-        """Checks if a building at (x,y) with dimensions (w,h) is adjacent to a road."""
-        # Check all tiles around the perimeter
-        for i in range(x - 1, x + b_width + 1):
-            for j in range(y - 1, y + b_height + 1):
-                # Skip the tiles the building itself occupies
-                if x <= i < x + b_width and y <= j < y + b_height:
-                    continue
-                if 0 <= i < self.grid_length_x and 0 <= j < self.grid_length_y:
-                    b = self.buildings[i][j]
-                    if isinstance(b, Road):
-                        return True
-        return False
-
-    def get_adjacent_roads(self, x, y, b_width, b_height):
-        """Returns a list of (x, y) coordinates of roads adjacent to the building."""
-        roads = []
-        for i in range(x - 1, x + b_width + 1):
-            for j in range(y - 1, y + b_height + 1):
-                if x <= i < x + b_width and y <= j < y + b_height:
-                    continue
-                if 0 <= i < self.grid_length_x and 0 <= j < self.grid_length_y:
-                    b = self.buildings[i][j]
-                    if isinstance(b, Road):
-                        roads.append((i, j))
-        return roads
-
-    def is_road_safe_to_demolish(self, x, y):
-        """
-        Checks if a road at (x, y) can be safely demolished without breaking
-        connectivity between existing zones.
-        """
-        from collections import deque
-
-        all_zones = []
-        for bx in range(self.grid_length_x):
-            for by in range(self.grid_length_y):
-                b = self.buildings[bx][by]
-                if isinstance(b, Zone) and b.origin == (bx, by):
-                    all_zones.append(b)
-
-        if not all_zones:
-            return True  # No zones to disconnect
-
-        # Helper to get road network connectivity
-        def get_road_networks(exclude_pos=None):
-            networks = {}  # (rx, ry) -> network_id
-            visited = set()
-            net_id = 0
-            # Optimize: only iterate over coordinates that HAVE roads
-            road_positions = []
-            for rx in range(self.grid_length_x):
-                for ry in range(self.grid_length_y):
-                    b = self.buildings[rx][ry]
-                    if isinstance(b, Road):
-                        road_positions.append((rx, ry))
-
-            for rx, ry in road_positions:
-                if (rx, ry) == exclude_pos:
-                    continue
-                if (rx, ry) not in visited:
-                    queue = deque([(rx, ry)])
-                    visited.add((rx, ry))
-                    while queue:
-                        cx, cy = queue.popleft()
-                        networks[(cx, cy)] = net_id
-                        for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
-                            nx, ny = cx + dx, cy + dy
-                            if (nx, ny) == exclude_pos:
-                                continue
-                            if 0 <= nx < self.grid_length_x and 0 <= ny < self.grid_length_y:
-                                nb = self.buildings[nx][ny]
-                                if isinstance(nb, Road) and (nx, ny) not in visited:
-                                    visited.add((nx, ny))
-                                    queue.append((nx, ny))
-                    net_id += 1
-            return networks
-
-        # Get networks BEFORE removal
-        current_networks = get_road_networks()
-
-        # Map zones to their networks BEFORE removal
-        def get_zone_networks(zone, networks_map):
-            adj = self.get_adjacent_roads(
-                zone.origin[0], zone.origin[1], zone.grid_width, zone.grid_height
-            )
-            return {networks_map[r] for r in adj if r in networks_map}
-
-        zone_to_nets_before = {z: get_zone_networks(z, current_networks) for z in all_zones}
-
-        # Get networks AFTER removal
-        future_networks = get_road_networks(exclude_pos=(x, y))
-        zone_to_nets_after = {z: get_zone_networks(z, future_networks) for z in all_zones}
-
-        # Check if any previously connected zones are now in different networks or disconnected
-        # This is a bit tricky. If two zones shared a network before, they must share one after.
-        for i in range(len(all_zones)):
-            for j in range(i + 1, len(all_zones)):
-                z1 = all_zones[i]
-                z2 = all_zones[j]
-
-                nets1_before = zone_to_nets_before[z1]
-                nets2_before = zone_to_nets_before[z2]
-
-                # If they were connected via at least one common network
-                if nets1_before.intersection(nets2_before):
-                    # They MUST still be connected via at least one common network after
-                    nets1_after = zone_to_nets_after[z1]
-                    nets2_after = zone_to_nets_after[z2]
-                    if not nets1_after.intersection(nets2_after):
-                        return False
-
-        return True
 
     def _set_ignore_clicks(self):
         self.ignore_clicks_until_release = True

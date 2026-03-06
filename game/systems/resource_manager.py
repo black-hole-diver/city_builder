@@ -1,4 +1,4 @@
-from .setting import COSTS, MAINTENANCE_FEES
+from ..setting import COSTS, MAINTENANCE_FEES
 
 
 class ResourceManager:
@@ -124,7 +124,7 @@ class ResourceManager:
             for y in range(world.grid_length_y):
                 b = world.buildings[x][y]
                 if b and b not in processed_buildings:
-                    from .buildings import Tree
+                    from ..buildings import Tree
 
                     if isinstance(b, Tree):
                         if not getattr(b, "is_old_tree", False) and getattr(b, "plant_date", None):
