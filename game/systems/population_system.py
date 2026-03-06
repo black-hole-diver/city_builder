@@ -409,33 +409,46 @@ class PopulationSystem:
                         if not eligible:
                             break
                 if actual_growth > 0:
-                    self.game.add_notification(
-                        f"City Population Growth: +{actual_growth}", (100, 255, 100)
+                    EventBus.publish(
+                        GameEvent.NOTIFY,
+                        f"City Population Growth: +{actual_growth}",
+                        (100, 255, 100)
                     )
             self.resource_manager.population = sum(rz.occupants for rz in res_zones)
 
         # --- Apply Population Decline ---
         elif growth_potential < 0:
-            self.game.add_notification(f"PEOPLE ARE LEAVING: {growth_potential}", (255, 100, 100))
-            actual_left = 0
-            for _ in range(abs(growth_potential)):
-                eligible = [rz for rz in res_zones if rz.occupants > 0]
-                if eligible:
-                    target = random.choice(eligible)
-                    target.occupants -= 1
-                    actual_left += 1
-            if actual_left > 0:
-                sec_ratio = self.resource_manager.edu_secondary / self.resource_manager.population
-                tert_ratio = self.resource_manager.edu_tertiary / self.resource_manager.population
-                sec_left = int(actual_left * sec_ratio)
-                tert_left = int(actual_left * tert_ratio)
-                self.resource_manager.edu_secondary = max(
-                    0, self.resource_manager.edu_secondary - sec_left
-                )
-                self.resource_manager.edu_tertiary = max(
-                    0, self.resource_manager.edu_tertiary - tert_left
-                )
-            self.resource_manager.population = sum(rz.occupants for rz in res_zones)
+            if self.resource_manager.population > 0:
+                EventBus.publish(
+                        GameEvent.NOTIFY,
+                        f"PEOPLE ARE LEAVING: {growth_potential}",
+                        (255, 100, 100)
+                    )
+                actual_left = 0
+                for _ in range(abs(growth_potential)):
+                    eligible = [rz for rz in res_zones if rz.occupants > 0]
+                    if eligible:
+                        target = random.choice(eligible)
+                        target.occupants -= 1
+                        actual_left += 1
+                if actual_left > 0:
+                    sec_ratio = self.resource_manager.edu_secondary / self.resource_manager.population
+                    tert_ratio = self.resource_manager.edu_tertiary / self.resource_manager.population
+                    sec_left = int(actual_left * sec_ratio)
+                    tert_left = int(actual_left * tert_ratio)
+                    self.resource_manager.edu_secondary = max(
+                        0, self.resource_manager.edu_secondary - sec_left
+                    )
+                    self.resource_manager.edu_tertiary = max(
+                        0, self.resource_manager.edu_tertiary - tert_left
+                    )
+                self.resource_manager.population = sum(rz.occupants for rz in res_zones)
+            else:
+                EventBus.publish(
+                        GameEvent.NOTIFY,
+                        "PEOPLE RE NOT COMING IN",
+                        (255, 100, 100)
+                    )
 
     def _workplace_assignment(self, ind_zones, ser_zones, res_zones):
         """Assign workers to industrial and service zones based on road access and fill ratio.
