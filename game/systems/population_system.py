@@ -104,7 +104,7 @@ class PopulationSystem:
         """Update road access for all entities."""
         for e in self.game.entities:
             if hasattr(e, "has_road_access"):
-                e.has_road_access = self.world.has_road_access(
+                e.has_road_access = self.game.construction_manager.has_road_access(
                     e.origin[0], e.origin[1], e.grid_width, e.grid_height
                 )
 
@@ -141,7 +141,7 @@ class PopulationSystem:
 
     def _get_touched_networks(self, zone, road_networks):
         """Get all road networks adjacent to this zone."""
-        adj_roads = self.world.get_adjacent_roads(
+        adj_roads = self.game.construction_manager.get_adjacent_roads(
             zone.origin[0], zone.origin[1], zone.grid_width, zone.grid_height
         )
         return {road_networks[r_pos] for r_pos in adj_roads if r_pos in road_networks}
@@ -564,7 +564,8 @@ class PopulationSystem:
         from game.setting import FIRE_STATION_RADIUS
 
         active_stations = [
-            e for e in self.game.entities
+            e
+            for e in self.game.entities
             if isinstance(e, FireStation)
             and getattr(e, "is_powered", False)
             and getattr(e, "has_road_access", False)

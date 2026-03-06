@@ -6,11 +6,6 @@ from .utils import logger
 from game.event_bus import EventBus
 from .setting import (
     TILE_SIZE,
-    FIRE_SPREAD_TIME,
-    FIRE_STATION_RADIUS,
-    CHANCE,
-    BUILDING_REFUND_PERCENT,
-    ZONE_REFUND_PERCENT,
     BLOCK_URL,
     TREE_URL,
     ROCK_URL,
@@ -22,20 +17,7 @@ from .workers import Worker
 from .buildings import (
     Building,
     Tree,
-    Zone,
-    ResZone,
-    IndZone,
-    SerZone,
-    Stadium,
-    Police,
-    FireStation,
-    School,
-    University,
-    PowerPlant,
-    Road,
-    PowerLine,
 )
-from .tools import Axe, Hammer, VIP
 from typing import List, Optional
 
 
@@ -102,24 +84,6 @@ class World:
         # NEW: Cache the mask outline so we don't recalculate it 60 times a second
         self.examine_mask_points = None
 
-        # Map string names to classes for cleaner building instantiation
-        self.building_types = {
-            EntityType.RES_ZONE: ResZone,
-            EntityType.IND_ZONE: IndZone,
-            EntityType.SER_ZONE: SerZone,
-            EntityType.STADIUM: Stadium,
-            EntityType.POLICE: Police,
-            EntityType.FIRE_STATION: FireStation,
-            EntityType.SCHOOL: School,
-            EntityType.UNIVERSITY: University,
-            EntityType.POWER_PLANT: PowerPlant,
-            EntityType.ROAD: Road,
-            EntityType.POWERLINE: PowerLine,
-            EntityType.TREE: Tree,
-        }
-
-        self.tools = {EntityType.AXE: Axe(), EntityType.HAMMER: Hammer(), EntityType.VIP: VIP()}
-
         for gx in range(self.grid_length_x):
             for gy in range(self.grid_length_y):
                 if self.world[gx][gy][GridKey.TILE] == EntityType.TREE:
@@ -138,7 +102,6 @@ class World:
                     self.world[gx][gy][GridKey.COLLISION] = True
                     self.collision_matrix[gy][gx] = 0
 
-        EventBus.subscribe(GameEvent.EXECUTE_DEMOLITION, self.execute_demolition)
         EventBus.subscribe(GameEvent.IGNORE_CLICKS, self._set_ignore_clicks)
 
     def update(self, camera, game_paused):
@@ -149,9 +112,6 @@ class World:
             if now - self.fire_frame_timer > 80:
                 self.fire_current_frame = (self.fire_current_frame + 1) % len(self.fire_images)
                 self.fire_frame_timer = now
-
-        if not self.game_paused:
-            self.process_fires()
 
         mouse_pos = pg.mouse.get_pos()
         mouse_action = pg.mouse.get_pressed()
@@ -172,7 +132,7 @@ class World:
         grid_pos = self.mouse_to_grid(mouse_pos[0], mouse_pos[1], camera.scroll)
 
         if self.hud.selected_tile is not None:
-            if self.can_place_tile(grid_pos):
+            if self.game.construction_manager.can_place_tile(grid_pos):
                 img = self.hud.selected_tile["image"].copy()
                 img.set_alpha(100)
 
@@ -182,8 +142,8 @@ class World:
                 iso_poly = cell[GridKey.ISO_POLY]
                 selected_name = self.hud.selected_tile["name"]
 
-                if selected_name in self.tools:
-                    tool = self.tools[selected_name]
+                if selected_name in self.game.construction_manager.tools:
+                    tool = self.game.construction_manager.tools[selected_name]
                     can_use = tool.can_use(grid_pos, self)
                     self.temp_tile = {
                         "image": img,
@@ -196,7 +156,9 @@ class World:
                 else:
                     b_width = self.hud.selected_tile.get("grid_width", 1)
                     b_height = self.hud.selected_tile.get("grid_height", 1)
-                    can_build = self.is_area_free(grid_pos[0], grid_pos[1], b_width, b_height)
+                    can_build = self.game.construction_manager.is_area_free(
+                        grid_pos[0], grid_pos[1], b_width, b_height
+                    )
 
                     cart_x = grid_pos[0] * TILE_SIZE
                     cart_y = grid_pos[1] * TILE_SIZE
@@ -228,114 +190,22 @@ class World:
                         and not self.temp_tile[GridKey.COLLISION]
                         and not self.game_paused
                     ):
-                        building_name = self.hud.selected_tile["name"]
-                        building_class = self.building_types.get(building_name)
+                        ent = self.game.construction_manager.place_building(
+                            grid_pos, self.hud.selected_tile, minx, miny
+                        )
+                        from .buildings import Road, PowerLine, Tree
 
-                        if building_class:
-                            building_image = self.hud.selected_tile["image"]
-                            kwargs = {}
-                            if building_name == EntityType.TREE:
-                                kwargs["plant_date"] = self.game.current_date
-                            ent = building_class(
-                                (minx, miny),
-                                building_image,
-                                self.resource_manager,
-                                grid_pos,
-                                **kwargs,
-                            )
-                            ent.game = self.game  # Set game reference
-                            self.resource_manager.apply_cost_to_resource(building_name, self.game)
-                            EventBus.publish(GameEvent.PLAY_SOUND, "creation")
-
-                            # Update initial road access
-                            ent.has_road_access = self.has_road_access(
-                                grid_pos[0], grid_pos[1], b_width, b_height
-                            )
-
-                            self.entities.append(ent)
-                            for x in range(grid_pos[0], grid_pos[0] + b_width):
-                                for y in range(grid_pos[1], grid_pos[1] + b_height):
-                                    self.buildings[x][y] = ent
-                                    self.world[x][y][GridKey.COLLISION] = True
-                                    self.collision_matrix[y][x] = 0
-
-                            # NEW: Update road access for ALL buildings if we just placed a road
-                            if isinstance(ent, Road):
-                                newly_connected = False
-                                for e in self.entities:
-                                    if hasattr(e, "has_road_access"):
-                                        was_connected = e.has_road_access
-                                        e.has_road_access = self.has_road_access(
-                                            e.origin[0], e.origin[1], e.grid_width, e.grid_height
-                                        )
-                                        if (
-                                            not was_connected
-                                            and e.has_road_access
-                                            and not isinstance(e, Road)
-                                        ):
-                                            newly_connected = True
-                                # Recalculate satisfaction immediately for better responsiveness
-                                EventBus.publish(GameEvent.RECALC_SATISFACTION)
-
-                            # Instant Power Recalculation Trigger
-                            if isinstance(
-                                ent,
-                                (
-                                    Zone,
-                                    PowerPlant,
-                                    PowerLine,
-                                    Police,
-                                    FireStation,
-                                    Stadium,
-                                    School,
-                                    University,
-                                ),
-                            ):
-                                EventBus.publish(GameEvent.RECALC_SATISFACTION)
-
-                            # Initial image update for zones
-                            if hasattr(ent, "update_image"):
-                                ent.update_image()
-                                if isinstance(ent, ResZone):
-                                    EventBus.publish(
-                                        GameEvent.NOTIFY, "RESIDENT AREA BUILT", (100, 200, 255)
-                                    )
-                                    EventBus.publish(GameEvent.RECALC_SATISFACTION)
-                                elif isinstance(ent, (IndZone, SerZone)):
-                                    EventBus.publish(
-                                        GameEvent.NOTIFY, "NEW WORKPLACE BUILT", (255, 165, 0)
-                                    )
-                                    EventBus.publish(GameEvent.RECALC_SATISFACTION)
-
-                            if isinstance(ent, Road):
-                                if newly_connected:
-                                    EventBus.publish(
-                                        GameEvent.NOTIFY, "ROAD CONNECTED", (200, 200, 200)
-                                    )
-                            elif isinstance(
-                                ent, (Police, Stadium, FireStation, School, University, PowerPlant)
-                            ):
-                                EventBus.publish(
-                                    GameEvent.NOTIFY,
-                                    f"NEW {building_name.upper()} BUILT!",
-                                    (255, 255, 100),
-                                )
-                                # Recalculate satisfaction immediately to apply new bonuses
-                                EventBus.publish(GameEvent.RECALC_SATISFACTION)
-
-                        # Do not deselect if it's a Road or PowerLine for continuous construction
                         if not isinstance(ent, (Road, PowerLine, Tree)):
                             self.hud.selected_tile = None
                         else:
-                            # Re-check affordability for continuous placement
-                            if not self.resource_manager.is_affordable(building_name):
+                            if not self.resource_manager.is_affordable(selected_name):
                                 self.hud.selected_tile = None
 
                         self.examine_tile = None
                         self.hud.examined_tile = None
                         self.examine_mask_points = None
         else:
-            if self.can_place_tile(grid_pos):
+            if self.game.construction_manager.can_place_tile(grid_pos):
                 building = self.buildings[grid_pos[0]][grid_pos[1]]
                 world_tile = self.world[grid_pos[0]][grid_pos[1]][GridKey.TILE]
 
@@ -434,12 +304,23 @@ class World:
                         (cart_x, cart_y + b_h * TILE_SIZE),
                     ]
                     multi_iso = [self.cart_to_iso(px, py) for px, py in multi_rect]
-                    minx = min(px for px, py in multi_iso)
-                    miny = min(py for px, py in multi_iso)
+                    minx = min(px for px, _ in multi_iso)
+                    maxx = max(px for px, _ in multi_iso)
+                    miny = min(py for _, py in multi_iso)
+                    maxy = max(py for _, py in multi_iso)
 
-                    b_screen_x = minx + offset_x
-                    floor_height = (b_w + b_h) * (TILE_SIZE / 2)
-                    b_screen_y = miny - (building.image.get_height() - floor_height) + offset_y
+                    from .buildings import Tree, PowerLine
+
+                    # for narrow objects
+                    if isinstance(building, (Tree, PowerLine)):
+                        center_x = minx + ((maxx - minx) / 2)
+                        center_y = miny + ((maxy - miny) / 2)
+                        b_screen_x = (center_x + offset_x) - (building.image.get_width() / 2)
+                        b_screen_y = (center_y + offset_y) - building.image.get_height()
+                    else:
+                        b_screen_x = minx + offset_x
+                        floor_height = (b_w + b_h) * (TILE_SIZE / 2)
+                        b_screen_y = miny - (building.image.get_height() - floor_height) + offset_y
 
                     # Calculate depth specifically for multi-tile buildings
                     depth = x + (b_w / 2.0) + y + (b_h / 2.0)
@@ -511,10 +392,9 @@ class World:
                     }
                 )
 
-        # 2. Sort the queue by our calculated depth!
+        # -- Render from back to front --
         render_queue.sort(key=lambda q_item: q_item["depth"])
 
-        # 3. Render everything from back-to-front
         for item in render_queue:
             screen.blit(item["image"], item["pos"])
             if item["mask"]:
@@ -534,7 +414,7 @@ class World:
                 )
                 screen.blit(curr_fire_img, (fx, fy))
 
-        # 4. Draw Ghost Tile last so it stays completely visible as a UI overlay
+        # -- Hovering items on tiles --
         if self.temp_tile is not None:
             iso_poly = self.temp_tile[GridKey.ISO_POLY]
             shifted_poly = [(px + offset_x, py + offset_y) for px, py in iso_poly]
@@ -547,10 +427,24 @@ class World:
             b_w = self.temp_tile.get("b_w", 1)
             b_h = self.temp_tile.get("b_h", 1)
 
-            floor_height = (b_w + b_h) * (TILE_SIZE / 2)
-            screen_y = render_pos[1] - (img.get_height() - floor_height) + offset_y
+            from .setting import EntityType
 
-            screen.blit(img, (render_pos[0] + offset_x, screen_y))
+            selected_name = self.hud.selected_tile["name"] if self.hud.selected_tile else None
+            if selected_name in (EntityType.TREE, EntityType.POWERLINE):
+                minx = min(px for px, _ in iso_poly)
+                maxx = max(px for px, _ in iso_poly)
+                miny = min(py for _, py in iso_poly)
+                maxy = max(py for _, py in iso_poly)
+                center_x = minx + ((maxx - minx) / 2)
+                center_y = miny + ((maxy - miny) / 2)
+                preview_x = (center_x + offset_x) - (img.get_width() / 2)
+                preview_y = (center_y + offset_y) - img.get_height()
+            else:
+                preview_x = render_pos[0] + offset_x
+                floor_height = (b_w + b_h) * (TILE_SIZE / 2)
+                preview_y = render_pos[1] - (img.get_height() - floor_height) + offset_y
+
+            screen.blit(img, (preview_x, preview_y))
 
     def create_world(self):
         world = []
@@ -637,369 +531,6 @@ class World:
             EntityType.ROCK: pg.image.load(ROCK_URL).convert_alpha(),
             EntityType.BLOCK: pg.image.load(BLOCK_URL).convert_alpha(),
         }
-
-    def can_place_tile(self, grid_pos):
-        mouse_pos = pg.mouse.get_pos()
-
-        # Check HUD panels using any() for cleaner, short-circuit logic
-        hud_rects = [self.hud.resource_rect, self.hud.build_rect, self.hud.select_rect]
-
-        if hasattr(self.hud, "dino_btn_rect"):
-            hud_rects.append(self.hud.dino_btn_rect)
-
-        if getattr(self.game, "menu_state", None) == "CONFIRM_DEMOLISH" and hasattr(
-            self.hud, "demo_box_rect"
-        ):
-            hud_rects.append(self.hud.demo_box_rect)
-
-        if any(rect.collidepoint(mouse_pos) for rect in hud_rects):
-            return False
-
-        # BUG FIX: changed `self.grid_length_x` to `self.grid_length_y` for the Y axis check
-        world_bounds = (0 <= grid_pos[0] < self.grid_length_x) and (
-            0 <= grid_pos[1] < self.grid_length_y
-        )
-        return world_bounds
-
-    def is_area_free(self, origin_x, origin_y, width, height):
-        for x in range(origin_x, origin_x + width):
-            for y in range(origin_y, origin_y + height):
-                if not (0 <= x < self.grid_length_x and 0 <= y < self.grid_length_y):
-                    return False
-                if self.world[x][y][GridKey.COLLISION]:
-                    return False
-        return True
-
-    def has_road_access(self, x, y, b_width, b_height):
-        """Checks if a building at (x,y) with dimensions (w,h) is adjacent to a road."""
-        # Check all tiles around the perimeter
-        for i in range(x - 1, x + b_width + 1):
-            for j in range(y - 1, y + b_height + 1):
-                # Skip the tiles the building itself occupies
-                if x <= i < x + b_width and y <= j < y + b_height:
-                    continue
-                if 0 <= i < self.grid_length_x and 0 <= j < self.grid_length_y:
-                    b = self.buildings[i][j]
-                    if isinstance(b, Road):
-                        return True
-        return False
-
-    def get_adjacent_roads(self, x, y, b_width, b_height):
-        """Returns a list of (x, y) coordinates of roads adjacent to the building."""
-        roads = []
-        for i in range(x - 1, x + b_width + 1):
-            for j in range(y - 1, y + b_height + 1):
-                if x <= i < x + b_width and y <= j < y + b_height:
-                    continue
-                if 0 <= i < self.grid_length_x and 0 <= j < self.grid_length_y:
-                    b = self.buildings[i][j]
-                    if isinstance(b, Road):
-                        roads.append((i, j))
-        return roads
-
-    def is_road_safe_to_demolish(self, x, y):
-        """
-        Checks if a road at (x, y) can be safely demolished without breaking
-        connectivity between existing zones.
-        """
-        from collections import deque
-
-        all_zones = []
-        for bx in range(self.grid_length_x):
-            for by in range(self.grid_length_y):
-                b = self.buildings[bx][by]
-                if isinstance(b, Zone) and b.origin == (bx, by):
-                    all_zones.append(b)
-
-        if not all_zones:
-            return True  # No zones to disconnect
-
-        # Helper to get road network connectivity
-        def get_road_networks(exclude_pos=None):
-            networks = {}  # (rx, ry) -> network_id
-            visited = set()
-            net_id = 0
-            # Optimize: only iterate over coordinates that HAVE roads
-            road_positions = []
-            for rx in range(self.grid_length_x):
-                for ry in range(self.grid_length_y):
-                    b = self.buildings[rx][ry]
-                    if isinstance(b, Road):
-                        road_positions.append((rx, ry))
-
-            for rx, ry in road_positions:
-                if (rx, ry) == exclude_pos:
-                    continue
-                if (rx, ry) not in visited:
-                    queue = deque([(rx, ry)])
-                    visited.add((rx, ry))
-                    while queue:
-                        cx, cy = queue.popleft()
-                        networks[(cx, cy)] = net_id
-                        for dx, dy in [(0, 1), (0, -1), (1, 0), (-1, 0)]:
-                            nx, ny = cx + dx, cy + dy
-                            if (nx, ny) == exclude_pos:
-                                continue
-                            if 0 <= nx < self.grid_length_x and 0 <= ny < self.grid_length_y:
-                                nb = self.buildings[nx][ny]
-                                if isinstance(nb, Road) and (nx, ny) not in visited:
-                                    visited.add((nx, ny))
-                                    queue.append((nx, ny))
-                    net_id += 1
-            return networks
-
-        # Get networks BEFORE removal
-        current_networks = get_road_networks()
-
-        # Map zones to their networks BEFORE removal
-        def get_zone_networks(zone, networks_map):
-            adj = self.get_adjacent_roads(
-                zone.origin[0], zone.origin[1], zone.grid_width, zone.grid_height
-            )
-            return {networks_map[r] for r in adj if r in networks_map}
-
-        zone_to_nets_before = {z: get_zone_networks(z, current_networks) for z in all_zones}
-
-        # Get networks AFTER removal
-        future_networks = get_road_networks(exclude_pos=(x, y))
-        zone_to_nets_after = {z: get_zone_networks(z, future_networks) for z in all_zones}
-
-        # Check if any previously connected zones are now in different networks or disconnected
-        # This is a bit tricky. If two zones shared a network before, they must share one after.
-        for i in range(len(all_zones)):
-            for j in range(i + 1, len(all_zones)):
-                z1 = all_zones[i]
-                z2 = all_zones[j]
-
-                nets1_before = zone_to_nets_before[z1]
-                nets2_before = zone_to_nets_before[z2]
-
-                # If they were connected via at least one common network
-                if nets1_before.intersection(nets2_before):
-                    # They MUST still be connected via at least one common network after
-                    nets1_after = zone_to_nets_after[z1]
-                    nets2_after = zone_to_nets_after[z2]
-                    if not nets1_after.intersection(nets2_after):
-                        return False
-
-        return True
-
-    def execute_demolition(self, grid_pos, pay_compensation=0, apply_penalty=0, refund=True):
-        has_building = self.buildings[grid_pos[0]][grid_pos[1]] is not None
-        is_rock = self.world[grid_pos[0]][grid_pos[1]][GridKey.TILE] == EntityType.ROCK
-
-        if has_building:
-            b = self.buildings[grid_pos[0]][grid_pos[1]]
-
-            EventBus.publish(GameEvent.PLAY_SOUND, "destruction")
-
-            # 1. Apply financial and satisfaction consequences
-            if pay_compensation > 0:
-                self.resource_manager.funds -= pay_compensation
-                self.resource_manager.log_transaction(
-                    self.game, "EVICTION PAYOUT", 0, pay_compensation
-                )
-                EventBus.publish(
-                    GameEvent.NOTIFY, f"PAID COMPENSATION: -${pay_compensation:,}", (255, 100, 100)
-                )
-
-            if apply_penalty > 0:
-                self.resource_manager.eviction_penalty += apply_penalty
-                EventBus.publish(
-                    GameEvent.NOTIFY, f"CITIZENS ANGERED! (-{apply_penalty}% Sat)", (255, 50, 50)
-                )
-
-            # 2. Rehousing Logic for ResZones
-            if isinstance(b, ResZone) and getattr(b, "occupants", 0) > 0:
-                displaced = b.occupants
-                other_res = [z for z in self.entities if isinstance(z, ResZone) and z != b]
-
-                # Try to fit them into other zones
-                for z in other_res:
-                    if displaced <= 0:
-                        break
-                    space = z.capacity - z.occupants
-                    if space > 0:
-                        moved = min(displaced, space)
-                        z.occupants += moved
-                        displaced -= moved
-                        if hasattr(z, "update_image"):
-                            z.update_image()
-
-                # Citizens who couldn't find a home leave the city forever
-                if displaced > 0:
-                    # Distribute evictions proportionally across education levels
-                    if self.resource_manager.population > 0:
-                        sec_ratio = (
-                            self.resource_manager.edu_secondary / self.resource_manager.population
-                        )
-                        tert_ratio = (
-                            self.resource_manager.edu_tertiary / self.resource_manager.population
-                        )
-                        sec_left = int(displaced * sec_ratio)
-                        tert_left = int(displaced * tert_ratio)
-                        self.resource_manager.edu_secondary = max(
-                            0, self.resource_manager.edu_secondary - sec_left
-                        )
-                        self.resource_manager.edu_tertiary = max(
-                            0, self.resource_manager.edu_tertiary - tert_left
-                        )
-                    self.resource_manager.population = max(
-                        0, self.resource_manager.population - displaced
-                    )
-                    res = self.resource_manager
-                    for _ in range(displaced):
-                        if res.edu_primary > 0:
-                            res.edu_primary -= 1
-                        elif res.edu_secondary > 0:
-                            res.edu_secondary -= 1
-                        elif res.edu_tertiary > 0:
-                            res.edu_tertiary -= 1
-                    EventBus.publish(
-                        GameEvent.NOTIFY, f"{displaced} CITIZENS LEFT THE CITY!", (255, 50, 50)
-                    )
-                else:
-                    EventBus.publish(
-                        GameEvent.NOTIFY, "ALL DISPLACED CITIZENS REHOUSED", (100, 255, 100)
-                    )
-
-            # 3. Process Salvage Refund
-            if refund:
-                refund_percent = (
-                    ZONE_REFUND_PERCENT if hasattr(b, "occupants") else BUILDING_REFUND_PERCENT
-                )
-                cost = self.resource_manager.costs.get(b.name, 0)
-                refund_amount = int(cost * refund_percent)
-                self.resource_manager.funds += refund_amount
-                if refund_amount > 0:
-                    self.resource_manager.log_transaction(
-                        self.game, f"SALVAGE {b.name}", refund_amount, 0
-                    )
-
-            # 4. Remove Entity and Clear Matrix
-            if b in self.entities:
-                self.entities.remove(b)
-
-            b_w = b.grid_width
-            b_h = b.grid_height
-            ox, oy = b.origin
-
-            for x in range(ox, ox + b_w):
-                for y in range(oy, oy + b_h):
-                    self.buildings[x][y] = None
-                    self.world[x][y][GridKey.COLLISION] = False
-                    self.collision_matrix[y][x] = 1
-
-            # 5. Handle Connectivity Updates
-            if isinstance(b, Road):
-                for e in self.entities:
-                    if hasattr(e, "has_road_access"):
-                        e.has_road_access = self.has_road_access(
-                            e.origin[0], e.origin[1], e.grid_width, e.grid_height
-                        )
-
-            # 6. Clear UI targeting
-            if self.examine_tile == b.origin:
-                self.examine_tile = None
-                self.hud.examined_tile = None
-                self.examine_mask_points = None
-
-            EventBus.publish(GameEvent.RECALC_SATISFACTION)
-
-        elif is_rock:
-            if self.examine_tile == (grid_pos[0], grid_pos[1]):
-                self.examine_tile = None
-                self.hud.examined_tile = None
-                self.examine_mask_points = None
-
-            self.world[grid_pos[0]][grid_pos[1]][GridKey.TILE] = ""
-            self.world[grid_pos[0]][grid_pos[1]][GridKey.COLLISION] = False
-            self.collision_matrix[grid_pos[1]][grid_pos[0]] = 1
-            EventBus.publish(GameEvent.PLAY_SOUND, "destruction")
-            EventBus.publish(GameEvent.NOTIFY, "ROCK SMASHED!", (200, 200, 200))
-
-    def process_fires(self):
-        now = pg.time.get_ticks()
-        stations = [
-            b
-            for b in self.entities
-            if isinstance(b, FireStation) and getattr(b, "is_powered", False)
-        ]
-
-        for b in self.entities.copy():
-            if not hasattr(b, "on_fire") or isinstance(b, (Road, Tree, FireStation)):
-                continue
-
-            # --- START LOGIC ---
-            if not b.on_fire:
-                chance = CHANCE * 0.01
-                if isinstance(b, (PowerPlant, IndZone)):
-                    chance = CHANCE * 0.1  # Higher risk
-
-                # Check station radius
-                is_protected = False
-                for station in stations:
-                    dist = abs(b.origin[0] - station.origin[0]) + abs(
-                        b.origin[1] - station.origin[1]
-                    )
-                    if dist <= FIRE_STATION_RADIUS:
-                        is_protected = True
-                        break
-
-                if is_protected:
-                    chance *= 0.1  # 90% reduction
-
-                import random
-
-                if random.random() < chance:
-                    b.on_fire = True
-                    b.fire_start_time = now
-                    b.targeted_by_truck = False
-                    EventBus.publish(GameEvent.NOTIFY, "IT'S FUCKING BURNING!!!!", (255, 50, 50))
-
-            # --- SPREAD LOGIC ---
-            elif b.on_fire:
-                if now - b.fire_start_time > FIRE_SPREAD_TIME:
-                    adj = [(0, 1), (0, -1), (1, 0), (-1, 0)]
-                    # Check every tile the building occupies, not just the top-left!
-                    for x in range(b.origin[0], b.origin[0] + b.grid_width):
-                        for y in range(b.origin[1], b.origin[1] + b.grid_height):
-                            for dx, dy in adj:
-                                nx, ny = x + dx, y + dy
-                                if 0 <= nx < self.grid_length_x and 0 <= ny < self.grid_length_y:
-                                    neighbor = self.buildings[nx][ny]
-                                    if (
-                                        neighbor
-                                        and neighbor != b
-                                        and hasattr(neighbor, "on_fire")
-                                        and not neighbor.on_fire
-                                        and not isinstance(neighbor, (Road, Tree, FireStation))
-                                    ):
-                                        neighbor.on_fire = True
-                                        neighbor.fire_start_time = now
-                                        neighbor.targeted_by_truck = False
-                                        EventBus.publish(
-                                            GameEvent.NOTIFY, "FIRE SPREAD!", (255, 100, 50)
-                                        )
-
-                    EventBus.publish(
-                        GameEvent.NOTIFY, f"{b.name.upper()} BURNED DOWN!", (255, 50, 50)
-                    )
-                    self.execute_demolition(b.origin, apply_penalty=10, refund=False)
-                    continue
-
-                # --- DISPATCH TRUCK ---
-                if not b.targeted_by_truck and stations:
-                    closest_station = min(
-                        stations,
-                        key=lambda st: (
-                            abs(b.origin[0] - st.origin[0]) + abs(b.origin[1] - st.origin[1])
-                        ),
-                    )
-                    from .workers import FireTruck
-
-                    FireTruck(closest_station, b, self)
-                    b.targeted_by_truck = True
 
     def _set_ignore_clicks(self):
         self.ignore_clicks_until_release = True
