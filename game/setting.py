@@ -20,7 +20,8 @@ class GameEvent:
     NOTIFY = "notify"
     START_RAMPAGE = "start_rampage"
     TOGGLE_MUSIC = "toggle_music"
-
+    EXECUTE_DEMOLITION = "execute_demolition"
+    IGNORE_CLICKS = "ignore_clicks"
 
 # ==========================================
 # CORE GAME SETTINGS

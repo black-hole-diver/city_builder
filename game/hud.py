@@ -237,7 +237,12 @@ class Hud:
                 if hasattr(self, "demo_yes_rect") and self.demo_yes_rect.collidepoint(mouse_pos):
                     pos = self.game.demolish_target_pos
                     stats = self.game.demolish_stats
-                    self.game.world.execute_demolition(pos, stats["cost"], stats["sat_penalty"])
+                    EventBus.publish(
+                        GameEvent.EXECUTE_DEMOLITION,
+                        pos,
+                        pay_compensation=stats["cost"],
+                        apply_penalty=stats["sat_penalty"]
+                    )
                     self.game.menu_state = None
                 elif hasattr(self, "demo_no_rect") and self.demo_no_rect.collidepoint(mouse_pos):
                     self.game.menu_state = None
@@ -362,7 +367,7 @@ class Hud:
 
         # Dynamic Text based on what is being destroyed
         if stats["occupants"] > 0:
-            if stats["type"] == "ResZone":
+            if stats["type"] == EntityType.RES_ZONE:
                 draw_text(
                     screen,
                     f"Residents to Relocate: {stats['occupants']}",
@@ -396,7 +401,7 @@ class Hud:
                     (box_rect.x + 40, y),
                 )
             y += 45
-        elif stats["type"] == "Road":
+        elif stats["type"] == EntityType.ROAD:
             draw_text(
                 screen,
                 "Warning: Destroying infrastructure disrupts city connectivity.",
@@ -462,16 +467,19 @@ class Hud:
                 if self.demo_yes_rect.collidepoint(mouse_pos):
                     # Execute demolition
                     pos = self.game.demolish_target_pos
-                    self.game.world.execute_demolition(
-                        pos, pay_compensation=stats["cost"], apply_penalty=stats["sat_penalty"]
+                    EventBus.publish(
+                        GameEvent.EXECUTE_DEMOLITION,
+                        pos,
+                        pay_compensation=stats["cost"],
+                        apply_penalty=stats["sat_penalty"]
                     )
                     self.game.menu_state = None
-                    self.game.world.ignore_clicks_until_release = True
+                    EventBus.publish(GameEvent.IGNORE_CLICKS)
 
                 elif self.demo_no_rect.collidepoint(mouse_pos):
                     # Cancel demolition
                     self.game.menu_state = None
-                    self.game.world.ignore_clicks_until_release = True
+                    EventBus.publish(GameEvent.IGNORE_CLICKS)
         else:
             self.demo_click_handled = False  # Reset debounce when mouse is released
 
