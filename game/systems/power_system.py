@@ -1,9 +1,11 @@
-from game.setting import POWER_PLANT_SUPPLY
+from game.setting import POWER_PLANT_SUPPLY, GameEvent
+from game.event_bus import EventBus
 
 
 class PowerSystem:
     def __init__(self, world):
         self.world = world
+        EventBus.subscribe(GameEvent.UPDATE_POWER_CONNECTIVITY, self.update_connectivity)
 
     def update_connectivity(self):
         from game.buildings import (
@@ -17,7 +19,6 @@ class PowerSystem:
             University,
         )
 
-        """Moved from Game._calculate_power_connectivity"""
         power_cable = [
             e
             for e in self.world.entities

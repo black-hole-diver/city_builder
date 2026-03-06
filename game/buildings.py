@@ -12,6 +12,7 @@ from .setting import (
     SERZONE_URL2,
     SERZONE_URL3,
     SERZONE_URL4,
+    EntityType,
 )
 
 
@@ -41,7 +42,7 @@ class Building:
 class Tree(Building):
     def __init__(self, pos, image, resource_manager, grid_pos, is_old_tree=False, plant_date=None):
         super().__init__(
-            pos, image, "Tree", resource_manager, grid_pos, grid_width=1, grid_height=1
+            pos, image, EntityType.TREE, resource_manager, grid_pos, grid_width=1, grid_height=1
         )
         self.is_old_tree = is_old_tree
         self.plant_date = plant_date
@@ -130,7 +131,7 @@ class Zone(Building):
 
 class ResZone(Zone):
     def __init__(self, pos, image, resource_manager, grid_pos):
-        super().__init__(pos, image, "ResZone", resource_manager, grid_pos)
+        super().__init__(pos, image, EntityType.RES_ZONE, resource_manager, grid_pos)
         from .utils import format_isometric_asset
 
         self.lvl1_image = format_isometric_asset(
@@ -144,7 +145,7 @@ class ResZone(Zone):
 
 class IndZone(Zone):
     def __init__(self, pos, image, resource_manager, grid_pos):
-        super().__init__(pos, image, "IndZone", resource_manager, grid_pos)
+        super().__init__(pos, image, EntityType.IND_ZONE, resource_manager, grid_pos)
         from .utils import format_isometric_asset
 
         self.lvl1_image = format_isometric_asset(
@@ -158,7 +159,7 @@ class IndZone(Zone):
 
 class SerZone(Zone):
     def __init__(self, pos, image, resource_manager, grid_pos):
-        super().__init__(pos, image, "SerZone", resource_manager, grid_pos)
+        super().__init__(pos, image, EntityType.SER_ZONE, resource_manager, grid_pos)
         from .utils import format_isometric_asset
 
         self.lvl1_image = format_isometric_asset(
@@ -176,21 +177,27 @@ class SerZone(Zone):
 class Police(Building):
     def __init__(self, pos, image, resource_manager, grid_pos):
         super().__init__(
-            pos, image, "Police", resource_manager, grid_pos, grid_width=2, grid_height=2
+            pos, image, EntityType.POLICE, resource_manager, grid_pos, grid_width=2, grid_height=2
         )
 
 
 class Stadium(Building):
     def __init__(self, pos, image, resource_manager, grid_pos):
         super().__init__(
-            pos, image, "Stadium", resource_manager, grid_pos, grid_width=4, grid_height=4
+            pos, image, EntityType.STADIUM, resource_manager, grid_pos, grid_width=4, grid_height=4
         )
 
 
 class FireStation(Building):
     def __init__(self, pos, image, resource_manager, grid_pos):
         super().__init__(
-            pos, image, "FireStation", resource_manager, grid_pos, grid_width=2, grid_height=2
+            pos,
+            image,
+            EntityType.FIRE_STATION,
+            resource_manager,
+            grid_pos,
+            grid_width=2,
+            grid_height=2,
         )
 
 
@@ -201,7 +208,13 @@ class PowerPlant(Building):
     def __init__(self, pos, image, resource_manager, grid_pos):
         # Power Plants occupy a 4x4 area
         super().__init__(
-            pos, image, "PowerPlant", resource_manager, grid_pos, grid_width=4, grid_height=4
+            pos,
+            image,
+            EntityType.POWER_PLANT,
+            resource_manager,
+            grid_pos,
+            grid_width=4,
+            grid_height=4,
         )
 
 
@@ -209,14 +222,20 @@ class PowerPlant(Building):
 class Road(Building):
     def __init__(self, pos, image, resource_manager, grid_pos):
         super().__init__(
-            pos, image, "Road", resource_manager, grid_pos, grid_width=1, grid_height=1
+            pos, image, EntityType.ROAD, resource_manager, grid_pos, grid_width=1, grid_height=1
         )
 
 
 class PowerLine(Building):
     def __init__(self, pos, image, resource_manager, grid_pos):
         super().__init__(
-            pos, image, "PowerLine", resource_manager, grid_pos, grid_width=1, grid_height=1
+            pos,
+            image,
+            EntityType.POWERLINE,
+            resource_manager,
+            grid_pos,
+            grid_width=1,
+            grid_height=1,
         )
         self.base_image = image
         self.powered_image = image.copy()
@@ -238,7 +257,7 @@ class PowerLine(Building):
 class School(Building):
     def __init__(self, pos, image, resource_manager, grid_pos):
         super().__init__(
-            pos, image, "School", resource_manager, grid_pos, grid_width=2, grid_height=2
+            pos, image, EntityType.SCHOOL, resource_manager, grid_pos, grid_width=2, grid_height=2
         )
         self.capacity = 50
         self.occupants = 0
@@ -247,7 +266,13 @@ class School(Building):
 class University(Building):
     def __init__(self, pos, image, resource_manager, grid_pos):
         super().__init__(
-            pos, image, "University", resource_manager, grid_pos, grid_width=4, grid_height=4
+            pos,
+            image,
+            EntityType.UNIVERSITY,
+            resource_manager,
+            grid_pos,
+            grid_width=4,
+            grid_height=4,
         )
         self.capacity = 200
         self.occupants = 0

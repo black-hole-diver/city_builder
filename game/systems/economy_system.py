@@ -1,4 +1,5 @@
 from game.event_bus import EventBus
+from game.setting import GameEvent
 
 
 class EconomySystem:
@@ -6,9 +7,43 @@ class EconomySystem:
         self.world = world
         self.resource_manager = resource_manager
         self.game = game_context
+        EventBus.subscribe(GameEvent.INCREASE_TAX, self.increase_tax)
+        EventBus.subscribe(GameEvent.DECREASE_TAX, self.decrease_tax)
+        EventBus.subscribe(GameEvent.TAKE_LOAN, self.take_loan)
+        EventBus.subscribe(GameEvent.REPAY_LOAN, self.repay_loan)
+
+    def increase_tax(self):
+        self.resource_manager.tax_per_citizen += 1
+        EventBus.publish(
+            GameEvent.NOTIFY,
+            f"TAX INCREASED: ${self.resource_manager.tax_per_citizen}",
+            (255, 255, 100),
+        )
+        EventBus.publish(GameEvent.RECALC_SATISFACTION)
+
+    def decrease_tax(self):
+        if self.resource_manager.tax_per_citizen > 0:
+            self.resource_manager.tax_per_citizen -= 1
+            EventBus.publish(
+                GameEvent.NOTIFY,
+                f"TAX DECREASED: ${self.resource_manager.tax_per_citizen}",
+                (100, 255, 255),
+            )
+            EventBus.publish(GameEvent.RECALC_SATISFACTION)
+
+    def take_loan(self, amount=1000):
+        self.resource_manager.take_loan(amount, self.game)
+        EventBus.publish(GameEvent.NOTIFY, f"LOAN TAKEN: +${amount:,}", (100, 255, 100))
+        EventBus.publish(GameEvent.RECALC_SAT_AND_GROWTH)
+
+    def repay_loan(self, amount=1000):
+        if self.resource_manager.repay_loan(amount, self.game):
+            EventBus.publish(GameEvent.NOTIFY, f"LOAN REPAID: -${amount:,}", (255, 215, 0))
+            EventBus.publish(GameEvent.RECALC_SAT_AND_GROWTH)
+        else:
+            EventBus.publish(GameEvent.NOTIFY, "NOT ENOUGH FUNDS OR NO LOAN", (255, 100, 100))
 
     def apply_annual_logic(self):
-        """Moved from Game.apply_annual_logic"""
         """Handle annual events: budget summary, satisfaction, and game over conditions."""
         current_year = self.game.current_date.year - 1
         year_entry = next(
@@ -22,7 +57,7 @@ class EconomySystem:
         if year_entry:
             self._notify_annual_budget(year_entry)
         self._check_retirement_and_graduation()
-        EventBus.publish("recalculate_satisfaction")
+        EventBus.publish(GameEvent.RECALC_SATISFACTION)
         self._check_negative_consecutive_years()
         self._check_game_over_conditions()
 
@@ -35,17 +70,18 @@ class EconomySystem:
     def _check_game_over_conditions(self):
         if self.resource_manager.satisfaction < 10:
             self.resource_manager.is_mayor_replaced = True
-            self.game.add_notification("YOU ARE FIRED!!!!", (255, 0, 0))
+            EventBus.publish(GameEvent.NOTIFY, "YOU ARE FIRED!!!!", (255, 0, 0))
 
         if self.resource_manager.years_negative_budget > 5:
             self.resource_manager.is_mayor_replaced = True
-            self.game.add_notification("GAME OVER: DEBT LIMIT EXCEEDED", (255, 0, 0))
+            EventBus.publish(GameEvent.NOTIFY, "GAME OVER: DEBT LIMIT EXCEEDED", (255, 0, 0))
 
     def _notify_annual_budget(self, year_entry):
         tax = int(year_entry["income"])
         maintenance = int(year_entry["expenses"])
-        self.game.add_notification("TAXING TIME!", (255, 215, 0))
-        self.game.add_notification(
+        EventBus.publish(GameEvent.NOTIFY, "TAXING TIME!", (255, 215, 0))
+        EventBus.publish(
+            GameEvent.NOTIFY,
             f"Annual Budget: +${tax} -${maintenance}",
             (100, 255, 100) if tax >= maintenance else (255, 100, 100),
         )
@@ -100,4 +136,4 @@ class EconomySystem:
             self.resource_manager.edu_tertiary += graduates
 
         if len(schools) > 0 or len(unis) > 0:
-            self.game.add_notification("ACADEMIC YEAR COMPLETE", (100, 200, 255))
+            EventBus.publish(GameEvent.NOTIFY, "ACADEMIC YEAR COMPLETE", (100, 200, 255))

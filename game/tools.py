@@ -1,5 +1,6 @@
 from game.event_bus import EventBus
 from .buildings import Tree, Road, ResZone, Zone
+from .setting import GameEvent, EntityType, GridKey
 
 
 class Tool:
@@ -15,7 +16,7 @@ class Tool:
 
 class Axe(Tool):
     def __init__(self):
-        super().__init__("Axe")
+        super().__init__(EntityType.AXE)
 
     def can_use(self, grid_pos, world):
         b = world.buildings[grid_pos[0]][grid_pos[1]]
@@ -31,29 +32,29 @@ class Axe(Tool):
                 world.examine_mask_points = None
 
             world.buildings[grid_pos[0]][grid_pos[1]] = None
-            world.world[grid_pos[0]][grid_pos[1]]["collision"] = False
+            world.world[grid_pos[0]][grid_pos[1]][GridKey.COLLISION] = False
             world.collision_matrix[grid_pos[1]][grid_pos[0]] = 1
             if b in world.entities:
                 world.entities.remove(b)
 
-            EventBus.publish("play_sound", "wood_chop")
-            EventBus.publish("notify", "TIMBERRR! TREE CUT DOWN", (100, 255, 100))
-            EventBus.publish("recalculate_satisfaction")
+            EventBus.publish(GameEvent.PLAY_SOUND, "wood_chop")
+            EventBus.publish(GameEvent.NOTIFY, "TIMBERRR! TREE CUT DOWN", (100, 255, 100))
+            EventBus.publish(GameEvent.RECALC_SATISFACTION)
 
 
 class Hammer(Tool):
     def __init__(self):
-        super().__init__("Hammer")
+        super().__init__(EntityType.HAMMER)
 
     def can_use(self, grid_pos, world):
         has_building = world.buildings[grid_pos[0]][grid_pos[1]] is not None
-        is_rock = world.world[grid_pos[0]][grid_pos[1]]["tile"] == "rock"
+        is_rock = world.world[grid_pos[0]][grid_pos[1]][GridKey.TILE] == EntityType.ROCK
         return has_building or is_rock
 
     def use(self, grid_pos, world):
         if self.can_use(grid_pos, world):
             has_building = world.buildings[grid_pos[0]][grid_pos[1]] is not None
-            is_rock = world.world[grid_pos[0]][grid_pos[1]]["tile"] == "rock"
+            is_rock = world.world[grid_pos[0]][grid_pos[1]][GridKey.TILE] == EntityType.ROCK
 
             if has_building:
                 b = world.buildings[grid_pos[0]][grid_pos[1]]
@@ -96,24 +97,22 @@ class Hammer(Tool):
                         stats["sat_penalty"] = 5
 
                     # Pause and trigger the UI confirmation
-                    world.game.demolish_target_pos = grid_pos
-                    world.game.demolish_stats = stats
-                    world.game.menu_state = "CONFIRM_DEMOLISH"
+                    world.game.hud.demolish_target_pos = grid_pos
+                    world.game.hud.demolish_stats = stats
+                    world.game.hud.active_modal = "CONFIRM_DEMOLISH"
                 else:
-                    # Empty buildings and SAFE roads skip the warning and are destroyed instantly
                     world.execute_demolition(grid_pos)
             elif is_rock:
-                # Scenery is destroyed instantly
                 world.execute_demolition(grid_pos)
 
 
 class VIP(Tool):
     def __init__(self):
-        super().__init__("VIP")
+        super().__init__(EntityType.VIP)
 
     def can_use(self, grid_pos, world):
         b = world.buildings[grid_pos[0]][grid_pos[1]]
-        has_funds = world.resource_manager.is_affordable("VIP")
+        has_funds = world.resource_manager.is_affordable(EntityType.VIP)
         is_valid_zone = b is not None and isinstance(b, Zone)
         return is_valid_zone and not getattr(b, "is_vip", False) and has_funds
 
@@ -121,8 +120,8 @@ class VIP(Tool):
         if self.can_use(grid_pos, world):
             b = world.buildings[grid_pos[0]][grid_pos[1]]
             if hasattr(b, "apply_vip") and b.apply_vip():
-                world.resource_manager.apply_cost_to_resource("VIP", world.game)
-                EventBus.publish("play_sound", "creation")
+                world.resource_manager.apply_cost_to_resource(EntityType.VIP, world.game)
+                EventBus.publish(GameEvent.PLAY_SOUND, "creation")
 
                 # Deselect examine tile so the HUD updates immediately
                 if world.examine_tile == b.origin:
@@ -130,4 +129,4 @@ class VIP(Tool):
                     world.hud.examined_tile = None
                     world.examine_mask_points = None
 
-                EventBus.publish("recalculate_satisfaction")
+                EventBus.publish(GameEvent.RECALC_SATISFACTION)

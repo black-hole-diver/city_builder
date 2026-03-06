@@ -1,9 +1,5 @@
 import pygame as pg
-from .setting import (
-    HUD_COLOR,
-    BUILDING_SPECS,
-    ITEM_DESCRIPTIONS,
-)
+from .setting import HUD_COLOR, BUILDING_SPECS, ITEM_DESCRIPTIONS, EntityType, GameEvent
 from .utils import draw_text, load_images
 from .event_bus import EventBus
 from .buildings import (
@@ -61,15 +57,24 @@ class Hud:
         self.mouse_pressed = False
 
         self.display_names = {
-            "ResZone": "Residential Zone",
-            "IndZone": "Industrial Zone",
-            "SerZone": "Service Zone",
-            "FireStation": "Fire Station",
-            "PowerPlant": "Power Plant",
-            "PowerLine": "Power Line",
+            EntityType.RES_ZONE: "Residential Zone",
+            EntityType.IND_ZONE: "Industrial Zone",
+            EntityType.SER_ZONE: "Service Zone",
+            EntityType.FIRE_STATION: "Fire Station",
+            EntityType.POWER_PLANT: "Power Plant",
+            EntityType.POWERLINE: "Power Line",
         }
 
         self.item_descriptions = ITEM_DESCRIPTIONS
+        self.fonts = {
+            "btn_20": pg.font.SysFont("Trebuchet MS", 20, bold=True),
+            "btn_24": pg.font.SysFont("Trebuchet MS", 24, bold=True),
+            "title_80": pg.font.SysFont("Trebuchet MS", 80, bold=True),
+            "tooltip_title": pg.font.SysFont(None, 30),
+            "tooltip_desc": pg.font.SysFont(None, 24),
+            "desc_wrap": pg.font.SysFont(None, 20),
+        }
+        self.cached_desc_surfaces = []
 
         # --- NEW: Improved Button Layout ---
         # 1. System Controls (Top Left)
@@ -107,7 +112,11 @@ class Hud:
         self.load_save_btn_rect = pg.Rect(self.game_over_rect.right - 260, btn_y, 160, 45)
 
         self.menu_action = None
-        self.game = None  # Set by Game class
+        self.active_modal = None
+        self.demolish_stats = None
+        self.demolish_target_pos = None
+        self.rename_input_text = ""
+        self.sound_on = True
 
     @property
     def examined_tile(self):
@@ -128,8 +137,24 @@ class Hud:
             final_w = int(orig_w * scale)
             final_h = int(orig_h * scale)
             self.examined_tile_scaled_img = pg.transform.smoothscale(tile.image, (final_w, final_h))
+            raw_name = getattr(tile, "name", "")
+            desc = self.item_descriptions.get(raw_name, "A Structure in your city.")
+            max_text_width = self.select_rect.right - (self.select_rect.x + 15 + final_w + 15) - 15
+            self.cached_desc_surfaces = []
+            for paragraph in desc.split("\n"):
+                words = paragraph.split(" ")
+                current_line = ""
+                for word in words:
+                    test_line = current_line + word + " "
+                    if self.fonts["desc_wrap"].size(test_line)[0] < max_text_width:
+                        current_line = test_line
+                    else:
+                        self.cached_desc_surfaces.append(current_line)
+                        current_line = word + " "
+                self.cached_desc_surfaces.append(current_line)
         else:
             self.examined_tile_scaled_img = None
+            self.cached_desc_surfaces.clear()
 
     def create_build_hud(self):
         # 1. Grid Configuration
@@ -190,7 +215,7 @@ class Hud:
             rect = image_scale.get_rect(topleft=(cell_x + offset_x, cell_y + offset_y))
             cell_rect = pg.Rect(cell_x, cell_y, cell_w, cell_h)
 
-            item_type = "Tool" if image_name in ["Axe", "Hammer"] else "Building"
+            item_type = "Tool" if image_name in [EntityType.AXE, EntityType.HAMMER] else "Building"
             w, h = BUILDING_SPECS.get(image_name, (1, 1))
 
             tiles.append(
@@ -213,6 +238,30 @@ class Hud:
 
         return tiles
 
+    def _draw_styled_button(
+        self,
+        screen,
+        rect,
+        text,
+        font_key,
+        base_color=(60, 60, 70),
+        hover_color=(90, 90, 110),
+        border_color=(200, 200, 200),
+    ):
+        mouse_pos = pg.mouse.get_pos()
+        is_hovered = rect.collidepoint(mouse_pos)
+        color = hover_color if is_hovered else base_color
+
+        shadow_rect = rect.copy()
+        shadow_rect.y += 2
+        pg.draw.rect(screen, (20, 20, 20), shadow_rect, border_radius=6)
+        pg.draw.rect(screen, color, rect, border_radius=6)
+        pg.draw.rect(screen, border_color, rect, 2, border_radius=6)
+
+        text_surf = self.fonts[font_key].render(text, True, (255, 255, 255))
+        text_rect = text_surf.get_rect(center=rect.center)
+        screen.blit(text_surf, text_rect)
+
     def update(self):
         mouse_pos = pg.mouse.get_pos()
         mouse_action = pg.mouse.get_pressed()
@@ -228,26 +277,29 @@ class Hud:
                 and self.rename_btn_rect
                 and self.rename_btn_rect.collidepoint(mouse_pos)
             ):
-                if self.game and self.examined_tile:
-                    self.game.menu_state = "RENAME"
-                    self.game.rename_target = self.examined_tile
+                if self.examined_tile:
+                    self.active_modal = "RENAME"
+                    self.rename_target = self.examined_tile
                     # Pre-fill input with existing custom name or leave blank
-                    self.game.rename_input_text = (
+                    self.rename_input_text = (
                         getattr(self.examined_tile, "custom_name", "") or ""
                     )
                 self.mouse_pressed = True
                 return
-            if self.game and self.game.menu_state == "CONFIRM_DEMOLISH":
+            if self.active_modal == "CONFIRM_DEMOLISH":
                 if hasattr(self, "demo_yes_rect") and self.demo_yes_rect.collidepoint(mouse_pos):
-                    pos = self.game.demolish_target_pos
-                    stats = self.game.demolish_stats
-                    self.game.world.execute_demolition(pos, stats["cost"], stats["sat_penalty"])
-                    self.game.menu_state = None
+                    EventBus.publish(
+                        GameEvent.EXECUTE_DEMOLITION,
+                        self.demolish_target_pos,
+                        pay_compensation=self.demolish_stats["cost"],
+                        apply_penalty=self.demolish_stats["sat_penalty"],
+                    )
+                    self.active_modal = None
                 elif hasattr(self, "demo_no_rect") and self.demo_no_rect.collidepoint(mouse_pos):
-                    self.game.menu_state = None
+                    self.active_modal = None
                 self.mouse_pressed = True  # Prevent clicking through
                 return
-            if self.game and self.game.menu_state == "MAIN_MENU":
+            if self.active_modal == "MAIN_MENU":
                 if self.play_btn_rect.collidepoint(mouse_pos):
                     self.menu_action = "PLAY"
                 elif self.main_load_btn_rect.collidepoint(mouse_pos):
@@ -255,12 +307,12 @@ class Hud:
                 elif hasattr(self, "music_btn_rect_main") and self.music_btn_rect_main.collidepoint(
                     mouse_pos
                 ):
-                    self.game.toggle_music()
+                    EventBus.publish(GameEvent.TOGGLE_MUSIC)
                 return
 
             if hasattr(self, "dino_btn_rect") and self.dino_btn_rect.collidepoint(mouse_pos):
                 self.dino_action = True
-                EventBus.publish("start_rampage")
+                EventBus.publish(GameEvent.START_RAMPAGE)
 
             if self.save_btn_rect.collidepoint(mouse_pos):
                 self.menu_action = "SAVE"
@@ -271,32 +323,13 @@ class Hud:
 
             # Budget interactions
             elif self.tax_plus_rect.collidepoint(mouse_pos):
-                self.resource_manager.tax_per_citizen += 1
-                EventBus.publish(
-                    "notify",
-                    f"TAX INCREASED: ${self.resource_manager.tax_per_citizen}",
-                    (255, 255, 100),
-                )
-                EventBus.publish("recalculate_satisfaction")
+                EventBus.publish(GameEvent.INCREASE_TAX)
             elif self.tax_minus_rect.collidepoint(mouse_pos):
-                if self.resource_manager.tax_per_citizen > 0:
-                    self.resource_manager.tax_per_citizen -= 1
-                    EventBus.publish(
-                        "notify",
-                        f"TAX DECREASED: ${self.resource_manager.tax_per_citizen}",
-                        (100, 255, 255),
-                    )
-                    EventBus.publish("recalculate_satisfaction")
+                EventBus.publish(GameEvent.DECREASE_TAX)
             elif self.loan_btn_rect.collidepoint(mouse_pos):
-                self.resource_manager.take_loan(1000, self.game)
-                EventBus.publish("notify", "LOAN TAKEN: +$1,000", (100, 255, 100))
-                EventBus.publish("recalculate_satisfaction_and_growth")
+                EventBus.publish(GameEvent.TAKE_LOAN)
             elif self.repay_btn_rect.collidepoint(mouse_pos):
-                if self.resource_manager.repay_loan(1000, self.game):
-                    EventBus.publish("notify", "LOAN REPAID: -$1,000", (255, 215, 0))
-                    EventBus.publish("recalculate_satisfaction_and_growth")
-                else:
-                    EventBus.publish("notify", "NOT ENOUGH FUNDS OR NO LOAN", (255, 100, 100))
+                EventBus.publish(GameEvent.REPAY_LOAN)
             elif self.help_btn_rect.collidepoint(mouse_pos):
                 self.show_help = not self.show_help
                 if self.show_help:
@@ -306,7 +339,7 @@ class Hud:
                 if self.show_budget:
                     self.show_help = False
             elif self.music_btn_rect.collidepoint(mouse_pos):
-                EventBus.publish("toggle_music")
+                EventBus.publish(GameEvent.TOGGLE_MUSIC)
 
             # Game Over Interactions
             if self.resource_manager.is_mayor_replaced:
@@ -346,7 +379,7 @@ class Hud:
         pg.draw.rect(screen, (40, 45, 55), box_rect, border_radius=12)  # Dark slate grey
         pg.draw.rect(screen, (255, 100, 100), box_rect, 2, border_radius=12)  # Red warning border
 
-        stats = self.game.demolish_stats
+        stats = self.demolish_stats
 
         # Title
         draw_text(
@@ -364,7 +397,7 @@ class Hud:
 
         # Dynamic Text based on what is being destroyed
         if stats["occupants"] > 0:
-            if stats["type"] == "ResZone":
+            if stats["type"] == EntityType.RES_ZONE:
                 draw_text(
                     screen,
                     f"Residents to Relocate: {stats['occupants']}",
@@ -398,7 +431,7 @@ class Hud:
                     (box_rect.x + 40, y),
                 )
             y += 45
-        elif stats["type"] == "Road":
+        elif stats["type"] == EntityType.ROAD:
             draw_text(
                 screen,
                 "Warning: Destroying infrastructure disrupts city connectivity.",
@@ -463,21 +496,25 @@ class Hud:
 
                 if self.demo_yes_rect.collidepoint(mouse_pos):
                     # Execute demolition
-                    pos = self.game.demolish_target_pos
-                    self.game.world.execute_demolition(
-                        pos, pay_compensation=stats["cost"], apply_penalty=stats["sat_penalty"]
+                    pos = self.demolish_target_pos
+                    EventBus.publish(
+                        GameEvent.EXECUTE_DEMOLITION,
+                        pos,
+                        pay_compensation=stats["cost"],
+                        apply_penalty=stats["sat_penalty"],
                     )
-                    self.game.menu_state = None
-                    self.game.world.ignore_clicks_until_release = True
+                    self.active_modal = None
+                    EventBus.publish(GameEvent.IGNORE_CLICKS)
 
                 elif self.demo_no_rect.collidepoint(mouse_pos):
                     # Cancel demolition
-                    self.game.menu_state = None
-                    self.game.world.ignore_clicks_until_release = True
+                    self.active_modal = None
+                    EventBus.publish(GameEvent.IGNORE_CLICKS)
         else:
             self.demo_click_handled = False  # Reset debounce when mouse is released
 
-    def draw(self, screen, current_date=None, current_speed=1):
+    def draw(self, screen, current_date=None, current_speed=1, sound_on=True):
+        self.sound_on=sound_on
         # Draw HUD elements using their pre-calculated Rects
         screen.blit(self.resource_surface, self.resource_rect.topleft)
         screen.blit(self.build_surface, self.build_rect.topleft)
@@ -487,13 +524,13 @@ class Hud:
             screen.blit(self.select_surface, self.select_rect.topleft)
             raw_name = self.examined_tile.name
             default_text = self.display_names.get(raw_name, raw_name)
-            is_renaming = self.game and self.game.menu_state == "RENAME"
+            is_renaming = self.active_modal == "RENAME"
             has_custom_name = bool(getattr(self.examined_tile, "custom_name", None))
 
-            if self.game and self.game.menu_state == "RENAME":
+            if self.active_modal == "RENAME":
                 # Blinking cursor effect
                 cursor = "_" if (pg.time.get_ticks() // 500) % 2 == 0 else " "
-                title_text = f"{self.game.rename_input_text}{cursor}"
+                title_text = f"{self.rename_input_text}{cursor}"
                 title_color = (255, 255, 255)  # White while typing
             else:
                 title_text = getattr(self.examined_tile, "custom_name", None) or default_text
@@ -559,41 +596,18 @@ class Hud:
             screen.blit(self.examined_tile_scaled_img, (img_x, img_y))
 
             # 4. Draw the Description Text (Use raw_name to look up the description!)
-            desc = self.item_descriptions.get(raw_name, "A structure in your city.")
 
             # Show occupancy/local satisfaction in description area for zones
             if hasattr(self.examined_tile, "capacity"):
-                # Moved to dedicated status section below to prevent description overflow
                 pass
 
             desc_x = img_x + self.examined_tile_scaled_img.get_width() + 15
             desc_y = img_y
 
-            # --- NEW: Dynamic Word Wrapping ---
-            font = pg.font.SysFont(None, 20)
-            max_text_width = (
-                self.select_rect.right - desc_x - 15
-            )  # 15px padding from the right edge
-
-            wrapped_lines = []
-            for paragraph in desc.split("\n"):
-                words = paragraph.split(" ")
-                current_line = ""
-                for word in words:
-                    test_line = current_line + word + " "
-                    # Check if adding this word makes the line wider than our box
-                    if font.size(test_line)[0] < max_text_width:
-                        current_line = test_line
-                    else:
-                        wrapped_lines.append(current_line)
-                        current_line = word + " "
-                wrapped_lines.append(current_line)
-
-            # Print multi-line text and track our Y-coordinate
             current_y = desc_y
-            for line in wrapped_lines:
+            for line in self.cached_desc_surfaces:
                 draw_text(screen, line, 20, (220, 220, 220), (desc_x, current_y))
-                current_y += 22  # Move down a line
+                current_y += 22
 
             # --- 5. Show Status ---
             current_y += 10  # Add a little extra visual padding before the stats
@@ -638,11 +652,11 @@ class Hud:
                     for bonus in self.examined_tile.bonuses[:4]:  # Show max 4 bonuses
                         draw_text(screen, f"• {bonus}", 18, (255, 255, 150), (desc_x, current_y))
                         current_y += 18
-            if hasattr(self.examined_tile, "get_age_formatted") and self.game:
-                age_text = self.examined_tile.get_age_formatted(self.game.current_date)
+            if hasattr(self.examined_tile, "get_age_formatted") and current_date:
+                age_text = self.examined_tile.get_age_formatted(current_date)
                 draw_text(screen, f"Age: {age_text}", 22, (150, 255, 150), (desc_x, current_y))
                 current_y += 20
-            # ==========================================
+            # =========================================
             # NEW: Power Status Display
             # ==========================================
             b = self.examined_tile
@@ -675,28 +689,12 @@ class Hud:
                             screen, "Power: NO POWER", 22, (255, 100, 100), (desc_x, current_y)
                         )
                     current_y += 20
+
             # ==========================================
-            # ==========================================
-            # NEW: Fire Protection Status
+            # Fire Protection Status
             # ==========================================
             if isinstance(b, Building) and not isinstance(b, (Tree, Road, FireStation)):
-                # Check for nearby powered Fire Stations
-                from .setting import FIRE_STATION_RADIUS
-
-                is_fire_protected = False
-                if self.game:
-                    for ent in self.game.entities:
-                        if (
-                            isinstance(ent, FireStation)
-                            and getattr(ent, "is_powered", False)
-                            and getattr(ent, "has_road_access", False)
-                        ):
-                            dist = abs(b.origin[0] - ent.origin[0]) + abs(
-                                b.origin[1] - ent.origin[1]
-                            )
-                            if dist <= FIRE_STATION_RADIUS:
-                                is_fire_protected = True
-                                break
+                is_fire_protected = getattr(b, "is_fire_protected", False)
                 if is_fire_protected:
                     draw_text(
                         screen, "Safety: FIRE PROOFED", 22, (100, 255, 255), (desc_x, current_y)
@@ -774,43 +772,14 @@ class Hud:
         if self.hovered_tile is not None:
             self.draw_tooltip(screen, pg.mouse.get_pos(), self.hovered_tile)
 
-        # --- TOP LEFT: SYSTEM & FINANCE BUTTONS ---
+        # --- BUTTONS ---
         mouse_pos = pg.mouse.get_pos()
 
-        def draw_styled_button(
-            rect,
-            text,
-            base_color=(60, 60, 70),
-            hover_color=(90, 90, 110),
-            border_color=(200, 200, 200),
-            font_size=20,
-        ):
-            # Modern button with rounded corners and hover effect
-            is_hovered = rect.collidepoint(mouse_pos)
-            color = hover_color if is_hovered else base_color
-
-            # Draw shadow for "3D" effect
-            shadow_rect = rect.copy()
-            shadow_rect.y += 2
-            pg.draw.rect(screen, (20, 20, 20), shadow_rect, border_radius=6)
-
-            # Draw main button
-            pg.draw.rect(screen, color, rect, border_radius=6)
-            pg.draw.rect(screen, border_color, rect, 2, border_radius=6)
-
-            # Draw text - Centered
-            font = pg.font.SysFont("Trebuchet MS", font_size, bold=True)
-            text_surf = font.render(text, True, (255, 255, 255))
-            text_rect = text_surf.get_rect(center=rect.center)
-            screen.blit(text_surf, text_rect)
-
-        # 1. System Controls (Blueish Grey)
         sys_color = (50, 70, 90)
         sys_hover = (70, 90, 110)
-        draw_styled_button(self.save_btn_rect, "SAVE", sys_color, sys_hover)
-        draw_styled_button(self.load_btn_rect, "LOAD", sys_color, sys_hover)
+        self._draw_styled_button(screen, self.save_btn_rect, "SAVE", "btn_24", sys_color, sys_hover)
+        self._draw_styled_button(screen, self.load_btn_rect, "LOAD", "btn_24", sys_color, sys_hover)
 
-        # 2. Tax Controls (Greenish Grey for Income)
         tax_color = (60, 90, 60)
         tax_hover = (80, 110, 80)
         draw_text(
@@ -820,10 +789,9 @@ class Hud:
             (255, 255, 255),
             (self.tax_plus_rect.x, 18),
         )
-        draw_styled_button(self.tax_plus_rect, "+", tax_color, tax_hover)
-        draw_styled_button(self.tax_minus_rect, "-", tax_color, tax_hover)
+        self._draw_styled_button(screen, self.tax_plus_rect, "+", "btn_20", tax_color, tax_hover)
+        self._draw_styled_button(screen, self.tax_minus_rect, "-", "btn_20", tax_color, tax_hover)
 
-        # 3. Loan Controls (Gold/Orange for Money management)
         loan_color_base = (110, 90, 50)
         loan_hover = (130, 110, 70)
         debt_label_color = (
@@ -836,28 +804,34 @@ class Hud:
             debt_label_color,
             (self.loan_btn_rect.x, 18),
         )
-        draw_styled_button(self.loan_btn_rect, "TAKE LOAN", loan_color_base, loan_hover)
+        self._draw_styled_button(
+            screen, self.loan_btn_rect, "TAKE LOAN", "btn_20", loan_color_base, loan_hover
+        )
 
-        # Repay should be different color or highlighted if possible
         repay_color = (130, 60, 60) if self.resource_manager.total_loan_amount > 0 else (70, 70, 70)
         repay_hover = (150, 80, 80) if self.resource_manager.total_loan_amount > 0 else (90, 90, 90)
-        draw_styled_button(self.repay_btn_rect, "REPAY LOAN", repay_color, repay_hover)
+        self._draw_styled_button(
+            screen, self.repay_btn_rect, "REPAY LOAN", "btn_20", repay_color, repay_hover
+        )
 
-        # Help Button
         help_color = (90, 50, 90) if self.show_help else (70, 70, 80)
         help_hover = (110, 70, 110) if self.show_help else (90, 90, 100)
-        draw_styled_button(self.help_btn_rect, "HELP", help_color, help_hover)
+        self._draw_styled_button(
+            screen, self.help_btn_rect, "HELP", "btn_20", help_color, help_hover
+        )
 
-        # Budget Button
         budget_color = (50, 90, 90) if self.show_budget else (70, 70, 80)
         budget_hover = (70, 110, 110) if self.show_budget else (90, 90, 100)
-        draw_styled_button(self.budget_btn_rect, "BUDGET", budget_color, budget_hover)
+        self._draw_styled_button(
+            screen, self.budget_btn_rect, "BUDGET", "btn_20", budget_color, budget_hover
+        )
 
-        # Music Button
-        music_text = "SOUND: ON" if (self.game and self.game.sound_on) else "SOUND: OFF"
-        music_color = (60, 90, 60) if (self.game and self.game.sound_on) else (130, 60, 60)
-        music_hover = (80, 110, 80) if (self.game and self.game.sound_on) else (150, 80, 80)
-        draw_styled_button(self.music_btn_rect, music_text, music_color, music_hover)
+        music_text = "SOUND: ON" if self.sound_on else "SOUND: OFF"
+        music_color = (60, 90, 60) if self.sound_on else (130, 60, 60)
+        music_hover = (80, 110, 80) if self.sound_on else (150, 80, 80)
+        self._draw_styled_button(
+            screen, self.music_btn_rect, music_text, "btn_20", music_color, music_hover
+        )
 
         if self.show_help:
             self.draw_help_overlay(screen)
@@ -865,22 +839,19 @@ class Hud:
         if self.show_budget:
             self.draw_budget_panel(screen)
 
-        if self.game and self.game.menu_state == "CONFIRM_DEMOLISH":
+        if self.active_modal == "CONFIRM_DEMOLISH":
             self.draw_demolish_confirmation(screen)
 
         if self.resource_manager.is_mayor_replaced:
             self.draw_game_over_panel(screen)
 
-        # NEW: Education Status HUD (Bottom Left)
+        # --- Education Status HUD ---
         res = self.resource_manager
         edu_y = self.height - 180
         draw_text(screen, "CITIZEN EDUCATION", 24, (255, 215, 0), (20, edu_y))
-
         draw_text(screen, f"Primary: {res.edu_primary}", 18, (200, 200, 200), (30, edu_y + 30))
         draw_text(screen, f"Secondary: {res.edu_secondary}", 18, (150, 255, 150), (30, edu_y + 50))
         draw_text(screen, f"Tertiary: {res.edu_tertiary}", 18, (150, 150, 255), (30, edu_y + 70))
-
-        # Visual Progress Bar
         if res.population > 0:
             bar_w = 150
             pg.draw.rect(screen, (50, 50, 50), (30, edu_y + 95, bar_w, 10))
@@ -889,16 +860,15 @@ class Hud:
             pg.draw.rect(screen, (100, 255, 100), (30, edu_y + 95, sec_w, 10))
             pg.draw.rect(screen, (100, 100, 255), (30 + sec_w, edu_y + 95, tert_w, 10))
 
-        # Draw Dinosaur Button (Top Right)
         self.dino_btn_rect = pg.Rect(self.width - 200, 150, 180, 40)
-
-        # Borrowing your style logic for buttons
-        # mouse_pos = pg.mouse.get_pos()
-        # d_color = (255, 50, 50) if self.dino_btn_rect.collidepoint(mouse_pos) else (200, 40, 40)
-        # pg.draw.rect(screen, d_color, self.dino_btn_rect)
-        # pg.draw.rect(screen, (255, 255, 255), self.dino_btn_rect, 2)
-        draw_styled_button(
-            self.dino_btn_rect, "DINOSAUR!", (200, 40, 40), (255, 50, 50), (255, 255, 255), 24
+        self._draw_styled_button(
+            screen,
+            self.dino_btn_rect,
+            "DINOSAUR!",
+            "btn_24",
+            (200, 40, 40),
+            (255, 50, 50),
+            (255, 255, 255),
         )
 
     def draw_budget_panel(self, screen):
@@ -1036,8 +1006,9 @@ class Hud:
             (panel_x + 130, panel_y + panel_h - 30),
         )
 
-    def draw_main_menu(self, screen):
+    def draw_main_menu(self, screen, sound_on=True):
         # Draw a darkened overlay for the menu
+        self.sound_on=sound_on
         overlay = pg.Surface((self.width, self.height), pg.SRCALPHA)
         overlay.fill((0, 0, 0, 150))
         screen.blit(overlay, (0, 0))
@@ -1049,42 +1020,25 @@ class Hud:
         title_rect = title_surf.get_rect(center=(self.width // 2, self.height // 2 - 180))
         screen.blit(title_surf, title_rect)
 
-        # Styled Button helper
-        mouse_pos = pg.mouse.get_pos()
-
-        def draw_styled_button(
-            rect,
-            text,
-            base_color=(60, 60, 70),
-            hover_color=(90, 90, 110),
-            border_color=(200, 200, 200),
-            font_size=24,
-        ):
-            is_hovered = rect.collidepoint(mouse_pos)
-            color = hover_color if is_hovered else base_color
-            shadow_rect = rect.copy()
-            shadow_rect.y += 2
-            pg.draw.rect(screen, (20, 20, 20), shadow_rect, border_radius=6)
-            pg.draw.rect(screen, color, rect, border_radius=6)
-            pg.draw.rect(screen, border_color, rect, 2, border_radius=6)
-            font = pg.font.SysFont("Trebuchet MS", font_size, bold=True)
-            text_surf = font.render(text, True, (255, 255, 255))
-            text_rect = text_surf.get_rect(center=rect.center)
-            screen.blit(text_surf, text_rect)
-
-        draw_styled_button(self.play_btn_rect, "PLAY NEW GAME", (60, 90, 60), (80, 110, 80))
-        draw_styled_button(self.main_load_btn_rect, "LOAD LAST SAVE", (50, 70, 90), (70, 90, 110))
+        self._draw_styled_button(
+            screen, self.play_btn_rect, "PLAY NEW GAME", "btn_24", (60, 90, 60), (80, 110, 80)
+        )
+        self._draw_styled_button(
+            screen, self.main_load_btn_rect, "LOAD LAST SAVE", "btn_24", (50, 70, 90), (70, 90, 110)
+        )
 
         # Music Button in Main Menu
-        music_text = "SOUND: ON" if (self.game and self.game.sound_on) else "SOUND: OFF"
-        music_color = (60, 90, 60) if (self.game and self.game.sound_on) else (130, 60, 60)
-        music_hover = (80, 110, 80) if (self.game and self.game.sound_on) else (150, 80, 80)
+        music_text = "SOUND: ON" if self.sound_on else "SOUND: OFF"
+        music_color = (60, 90, 60) if self.sound_on else (130, 60, 60)
+        music_hover = (80, 110, 80) if self.sound_on else (150, 80, 80)
 
         # Position music button below the load button
         music_btn_menu_rect = pg.Rect(0, 0, 160, 40)
         music_btn_menu_rect.centerx = self.width // 2
         music_btn_menu_rect.top = self.main_load_btn_rect.bottom + 20
-        draw_styled_button(music_btn_menu_rect, music_text, music_color, music_hover)
+        self._draw_styled_button(
+            screen, music_btn_menu_rect, music_text, "btn_24", music_color, music_hover
+        )
         self.music_btn_rect_main = music_btn_menu_rect
 
     def draw_game_over_panel(self, screen):
@@ -1130,41 +1084,23 @@ class Hud:
             (self.game_over_rect.x + 180, stats_y + 30),
         )
 
-        # Buttons
-        mouse_pos = pg.mouse.get_pos()
-
-        def draw_styled_button(
-            rect,
-            text,
-            base_color=(60, 60, 70),
-            hover_color=(90, 90, 110),
-            border_color=(200, 200, 200),
-            font_size=20,
-        ):
-            # Modern button with rounded corners and hover effect
-            is_hovered = rect.collidepoint(mouse_pos)
-            color = hover_color if is_hovered else base_color
-
-            # Draw shadow for "3D" effect
-            shadow_rect = rect.copy()
-            shadow_rect.y += 2
-            pg.draw.rect(screen, (20, 20, 20), shadow_rect, border_radius=6)
-
-            # Draw main button
-            pg.draw.rect(screen, color, rect, border_radius=6)
-            pg.draw.rect(screen, border_color, rect, 2, border_radius=6)
-
-            # Draw text - Centered
-            font = pg.font.SysFont("Trebuchet MS", font_size, bold=True)
-            text_surf = font.render(text, True, (255, 255, 255))
-            text_rect = text_surf.get_rect(center=rect.center)
-            screen.blit(text_surf, text_rect)
-
-        draw_styled_button(
-            self.restart_btn_rect, "RESTART", (50, 90, 50), (70, 110, 70), (255, 255, 255)
+        self._draw_styled_button(
+            screen,
+            self.restart_btn_rect,
+            "RESTART",
+            "btn_24",
+            (50, 90, 50),
+            (70, 110, 70),
+            (255, 255, 255),
         )
-        draw_styled_button(
-            self.load_save_btn_rect, "LOAD SAVE", (50, 70, 90), (70, 90, 110), (255, 255, 255)
+        self._draw_styled_button(
+            screen,
+            self.load_save_btn_rect,
+            "LOAD SAVE",
+            "btn_24",
+            (50, 70, 90),
+            (70, 90, 110),
+            (255, 255, 255),
         )
 
     def draw_help_overlay(self, screen):
@@ -1234,8 +1170,8 @@ class Hud:
             cost_text = "Cost: Free"
 
         # 2. Setup fonts
-        font_title = pg.font.SysFont(None, 30)
-        font_desc = pg.font.SysFont(None, 24)
+        font_title = self.fonts["tooltip_title"]
+        font_desc = self.fonts["tooltip_desc"]
 
         # 3. Render text surfaces
         title_surf = font_title.render(display_name, True, (255, 255, 255))
