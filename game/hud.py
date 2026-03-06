@@ -112,7 +112,12 @@ class Hud:
         self.load_save_btn_rect = pg.Rect(self.game_over_rect.right - 260, btn_y, 160, 45)
 
         self.menu_action = None
-        self.game = None  # Set by Game class
+        self.game = None
+        # self.active_modal = None
+        # self.demolish_stats = None
+        # self.demolish_target_pos = None
+        # self.rename_input_text = ""
+        # self.sound_on = True
 
     @property
     def examined_tile(self):
@@ -593,11 +598,9 @@ class Hud:
             screen.blit(self.examined_tile_scaled_img, (img_x, img_y))
 
             # 4. Draw the Description Text (Use raw_name to look up the description!)
-            desc = self.item_descriptions.get(raw_name, "A structure in your city.")
 
             # Show occupancy/local satisfaction in description area for zones
             if hasattr(self.examined_tile, "capacity"):
-                # Moved to dedicated status section below to prevent description overflow
                 pass
 
             desc_x = img_x + self.examined_tile_scaled_img.get_width() + 15
@@ -651,11 +654,11 @@ class Hud:
                     for bonus in self.examined_tile.bonuses[:4]:  # Show max 4 bonuses
                         draw_text(screen, f"• {bonus}", 18, (255, 255, 150), (desc_x, current_y))
                         current_y += 18
-            if hasattr(self.examined_tile, "get_age_formatted") and self.game:
-                age_text = self.examined_tile.get_age_formatted(self.game.current_date)
+            if hasattr(self.examined_tile, "get_age_formatted") and current_date:
+                age_text = self.examined_tile.get_age_formatted(current_date)
                 draw_text(screen, f"Age: {age_text}", 22, (150, 255, 150), (desc_x, current_y))
                 current_y += 20
-            # ==========================================
+            # =========================================
             # NEW: Power Status Display
             # ==========================================
             b = self.examined_tile
