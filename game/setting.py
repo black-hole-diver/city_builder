@@ -133,6 +133,13 @@ ITEM_DESCRIPTIONS = {
 HAMMER_URL = "assets/graphics/hammer.png"
 AXE_URL = "assets/graphics/axe.png"
 
+
+# Worker, Dinosaur, Car, Firetruck
+DINOSAUR_URL = "assets/graphics/Dinosaur.png"
+WORKER_URL = "assets/graphics/worker.png"
+CAR_URL = "assets/graphics/Car.png"
+FIRETRUCK_URL = "assets/graphics/FireTruck.png"
+
 # Environment
 BLOCK_URL = "assets/graphics/block.png"
 TREE_URL = "assets/graphics/tree.png"
@@ -141,9 +148,6 @@ ROCK_URL = "assets/graphics/rock.png"
 # Infrastructure & Entities
 ROAD_URL = "assets/graphics/Road.png"
 POWERLINE_URL = "assets/graphics/Powerline.png"
-WORKER_URL = "assets/graphics/worker.png"
-CAR_URL = "assets/graphics/Car.png"
-FIRETRUCK_URL = "assets/graphics/FireTruck.png"
 
 # Service Buildings
 POLICE_URL = "assets/graphics/Police.png"
