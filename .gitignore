@@ -3,8 +3,11 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# OS-specific
+# OS-specific (Mac)
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
 
 # Virtual environments
 venv/
@@ -17,12 +20,25 @@ savegame.json
 save_slot_*.json
 
 # VS Code / IDE settings
-.vscode/
+.idea/
+.vscode/*
+!.vscode/launch.json
+!.vscode/settings.json
+
+# Build / Distribution (PyInstaller)
+build/
+dist/
 .build/
 .dist/
-.idea/
 "Power City Builder v1.0.1.spec"
 "Power City Builder.spec"
+
+# Sphinx Documentation Builds
+docs/build/
+docs/docs/build/
+
+# Logs and local project files
 .ruff_cache/
 merge_log_graph.txt
 citybuilder.log
+FolderStructure.txt

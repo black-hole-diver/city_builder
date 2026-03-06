@@ -1,0 +1,17 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Debug City Builder",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/__main__.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "justMyCode": true,
+            "env": {
+                "PYGAME_HIDE_SUPPORT_PROMPT": "1"
+            },
+        }
+    ]
+}
