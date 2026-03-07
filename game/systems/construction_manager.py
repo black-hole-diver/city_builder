@@ -5,6 +5,7 @@ from game.setting import (
     ZONE_REFUND_PERCENT,
     EntityType,
     GameEvent,
+    MusicEvent,
     GridKey,
 )
 from game.buildings import (
@@ -123,7 +124,7 @@ class ConstructionManager:
             )
             ent.game = self.game
             self.game.resource_manager.apply_cost_to_resource(building_name, self.game)
-            EventBus.publish(GameEvent.PLAY_SOUND, "creation")
+            EventBus.publish(GameEvent.PLAY_SOUND, MusicEvent.CREATION_SOUND)
 
             ent.has_road_access = self.has_road_access(grid_pos[0], grid_pos[1], b_width, b_height)
 
@@ -176,7 +177,7 @@ class ConstructionManager:
         if has_building:
             b = self.world.buildings[grid_pos[0]][grid_pos[1]]
 
-            EventBus.publish(GameEvent.PLAY_SOUND, "destruction")
+            EventBus.publish(GameEvent.PLAY_SOUND, MusicEvent.DESTRUCTION_SOUND)
 
             # 1. Apply financial and satisfaction consequences
             if pay_compensation > 0:
@@ -302,7 +303,7 @@ class ConstructionManager:
             self.world.world[grid_pos[0]][grid_pos[1]][GridKey.TILE] = ""
             self.world.world[grid_pos[0]][grid_pos[1]][GridKey.COLLISION] = False
             self.world.collision_matrix[grid_pos[1]][grid_pos[0]] = 1
-            EventBus.publish(GameEvent.PLAY_SOUND, "destruction")
+            EventBus.publish(GameEvent.PLAY_SOUND, MusicEvent.DESTRUCTION_SOUND)
             EventBus.publish(GameEvent.NOTIFY, "ROCK SMASHED!", (200, 200, 200))
 
     def is_road_safe_to_demolish(self, x, y):
