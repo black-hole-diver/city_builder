@@ -447,7 +447,7 @@ class PopulationSystem:
                     )
                 self.resource_manager.population = sum(rz.occupants for rz in res_zones)
             else:
-                EventBus.publish(GameEvent.NOTIFY, "PEOPLE RE NOT COMING IN", (255, 100, 100))
+                EventBus.publish(GameEvent.NOTIFY, "PEOPLE ARE NOT COMING IN", (255, 100, 100))
 
     def _workplace_assignment(self, ind_zones, ser_zones, res_zones):
         """Assign workers to industrial and service zones based on road access and fill ratio.

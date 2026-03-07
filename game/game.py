@@ -340,11 +340,18 @@ class Game:
 
     def start_rampage(self) -> None:
         """Triggers the Dinosaur Rampage event."""
+        now = pg.time.get_ticks()
         if (
             getattr(self, "rampage_active", False)
             or getattr(self, "dinosaur_entity", None) is not None
         ):
             self.add_notification("THE DINOSAIR IS ALREADY HERE...", (200, 200, 200))
+            pg.event.clear(pg.MOUSEBUTTONDOWN)
+            return
+        last_end = getattr(self, "last_rampage_end", 0)
+        if now - last_end < 5000:
+            self.add_notification("THE CITY IS STILL RECOVERING!", (200, 200, 200))
+            pg.event.clear(pg.MOUSEBUTTONDOWN)
             return
         self.rampage_active = True
         self.rampage_timer = pg.time.get_ticks()
@@ -419,6 +426,8 @@ class Game:
         pg.mixer.music.set_volume(0.1)
         if self.sound_on:
             pg.mixer.music.play(-1)
+        self.last_rampage_end = pg.time.get_ticks()
+        pg.event.clear(pg.MOUSEBUTTONDOWN)
 
     def draw(self):
         self.screen.fill(BACKGROUND_COLOR)
