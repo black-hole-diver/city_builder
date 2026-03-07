@@ -27,7 +27,7 @@ def draw_text(screen, text, size, color, pos):
     screen.blit(text_surface, text_rect)
 
 
-def get_line(x1, y1, x2, y2):
+def get_line(x1: int, y1: int, x2: int, y2: int):
     """Bresenham's Line Algorithm for Line of Sight and intersection check"""
     points = []
     dx, dy = abs(x2 - x1), abs(y2 - y1)

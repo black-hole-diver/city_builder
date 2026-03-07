@@ -42,3 +42,7 @@ docs/docs/build/
 merge_log_graph.txt
 citybuilder.log
 FolderStructure.txt
+
+# autotyping
+monkeytype.sqlite3
+monkeytype.sqlite3*
