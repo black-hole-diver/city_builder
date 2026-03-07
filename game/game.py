@@ -25,6 +25,7 @@ from .setting import (
     BACKGROUND_COLOR,
     EntityType,
     GameEvent,
+    MusicEvent,
 )
 
 import json
@@ -85,16 +86,11 @@ class Game:
         self.demolish_stats = {}
 
         # ============ Audio System ============
-        self.sounds = {
-            "creation": pg.mixer.Sound("assets/sounds/creation.ogg"),
-            "destruction": pg.mixer.Sound("assets/sounds/destruction.ogg"),
-            "wood_chop": pg.mixer.Sound("assets/sounds/wood_chop.ogg"),
-        }
 
         # Load and play background music
         self.sound_on = True
         try:
-            pg.mixer.music.load("assets/sounds/fly_me_to_the_moon.ogg")
+            pg.mixer.music.load(MusicEvent.BACKGROUND_MUSIC)
             pg.mixer.music.set_volume(0.1)  # Set volume to 10% (0.0 to 1.0)
             pg.mixer.music.play(-1)  # Loop indefinitely
         except Exception as e:
@@ -112,7 +108,7 @@ class Game:
         self.disaster_system = DisasterSystem(self, self.world)
         self.construction_manager = ConstructionManager(self, self.world)
 
-    def toggle_music(self):
+    def toggle_music(self) -> None:
         self.sound_on = not self.sound_on
         if self.sound_on:
             pg.mixer.music.unpause()
@@ -121,11 +117,11 @@ class Game:
             pg.mixer.music.pause()
             self.add_notification("SOUND: OFF", (255, 100, 100))
 
-    def play_sound(self, sound_name):
-        if self.sound_on and sound_name in self.sounds:
-            self.sounds[sound_name].play()
+    def play_sound(self, sound_file_name: str) -> None:
+        if self.sound_on:
+            pg.mixer.Sound(sound_file_name).play()
 
-    def create_starry_background(self):
+    def create_starry_background(self) -> None:
         """Create animated starry background with gradient sky."""
         surface = pg.Surface((self.width, self.height))
 
@@ -146,7 +142,7 @@ class Game:
 
         return surface
 
-    def run(self):
+    def run(self) -> None:
         self.playing = True
         while self.playing:
             self.clock.tick(60)
@@ -154,7 +150,7 @@ class Game:
             self.update()
             self.draw()
 
-    def events(self):
+    def events(self) -> None:
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 self.quit_game()
@@ -229,13 +225,13 @@ class Game:
                     self.current_speed = 4
                     self.add_notification("GAME SPEED: 4x", (255, 100, 100))
 
-    def add_notification(self, text, color=WHITE):
+    def add_notification(self, text: str, color: tuple[int, int, int] = WHITE) -> None:
         """Add a notification message that floats up and fades out."""
         self.notifications.append(
             {"text": text, "color": color, "timer": pg.time.get_ticks(), "offset_y": 0}
         )
 
-    def update(self):
+    def update(self) -> None:
         """Update game state, handle menu actions, and process game logic."""
         self.hud.update()
         # ============ Handle Menu Actions ============
@@ -322,6 +318,8 @@ class Game:
                 # Starter city boost: higher chance if population < 10
                 # Regular growth: requires high satisfaction if population >= 10
                 EventBus.publish("recalculate_satisfaction_and_growth")
+                if hasattr(self.resource_manager, "sync_demographics"):
+                    self.resource_manager.sync_demographics()
             # --- Annual Logic Trigger ---
             if self.current_date.year > old_year:
                 self.economy_system.apply_annual_logic()
@@ -340,13 +338,25 @@ class Game:
 
     # Dinosaur rampage
 
-    def start_rampage(self):
+    def start_rampage(self) -> None:
         """Triggers the Dinosaur Rampage event."""
+        now = pg.time.get_ticks()
+        if (
+            getattr(self, "rampage_active", False)
+            or getattr(self, "dinosaur_entity", None) is not None
+        ):
+            self.add_notification("THE DINOSAIR IS ALREADY HERE...", (200, 200, 200))
+            pg.event.clear(pg.MOUSEBUTTONDOWN)
+            return
+        last_end = getattr(self, "last_rampage_end", 0)
+        if now - last_end < 5000:
+            self.add_notification("THE CITY IS STILL RECOVERING!", (200, 200, 200))
+            pg.event.clear(pg.MOUSEBUTTONDOWN)
+            return
         self.rampage_active = True
         self.rampage_timer = pg.time.get_ticks()
         self.add_notification("DINOSAUR IS COMINGGGG!!!!!!!", (255, 50, 50))
 
-        # 1. Spawn Dinosaur
         from .workers import Dinosaur
 
         spawned = False
@@ -359,12 +369,11 @@ class Game:
                 spawned = True
             attempts += 1
 
-        # 2. Swap Soundtrack
         try:
-            pg.mixer.music.load("assets/sounds/dino_song_epic.ogg")
+            pg.mixer.music.load(MusicEvent.JURASSIC_MUSIC)
             pg.mixer.music.set_volume(0.4)
             if self.sound_on:
-                pg.mixer.music.play()  # Play once
+                pg.mixer.music.play()
         except Exception as e:
             logger.error(f"Error loading dino music: {e}")
 
@@ -400,6 +409,8 @@ class Game:
                     res_zones.remove(target)
 
             actual_killed = total_killed - killed_remaining
+            self.resource_manager.total_deaths += actual_killed
+
             if self.resource_manager.population > 0:
                 sec_ratio = self.resource_manager.edu_secondary / self.resource_manager.population
                 tert_ratio = self.resource_manager.edu_tertiary / self.resource_manager.population
@@ -409,11 +420,14 @@ class Game:
                 self.resource_manager.edu_tertiary = max(0, self.resource_manager.edu_tertiary)
             all_res_zones = [e for e in self.entities if isinstance(e, ResZone)]
             self.resource_manager.population = sum(rz.occupants for rz in all_res_zones)
+            self.resource_manager.sync_demographics()
             EventBus.publish("recalculate_satisfaction")
-        pg.mixer.music.load("assets/sounds/fly_me_to_the_moon.ogg")
+        pg.mixer.music.load(MusicEvent.BACKGROUND_MUSIC)
         pg.mixer.music.set_volume(0.1)
         if self.sound_on:
             pg.mixer.music.play(-1)
+        self.last_rampage_end = pg.time.get_ticks()
+        pg.event.clear(pg.MOUSEBUTTONDOWN)
 
     def draw(self):
         self.screen.fill(BACKGROUND_COLOR)
@@ -521,6 +535,9 @@ class Game:
             "map": [],
             "buildings": [],
             "workers": [],
+            "demographics": self.resource_manager.demographics,
+            "historical_tax_rates": self.resource_manager.historical_tax_rates,
+            "total_deaths": getattr(self.resource_manager, "total_deaths", 0),
         }
 
         # Save map tiles
@@ -601,8 +618,12 @@ class Game:
         self.resource_manager.total_loan_amount = data.get("total_loan_amount", 0)
         self.resource_manager.budget_history = data.get("budget_history", [])
         self.resource_manager.eviction_penalty = data.get("eviction_penalty", 0)
+        self.resource_manager.demographics = {
+            int(age_key): count for age_key, count in data["demographics"].items()
+        }
+        self.resource_manager.historical_tax_rates = data["historical_tax_rates"]
+        self.resource_manager.total_deaths = data.get("total_deaths", 0)
 
-        # Restore music state
         self.sound_on = data.get("sound_on", data.get("music_on", True))
         if self.sound_on:
             pg.mixer.music.unpause()

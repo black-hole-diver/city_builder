@@ -843,6 +843,26 @@ class Hud:
         if self.resource_manager.is_mayor_replaced:
             self.draw_game_over_panel(screen)
 
+        # --- Demographics Status HUD ---
+        res = self.resource_manager
+        demo = getattr(res, "demographics", {})
+
+        age_18_30 = sum(demo.get(a, 0) for a in range(18, 31))
+        age_31_50 = sum(demo.get(a, 0) for a in range(31, 51))
+        age_51_64 = sum(demo.get(a, 0) for a in range(51, 65))
+        age_65_plus = sum(demo.get(a, 0) for a in range(65, 101))
+
+        demo_y = self.height - 330  # Positioned above Education
+        draw_text(screen, "CITY DEMOGRAPHICS", 24, (255, 215, 0), (20, demo_y))
+        draw_text(screen, f"Young (18-30): {age_18_30}", 18, (200, 200, 200), (30, demo_y + 30))
+        draw_text(screen, f"Adult (31-50): {age_31_50}", 18, (200, 200, 200), (30, demo_y + 50))
+        draw_text(screen, f"Senior (51-64): {age_51_64}", 18, (200, 200, 200), (30, demo_y + 70))
+        draw_text(screen, f"Retired (65+): {age_65_plus}", 18, (255, 150, 150), (30, demo_y + 90))
+        accumulated_deaths = getattr(res, "total_deaths", 0)
+        draw_text(
+            screen, f"Total Deceased: {accumulated_deaths}", 18, (150, 150, 150), (30, demo_y + 115)
+        )
+
         # --- Education Status HUD ---
         res = self.resource_manager
         edu_y = self.height - 180

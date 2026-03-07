@@ -10,6 +10,14 @@ class GridKey:
     ISO_POLY = "iso_poly"
 
 
+class MusicEvent:
+    JURASSIC_MUSIC = "assets/sounds/dino_song_epic.ogg"
+    CREATION_SOUND = "assets/sounds/creation.ogg"
+    DESTRUCTION_SOUND = "assets/sounds/destruction.ogg"
+    BACKGROUND_MUSIC = "assets/sounds/fly_me_to_the_moon.ogg"
+    WOOD_CHOP_SOUND = "assets/sounds/wood_chop.ogg"
+
+
 # ==========================================
 # EVENT CONSTANTS
 # ==========================================

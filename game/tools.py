@@ -1,6 +1,6 @@
 from game.event_bus import EventBus
 from .buildings import Tree, Road, ResZone, Zone
-from .setting import GameEvent, EntityType, GridKey
+from .setting import GameEvent, EntityType, GridKey, MusicEvent
 
 
 class Tool:
@@ -37,7 +37,7 @@ class Axe(Tool):
             if b in world.entities:
                 world.entities.remove(b)
 
-            EventBus.publish(GameEvent.PLAY_SOUND, "wood_chop")
+            EventBus.publish(GameEvent.PLAY_SOUND, MusicEvent.WOOD_CHOP_SOUND)
             EventBus.publish(GameEvent.NOTIFY, "TIMBERRR! TREE CUT DOWN", (100, 255, 100))
             EventBus.publish(GameEvent.RECALC_SATISFACTION)
 
@@ -125,7 +125,7 @@ class VIP(Tool):
             b = world.buildings[grid_pos[0]][grid_pos[1]]
             if hasattr(b, "apply_vip") and b.apply_vip():
                 world.resource_manager.apply_cost_to_resource(EntityType.VIP, world.game)
-                EventBus.publish(GameEvent.PLAY_SOUND, "creation")
+                EventBus.publish(GameEvent.PLAY_SOUND, MusicEvent.CREATION_SOUND)
 
                 # Deselect examine tile so the HUD updates immediately
                 if world.examine_tile == b.origin:

@@ -1,4 +1,4 @@
-from ..setting import COSTS, MAINTENANCE_FEES
+from game.setting import COSTS, MAINTENANCE_FEES
 
 
 class ResourceManager:
@@ -24,6 +24,33 @@ class ResourceManager:
         self.total_loan_amount = 0
 
         self.budget_history = []  # List of {year, income, expenses, balance}
+
+        # v1.1.0
+        self.demographics = {age: 0 for age in range(18, 101)}
+        self.historical_tax_rates = []
+        self.total_deaths = 0
+
+    def sync_demographics(self):
+        """Ensures the statistical demographic tally matches actual zone population."""
+        current_sim_pop = sum(self.demographics.values())
+        diff = int(self.population) - current_sim_pop
+        from random import randint, choice
+
+        if diff > 0:
+            for _ in range(diff):
+                age = randint(18, 60)
+                self.demographics[age] += 1
+        elif diff < 0:
+            # Pensioners refuse to leave!
+            removals_needed = abs(diff)
+            working_ages = list(range(18, 65))
+            while removals_needed > 0:
+                valid_ages = [age for age in working_ages if self.demographics[age] > 0]
+                if not valid_ages:
+                    break
+                target_age = choice(valid_ages)
+                self.demographics[target_age] -= 1
+                removals_needed -= 1
 
     @property
     def population(self):
@@ -94,31 +121,9 @@ class ResourceManager:
             self.budget_history.pop()
 
     def apply_daily_budget(self, world):
-        # Calculate daily tax based on education levels
-        # University = 2.0x value, School = 1.5x value, Primary = 1.0x value
-        effective_pop = (
-            (self.edu_primary * 1.0) + (self.edu_secondary * 1.5) + (self.edu_tertiary * 2.0)
-        )
-
-        daily_tax_per_citizen = self.tax_per_citizen / 365.0
-        tax_income = effective_pop * daily_tax_per_citizen
-
-        ind_ser_zones = [
-            e for e in world.entities if getattr(e, "name", "") in ["IndZone", "SerZone"]
-        ]
-        total_workers = sum(getattr(z, "occupants", 0) for z in ind_ser_zones)
-        unpowered_workers = sum(
-            getattr(z, "occupants", 0) for z in ind_ser_zones if not getattr(z, "is_powered", False)
-        )
-
-        if total_workers > 0:
-            penalty_ratio = unpowered_workers / total_workers
-            # Reduce total daily tax proportionally (up to 50% loss if all workplaces lose power)
-            tax_income *= 1.0 - (penalty_ratio * 0.5)
-
+        tax_income = 0
         maintenance_cost = (self.total_loan_amount * 0.05) / 365.0
 
-        # Calculate total occupants across all zones (Residential, Industrial, Service)
         processed_buildings = set()
         for x in range(world.grid_length_x):
             for y in range(world.grid_length_y):
@@ -134,16 +139,12 @@ class ResourceManager:
                         maintenance_cost += self.maintenance_fees.get(b.name, 0) / 365.0
                     processed_buildings.add(b)
 
-        self.funds += tax_income
         self.funds -= maintenance_cost
 
-        # Log daily budget if it's significant (> 0.1) or once a month to avoid spam
-        if (tax_income > 0.1 or maintenance_cost > 0.1) and world.game.current_date.day == 1:
-            self.log_transaction(world.game, "DAILY BUDGET", tax_income, maintenance_cost)
+        if maintenance_cost > 0.1 and world.game.current_date.day == 1:
+            self.log_transaction(world.game, "DAILY EXPENSE", 0, maintenance_cost)
 
         if self.funds < 0:
-            # We only count full years of negative budget for the game over condition
-            # This is handled in apply_annual_logic now
             pass
         else:
             self.years_negative_budget = 0
